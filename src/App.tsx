@@ -245,14 +245,13 @@ function Dashboard({ onNav }: { onNav: (s: Screen) => void }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <PageTitle title="Dashboard" sub="Métricas operativas y alertas IA · Actualizado hace 4 min" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
         <div className="kpi"><div className="kpi-label">Stock total</div><div className="kpi-value tabular">4.800 L</div><div className="kpi-sub">+8% vs mes anterior</div></div>
         <div className="kpi"><div className="kpi-label">Cotizaciones vigentes</div><div className="kpi-value tabular">6</div><div className="kpi-sub">$12,4M CLP en cartera</div></div>
         <div className="kpi"><div className="kpi-label">Facturas pendientes</div><div className="kpi-value tabular" style={{ color: "#B45309" }}>3</div><div className="kpi-sub">$10,09M CLP por cobrar</div></div>
-        <div className="kpi"><div className="kpi-label">Embarques en tránsito</div><div className="kpi-value tabular" style={{ color: "#0052CC" }}>3</div><div className="kpi-sub">ETA próxima: 25 Jun</div></div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
         <div className="panel">
           <div className="panel-header">
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -287,26 +286,6 @@ function Dashboard({ onNav }: { onNav: (s: Screen) => void }) {
           })}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div className="panel" style={{ flex: 1 }}>
-            <div className="panel-header">
-              <span style={{ fontWeight: 700, fontSize: "0.8125rem", color: "#0F172A" }}>Embarques activos</span>
-              <button className="btn btn-ghost btn-sm" onClick={() => onNav("logistica")}>Ver →</button>
-            </div>
-            {EMBARQUES.map(e => (
-              <div key={e.id} style={{ padding: "12px 16px", borderBottom: "1px solid #F1F5F9" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: "0.6875rem", fontFamily: "JetBrains Mono, monospace", fontWeight: 700, color: "#0052CC" }}>{e.id}</span>
-                  <Badge t={e.estado === "Recibido" ? "ok" : e.estado === "Llegando" ? "purple" : "info"}>{e.estado}</Badge>
-                </div>
-                <div style={{ fontSize: "0.6875rem", color: "#64748B", marginBottom: 6 }}>{e.origen} → {e.destino} · ETA {e.eta}</div>
-                <div className="progress">
-                  <div className="progress-fill" style={{ width: `${e.progreso}%`, background: e.progreso === 100 ? "#00995A" : e.progreso > 80 ? "#16A34A" : "#0052CC" }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       <div className="panel">
