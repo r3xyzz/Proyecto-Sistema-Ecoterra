@@ -49,7 +49,7 @@ const I = {
 type Screen = "dashboard" | "clientes" | "proveedores" | "productos"
   | "lotes" | "movimientos"
   | "cotizaciones" | "oc" | "facturacion" | "nc"
-  | "logistica" | "ia";
+  | "ia";
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 function Badge({ t, children }: { t: "ok"|"warn"|"danger"|"info"|"neutral"|"purple"; children: ReactNode }) {
@@ -154,9 +154,6 @@ const NAV: NavGroup[] = [
     { id: "oc", label: "Órdenes de Compra", icon: I.oc },
     { id: "facturacion", label: "Facturación", icon: I.invoice },
     { id: "nc", label: "Notas de Crédito", icon: I.nc },
-  ]},
-  { label: "Logística", items: [
-    { id: "logistica", label: "Recepción de Embarques", icon: I.logistics },
   ]},
   { label: "Inteligencia Artificial", items: [
     { id: "ia", label: "Panel Predictivo IA", icon: I.ai },
@@ -1567,7 +1564,6 @@ export default function App() {
       case "oc":           return <OC/>;
       case "facturacion":  return <Facturacion/>;
       case "nc":           return <NotasCredito/>;
-      case "logistica":    return <Logistica/>;
       case "ia":           return <IaPanel/>;
       default:             return <Dashboard onNav={setScreen}/>;
     }
