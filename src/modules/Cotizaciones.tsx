@@ -1,4 +1,102 @@
-import React, { useState } from "react";
-import { fmtCLP, I, Ico, PageTitle } from "../shared";
-type Quote = { id: string; cliente: string; fecha: string; vigencia: string; total: number; estado: string; oc: string | null; factura: string | null };
-export default function Cotizaciones({ cotizaciones }: { cotizaciones: Quote[] }) { const [show, setShow] = useState(false); return <div><PageTitle title="Cotizaciones" sub="Ciclo de vida comercial"><button className="btn btn-primary" onClick={() => setShow(true)}><Ico p={I.plus} size={14} /> Nueva cotización</button></PageTitle><div className="panel"><table className="dt w-full"><thead><tr><th>N° Cotización</th><th>Cliente</th><th>Fecha</th><th>Vigencia</th><th>Total (CLP)</th><th>OC</th><th>Factura</th><th>Estado</th></tr></thead><tbody>{cotizaciones.map(quote => <tr key={quote.id}><td style={{ fontWeight: 700, color: "#0052CC" }}>{quote.id}</td><td>{quote.cliente}</td><td>{quote.fecha}</td><td>{quote.vigencia}</td><td>{fmtCLP(quote.total)}</td><td>{quote.oc ?? "—"}</td><td>{quote.factura ?? "—"}</td><td>{quote.estado}</td></tr>)}</tbody></table></div>{show && <div className="modal-backdrop" onClick={() => setShow(false)}><div className="modal" style={{ width: 480, padding: 24 }} onClick={event => event.stopPropagation()}><h2 style={{ fontWeight: 700, marginBottom: 18 }}>Nueva Cotización</h2><div className="field"><label className="label">Cliente</label><select className="select"><option>Seleccionar cliente…</option></select></div><div className="field" style={{ marginTop: 12 }}><label className="label">Vigencia</label><select className="select"><option>7 días</option><option>10 días</option><option>15 días</option><option>30 días</option></select></div><div style={{ display: "flex", gap: 8, marginTop: 18 }}><button className="btn btn-primary" onClick={() => setShow(false)}>Guardar borrador</button><button className="btn btn-ghost" onClick={() => setShow(false)}>Cancelar</button></div></div></div>}</div>; }
+import React, { useState } from "react"
+
+import { fmtCLP, I, Ico, PageTitle } from "../shared"
+
+type Quote = {
+  id: string
+  cliente: string
+  fecha: string
+  vigencia: string
+  total: number
+  estado: string
+  oc: string | null
+  factura: string | null
+}
+
+export default function Cotizaciones({
+  cotizaciones,
+}: {
+  cotizaciones: Quote[]
+}) {
+  const [show, setShow] = useState(false)
+  return (
+    <div>
+      <PageTitle title="Cotizaciones" sub="Ciclo de vida comercial">
+        <button className="btn btn-primary" onClick={() => setShow(true)}>
+          <Ico p={I.plus} size={14} /> Nueva cotización
+        </button>
+      </PageTitle>
+      <div className="panel">
+        <table className="dt w-full">
+          <thead>
+            <tr>
+              <th>N° Cotización</th>
+              <th>Cliente</th>
+              <th>Fecha</th>
+              <th>Vigencia</th>
+              <th>Total (CLP)</th>
+              <th>OC</th>
+              <th>Factura</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {cotizaciones.map((quote) => (
+              <tr key={quote.id}>
+                <td style={{ fontWeight: 700, color: "#0052CC" }}>
+                  {quote.id}
+                </td>
+                <td>{quote.cliente}</td>
+                <td>{quote.fecha}</td>
+                <td>{quote.vigencia}</td>
+                <td>{fmtCLP(quote.total)}</td>
+                <td>{quote.oc ?? "—"}</td>
+                <td>{quote.factura ?? "—"}</td>
+                <td>{quote.estado}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {show && (
+        <div className="modal-backdrop" onClick={() => setShow(false)}>
+          <div
+            className="modal"
+            style={{ width: 480, padding: 24 }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 style={{ fontWeight: 700, marginBottom: 18 }}>
+              Nueva Cotización
+            </h2>
+            <div className="field">
+              <label className="label">Cliente</label>
+              <select className="select">
+                <option>Seleccionar cliente…</option>
+              </select>
+            </div>
+            <div className="field" style={{ marginTop: 12 }}>
+              <label className="label">Vigencia</label>
+              <select className="select">
+                <option>7 días</option>
+                <option>10 días</option>
+                <option>15 días</option>
+                <option>30 días</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => setShow(false)}
+              >
+                Guardar borrador
+              </button>
+              <button className="btn btn-ghost" onClick={() => setShow(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
