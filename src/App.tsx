@@ -212,8 +212,16 @@ function Topbar({ screen }: { screen: Screen }) {
   const label = NAV.flatMap(g => g.items).find(i => i.id === screen)?.label ?? "";
   return (
     <div className="topbar">
-      <div style={{ fontSize: "0.75rem", color: "#64748B", fontFamily: "JetBrains Mono, monospace" }}>
-        Ecoterra · {label} · {new Date().toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" })}
+      <div className="topbar-brand">
+        <div className="topbar-logo">
+          <img src={logoEcoterra} alt="Ecoterra" />
+        </div>
+        <div className="topbar-context">
+          <span className="topbar-company">Ecoterra</span>
+          <span className="topbar-divider">/</span>
+          <span className="topbar-page">{label}</span>
+          <span className="topbar-date">{new Date().toLocaleDateString("es-CL", { day: "2-digit", month: "short", year: "numeric" })}</span>
+        </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <button className="btn btn-ghost btn-sm" style={{ position: "relative" }}>
@@ -232,7 +240,6 @@ function Dashboard({ onNav }: { onNav: (s: Screen) => void }) {
 
   const activity = [
     { time: "09:14", desc: "Cotización COT-2024-041 emitida — Minera Los Bronces S.A.", type: "quote" },
-    { time: "08:52", desc: "Embarque EMB-2024-011 arriba en 2 días — Hapag-Lloyd vía Valparaíso.", type: "ship" },
     { time: "07:30", desc: "Alerta IA: POL-002 cruzó umbral mínimo de stock. 300 L restantes.", type: "alert" },
     { time: "Ayer",  desc: "Factura FAC-2024-122 emitida · $4.250.000 CLP · Vence 12 Jul.", type: "invoice" },
     { time: "Ayer",  desc: "Lote LT-2024-005 registrado · 1.340 L POL-004 · Ubicación C3-02.", type: "lot" },
@@ -242,8 +249,7 @@ function Dashboard({ onNav }: { onNav: (s: Screen) => void }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       <PageTitle title="Dashboard" sub="Métricas operativas y alertas IA · Actualizado hace 4 min" />
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10 }}>
-        <div className="kpi"><div className="kpi-label">Stock total</div><div className="kpi-value tabular">4.800 L</div><div className="kpi-sub">+8% vs mes anterior</div></div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 10 }}>
         <div className="kpi"><div className="kpi-label">Cotizaciones vigentes</div><div className="kpi-value tabular">6</div><div className="kpi-sub">$12,4M CLP en cartera</div></div>
         <div className="kpi"><div className="kpi-label">Facturas pendientes</div><div className="kpi-value tabular" style={{ color: "#B45309" }}>3</div><div className="kpi-sub">$10,09M CLP por cobrar</div></div>
       </div>
