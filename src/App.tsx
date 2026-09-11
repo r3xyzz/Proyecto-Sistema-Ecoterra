@@ -1498,8 +1498,14 @@ function IaPanel() {
         {/* Widget 1 */}
         <div className="panel">
           <div className="panel-header">
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}><Ico p={I.ship} size={15}/><span style={{ fontWeight:700, fontSize:"0.875rem", color:"#0F172A" }}>Predicción · Tiempo de Llegada</span></div>
-            <Badge t="info">Modelo v2.1</Badge>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ width:8, height:8, borderRadius:"50%", background:r1?"#00995A":"#CBD5E1", flexShrink:0 }} />
+              <Ico p={I.ship} size={15}/><span style={{ fontWeight:700, fontSize:"0.875rem", color:"#0F172A" }}>Predicción · Tiempo de Llegada</span>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <Badge t={r1?"ok":"neutral"}>{r1?"Resultado disponible":"Sin resultado"}</Badge>
+              <Badge t="info">Modelo v2.1</Badge>
+            </div>
           </div>
           <div style={{ padding:18 }}>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
