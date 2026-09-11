@@ -1057,7 +1057,9 @@ function Cotizaciones() {
 function OC() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [showUpload, setShowUpload] = useState<string|null>(null);
+  const [previewUpload, setPreviewUpload] = useState<{ oc: string; file: string }|null>(null);
   const [uploaded, setUploaded] = useState<Record<string,string>>({});
+  const [uploadedUrls, setUploadedUrls] = useState<Record<string,string>>({});
   const ocs = [
     { id:"OC-2024-041", cot:"COT-2024-040", cliente:"Constructora Vial Sur Ltda.", fecha:"2024-06-06", total:1_840_000, estado:"Aprobada", factura:"FAC-2024-121" },
     { id:"OC-2024-040", cot:"COT-2024-038", cliente:"Agrícola Atacama SpA", fecha:"2024-05-25", total:570_000, estado:"Pendiente facturar", factura:null as string|null },
@@ -1081,12 +1083,15 @@ function OC() {
                 <td><Badge t={o.estado==="Aprobada"?"ok":o.estado==="En despacho"?"info":"warn"}>{o.estado}</Badge></td>
                 <td>
                   {uploaded[o.id] ? (
-                    <span style={{ fontSize:"0.6875rem", color:"#00995A", display:"flex", alignItems:"center", gap:4 }}><Ico p={I.check} size={12}/>{uploaded[o.id]}</span>
+                    <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ fontSize:"0.6875rem", color:"#00995A", display:"flex", alignItems:"center", gap:4 }}><Ico p={I.check} size={12}/>{uploaded[o.id]}</span>
+                      <button className="btn btn-ghost btn-sm" onClick={()=>setPreviewUpload({ oc:o.id, file:uploaded[o.id] })}>Vista previa</button>
+                    </div>
                   ) : (
                     <button className="btn btn-ghost btn-sm" onClick={()=>setShowUpload(o.id)}><Ico p={I.upload} size={12}/> Subir PDF</button>
                   )}
                 </td>
-                <td>{!o.factura&&<button className="btn btn-primary btn-sm"><Ico p={I.invoice} size={12}/> Factura</button>}</td>
+                <td>{!o.factura&&<button className="btn btn-primary btn-sm" title="Crear factura asociada a esta orden de compra"><Ico p={I.invoice} size={12}/> Crear factura</button>}</td>
               </tr>
             ))}
           </tbody>
@@ -1099,11 +1104,38 @@ function OC() {
             <div style={{ border:"2px dashed #CBD5E1", borderRadius:8, padding:"32px 24px", textAlign:"center", cursor:"pointer", background:"#F8FAFC" }} onClick={()=>fileRef.current?.click()}>
               <Ico p={I.upload} size={28}/>
               <p style={{ fontSize:"0.8125rem", color:"#64748B", marginTop:8 }}>Haz clic o arrastra el PDF aquí</p>
-              <input ref={fileRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={e=>{ if(e.target.files?.[0]){setUploaded({...uploaded,[showUpload!]:e.target.files[0].name});setShowUpload(null);}}}/>
+              <input ref={fileRef} type="file" accept=".pdf" style={{ display:"none" }} onChange={e=>{ if(e.target.files?.[0]){const file=e.target.files[0];setUploaded({...uploaded,[showUpload!]:file.name});setUploadedUrls({...uploadedUrls,[showUpload!]:URL.createObjectURL(file)});setShowUpload(null);}}}/>
             </div>
             <div style={{ display:"flex", gap:8, marginTop:16 }}>
               <button className="btn btn-primary" style={{ flex:1, justifyContent:"center" }} onClick={()=>{setUploaded({...uploaded,[showUpload!]:"OC_cliente.pdf"});setShowUpload(null);}}><Ico p={I.check} size={14}/> Confirmar</button>
               <button className="btn btn-ghost" onClick={()=>setShowUpload(null)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+      {previewUpload && (
+        <div className="modal-backdrop" onClick={()=>setPreviewUpload(null)}>
+          <div className="modal" style={{ width:640, padding:0 }} onClick={e=>e.stopPropagation()}>
+            <div style={{ padding:"14px 20px", borderBottom:"1px solid #E2E8F0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div><div style={{ fontWeight:700, fontSize:"0.875rem", color:"#0F172A" }}>Vista previa — {previewUpload.oc}</div><div style={{ fontSize:"0.6875rem", color:"#94A3B8" }}>{previewUpload.file} · PDF subido</div></div>
+              <button onClick={()=>setPreviewUpload(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8" }}><Ico p={I.x} size={18}/></button>
+            </div>
+            <div style={{ padding:24, background:"#F1F5F9" }}>
+              {uploadedUrls[previewUpload.oc] ? (
+                <iframe title={`Vista previa de ${previewUpload.file}`} src={uploadedUrls[previewUpload.oc]} style={{ width:"100%", height:520, border:"1px solid #E2E8F0", background:"white" }} />
+              ) : <div style={{ minHeight:360, background:"white", border:"1px solid #E2E8F0", boxShadow:"0 4px 12px rgba(15,23,42,0.08)", padding:32 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", borderBottom:"2px solid #00995A", paddingBottom:18, marginBottom:24 }}>
+                  <div><div style={{ fontSize:"1.1rem", fontWeight:800, color:"#00995A" }}>Ecoterra</div><div style={{ fontSize:"0.6875rem", color:"#64748B", marginTop:3 }}>Orden de compra recibida</div></div>
+                  <div style={{ textAlign:"right" }}><div style={{ fontFamily:"JetBrains Mono, monospace", fontWeight:700, color:"#0F172A" }}>{previewUpload.oc}</div><div style={{ fontSize:"0.6875rem", color:"#64748B", marginTop:3 }}>Documento PDF</div></div>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:18, fontSize:"0.75rem", color:"#475569" }}>
+                  <div><strong style={{ color:"#0F172A" }}>Cliente</strong><div style={{ marginTop:5 }}>{ocs.find(o=>o.id===previewUpload.oc)?.cliente}</div></div>
+                  <div><strong style={{ color:"#0F172A" }}>Cotización asociada</strong><div style={{ marginTop:5 }}>{ocs.find(o=>o.id===previewUpload.oc)?.cot}</div></div>
+                  <div><strong style={{ color:"#0F172A" }}>Monto total</strong><div style={{ marginTop:5, fontFamily:"JetBrains Mono, monospace" }}>{fmtCLP(ocs.find(o=>o.id===previewUpload.oc)?.total ?? 0)}</div></div>
+                  <div><strong style={{ color:"#0F172A" }}>Archivo</strong><div style={{ marginTop:5 }}>{previewUpload.file}</div></div>
+                </div>
+                <div style={{ marginTop:42, borderTop:"1px solid #E2E8F0", paddingTop:14, fontSize:"0.6875rem", color:"#94A3B8" }}>Vista previa del documento cargado · No editable</div>
+              </div>}
             </div>
           </div>
         </div>
