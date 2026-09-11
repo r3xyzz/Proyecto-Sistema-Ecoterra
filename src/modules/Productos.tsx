@@ -1,6 +1,130 @@
-import React from "react";
-import { Badge, fmt, I, Ico, PageTitle, Product } from "../shared";
+import React from "react"
+
+import { Badge, fmt, I, Ico, PageTitle, Product } from "../shared"
 
 export default function Productos({ productos }: { productos: Product[] }) {
-  return <div><PageTitle title="Catálogo de Productos" sub="Polímeros industriales Ecoterra"><button className="btn btn-primary"><Ico p={I.plus ?? "M12 5v14M5 12h14"} size={14} /> Nuevo producto</button></PageTitle><div className="panel"><table className="dt w-full"><thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Unidad</th><th>Stock Mínimo</th><th>Stock Actual</th><th>Estado</th><th></th></tr></thead><tbody>{productos.map(product => { const pct = product.stockMin === 0 ? 100 : (product.stock / product.stockMin) * 100; const status = product.stock === 0 ? "danger" : pct < 50 ? "warn" : "ok"; return <tr key={product.id}><td style={{ fontFamily: "JetBrains Mono, monospace", fontSize: "0.75rem", fontWeight: 700, color: "#0052CC" }}>{product.codigo}</td><td><div style={{ fontWeight: 600, color: "#0F172A" }}>{product.nombre}</div><div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>{product.desc}</div></td><td><Badge t="info">{product.tipo}</Badge></td><td style={{ color: "#475569" }}>{product.unidad}</td><td style={{ fontFamily: "JetBrains Mono, monospace" }}>{fmt(product.stockMin)} L</td><td><div style={{ display: "flex", flexDirection: "column", gap: 4 }}><span className="tabular" style={{ fontWeight: 700, color: product.stock === 0 ? "#DC2626" : pct < 50 ? "#B45309" : "#15803D" }}>{fmt(product.stock)} L</span><div className="progress" style={{ width: 80 }}><div className="progress-fill" style={{ width: `${Math.min(100, pct)}%`, background: product.stock === 0 ? "#DC2626" : pct < 50 ? "#D97706" : "#00995A" }} /></div></div></td><td><Badge t={status}>{product.stock === 0 ? "Sin stock" : pct < 50 ? "Bajo mínimo" : "OK"}</Badge></td><td><div style={{ display: "flex", gap: 4 }}><button className="btn btn-ghost btn-sm"><Ico p={I.edit} size={13} /></button><button className="btn btn-ghost btn-sm"><Ico p={I.trash} size={13} /></button></div></td></tr>; })}</tbody></table></div></div>;
+  return (
+    <div>
+      <PageTitle
+        title="Catálogo de Productos"
+        sub="Polímeros industriales Ecoterra"
+      >
+        <button className="btn btn-primary">
+          <Ico p={I.plus ?? "M12 5v14M5 12h14"} size={14} /> Nuevo producto
+        </button>
+      </PageTitle>
+      <div className="panel">
+        <table className="dt w-full">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Unidad</th>
+              <th>Stock Mínimo</th>
+              <th>Stock Actual</th>
+              <th>Estado</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {productos.map((product) => {
+              const pct =
+                product.stockMin === 0
+                  ? 100
+                  : (product.stock / product.stockMin) * 100
+              const status =
+                product.stock === 0 ? "danger" : pct < 50 ? "warn" : "ok"
+              return (
+                <tr key={product.id}>
+                  <td
+                    style={{
+                      fontFamily: "JetBrains Mono, monospace",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      color: "#0052CC",
+                    }}
+                  >
+                    {product.codigo}
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600, color: "#0F172A" }}>
+                      {product.nombre}
+                    </div>
+                    <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>
+                      {product.desc}
+                    </div>
+                  </td>
+                  <td>
+                    <Badge t="info">{product.tipo}</Badge>
+                  </td>
+                  <td style={{ color: "#475569" }}>{product.unidad}</td>
+                  <td style={{ fontFamily: "JetBrains Mono, monospace" }}>
+                    {fmt(product.stockMin)} L
+                  </td>
+                  <td>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
+                      }}
+                    >
+                      <span
+                        className="tabular"
+                        style={{
+                          fontWeight: 700,
+                          color:
+                            product.stock === 0
+                              ? "#DC2626"
+                              : pct < 50
+                                ? "#B45309"
+                                : "#15803D",
+                        }}
+                      >
+                        {fmt(product.stock)} L
+                      </span>
+                      <div className="progress" style={{ width: 80 }}>
+                        <div
+                          className="progress-fill"
+                          style={{
+                            width: `${Math.min(100, pct)}%`,
+                            background:
+                              product.stock === 0
+                                ? "#DC2626"
+                                : pct < 50
+                                  ? "#D97706"
+                                  : "#00995A",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <Badge t={status}>
+                      {product.stock === 0
+                        ? "Sin stock"
+                        : pct < 50
+                          ? "Bajo mínimo"
+                          : "OK"}
+                    </Badge>
+                  </td>
+                  <td>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="btn btn-ghost btn-sm">
+                        <Ico p={I.edit} size={13} />
+                      </button>
+                      <button className="btn btn-ghost btn-sm">
+                        <Ico p={I.trash} size={13} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
 }
