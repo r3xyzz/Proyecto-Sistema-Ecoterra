@@ -1070,7 +1070,7 @@ function OC() {
       <PageTitle title="Órdenes de Compra" sub="OC recibidas de clientes — registro y trazabilidad con cotizaciones y facturas relacionadas" />
       <div className="panel">
         <table className="dt w-full">
-          <thead><tr><th>N° OC</th><th>Cotización</th><th>Cliente</th><th>Fecha</th><th>Total (CLP)</th><th>Factura</th><th>Estado</th><th>Archivo OC</th><th></th></tr></thead>
+          <thead><tr><th>N° OC</th><th>Cotización</th><th>Cliente</th><th>Fecha</th><th>Total (CLP)</th><th>Factura</th><th>Estado</th><th>Archivo OC</th></tr></thead>
           <tbody>
             {ocs.map(o=>(
               <tr key={o.id}>
@@ -1091,7 +1091,6 @@ function OC() {
                     <button className="btn btn-ghost btn-sm" onClick={()=>setShowUpload(o.id)}><Ico p={I.upload} size={12}/> Subir PDF</button>
                   )}
                 </td>
-                <td>{!o.factura&&<button className="btn btn-primary btn-sm" title="Crear factura asociada a esta orden de compra"><Ico p={I.invoice} size={12}/> Crear factura</button>}</td>
               </tr>
             ))}
           </tbody>
