@@ -843,7 +843,7 @@ function CreadorCotizacion({ onClose }: { onClose: () => void }) {
               </select>
             </div>
             <div className="field"><label className="label">Fecha</label><input type="date" className="input" defaultValue="2024-06-14"/></div>
-            <div className="field"><label className="label">Vigencia</label><select className="select"><option>30 días</option><option>15 días</option><option>45 días</option><option>60 días</option></select></div>
+            <div className="field"><label className="label">Vigencia</label><select className="select"><option>7 días</option><option>10 días</option><option>15 días</option><option>30 días</option></select></div>
             <div className="field"><label className="label">Condición de pago</label><select className="select"><option>30 días</option><option>60 días</option><option>Contado</option></select></div>
             <div className="field"><label className="label">Moneda</label><select className="select"><option>CLP</option><option>USD</option></select></div>
           </div>
