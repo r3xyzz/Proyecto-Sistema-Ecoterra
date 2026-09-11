@@ -289,6 +289,29 @@ function Dashboard({ onNav }: { onNav: (s: Screen) => void }) {
           })}
         </div>
 
+        <div className="panel">
+          <div className="panel-header">
+            <span style={{ fontWeight: 700, fontSize: "0.875rem", color: "#0F172A" }}>Stock actual por producto</span>
+            <button className="btn btn-ghost btn-sm" onClick={() => onNav("productos")}>Ver catálogo →</button>
+          </div>
+          {PRODUCTOS.map(p => {
+            const pct = p.stockMin === 0 ? 100 : Math.min(100, (p.stock / p.stockMin) * 100);
+            const color = p.stock === 0 ? "#DC2626" : pct < 50 ? "#D97706" : "#00995A";
+            return (
+              <div key={p.id} style={{ padding: "12px 18px", borderBottom: "1px solid #F1F5F9", display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: "0.8125rem", color: "#0F172A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.nombre}</div>
+                  <div className="progress" style={{ marginTop: 7 }}><div className="progress-fill" style={{ width: `${pct}%`, background: color }} /></div>
+                </div>
+                <div style={{ textAlign: "right", flexShrink: 0 }}>
+                  <div className="tabular" style={{ fontSize: "0.8125rem", fontWeight: 700, color }}>{fmt(p.stock)} L</div>
+                  <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>mín. {fmt(p.stockMin)} L</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
       </div>
 
       <div className="panel">
