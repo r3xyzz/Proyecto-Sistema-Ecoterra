@@ -957,6 +957,17 @@ function CreadorCotizacion({ onClose }: { onClose: () => void }) {
 
 function Cotizaciones() {
   const [showCrear, setShowCrear] = useState(false);
+  const [emailQuote, setEmailQuote] = useState<typeof COTIZACIONES[0]|null>(null);
+  const [ocQuote, setOcQuote] = useState<typeof COTIZACIONES[0]|null>(null);
+  const [selectedOc, setSelectedOc] = useState("");
+  const [associatedOcs, setAssociatedOcs] = useState<Record<string, string>>({});
+  const [sentQuote, setSentQuote] = useState<string|null>(null);
+
+  const openOcAssociation = (quote: typeof COTIZACIONES[0]) => {
+    setOcQuote(quote);
+    setSelectedOc(associatedOcs[quote.id] ?? quote.oc ?? "");
+  };
+
   return (
     <div>
       <PageTitle title="Cotizaciones" sub="Ciclo de vida comercial">
@@ -979,14 +990,14 @@ function Cotizaciones() {
                 <td style={{ fontFamily:"JetBrains Mono, monospace", fontSize:"0.75rem", color:"#64748B" }}>{c.fecha}</td>
                 <td style={{ fontFamily:"JetBrains Mono, monospace", fontSize:"0.75rem", color:"#64748B" }}>{c.vigencia}</td>
                 <td style={{ fontFamily:"JetBrains Mono, monospace", fontWeight:700, color:"#0F172A" }}>{fmtCLP(c.total)}</td>
-                <td style={{ fontFamily:"JetBrains Mono, monospace", fontSize:"0.75rem", color:"#0052CC" }}>{c.oc??"—"}</td>
+                <td style={{ fontFamily:"JetBrains Mono, monospace", fontSize:"0.75rem", color:"#0052CC" }}>{associatedOcs[c.id] ?? c.oc ?? "—"}</td>
                 <td style={{ fontFamily:"JetBrains Mono, monospace", fontSize:"0.75rem", color:"#00995A" }}>{c.factura??"—"}</td>
                 <td><Badge t={c.estado==="Vigente"?"ok":c.estado==="Convertida"?"info":"warn"}>{c.estado}</Badge></td>
                 <td>
                   <div style={{ display:"flex", gap:4 }}>
-                    <button className="btn btn-ghost btn-sm"><Ico p={I.pdf} size={13}/></button>
-                    <button className="btn btn-ghost btn-sm"><Ico p={I.mail} size={13}/></button>
-                    {c.estado==="Vigente"&&<button className="btn btn-navy btn-sm">→ OC</button>}
+                    <button className="btn btn-ghost btn-sm" title="Exportar cotización en PDF" aria-label={`Exportar ${c.id} en PDF`}><Ico p={I.pdf} size={13}/></button>
+                    <button className="btn btn-ghost btn-sm" title="Enviar PDF por correo" aria-label={`Enviar ${c.id} por correo`} onClick={()=>{setEmailQuote(c);setSentQuote(null);}}><Ico p={I.mail} size={13}/></button>
+                    {c.estado==="Vigente"&&<button className="btn btn-navy btn-sm" onClick={()=>openOcAssociation(c)}>→ OC</button>}
                   </div>
                 </td>
               </tr>
@@ -994,6 +1005,49 @@ function Cotizaciones() {
           </tbody>
         </table>
       </div>
+      {emailQuote && (
+        <div className="modal-backdrop" onClick={()=>setEmailQuote(null)}>
+          <div className="modal" style={{ width:480, padding:24 }} onClick={e=>e.stopPropagation()}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
+              <div>
+                <h2 style={{ fontWeight:700, color:"#0F172A", fontSize:"1rem" }}>Enviar cotización por correo</h2>
+                <p style={{ fontSize:"0.75rem", color:"#64748B", marginTop:3 }}>{emailQuote.id} · PDF generado</p>
+              </div>
+              <button onClick={()=>setEmailQuote(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8" }}><Ico p={I.x} size={18}/></button>
+            </div>
+            {sentQuote ? (
+              <div className="alert-ok"><Ico p={I.check} size={14}/><span>PDF enviado correctamente a <strong>{sentQuote}</strong>.</span></div>
+            ) : (
+              <>
+                <div className="alert-info" style={{ marginBottom:16 }}><Ico p={I.mail} size={14}/><span>Se enviará el PDF al correo registrado del cliente.</span></div>
+                <div className="field"><label className="label">Correo del cliente</label><input className="input" type="email" value={CLIENTES.find(c=>c.razon===emailQuote.cliente)?.email ?? ""} readOnly /></div>
+                <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:20 }}>
+                  <button className="btn btn-ghost" onClick={()=>setEmailQuote(null)}>Cancelar</button>
+                  <button className="btn btn-primary" onClick={()=>setSentQuote(CLIENTES.find(c=>c.razon===emailQuote.cliente)?.email ?? "correo del cliente")}><Ico p={I.mail} size={14}/> Enviar PDF</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+      {ocQuote && (
+        <div className="modal-backdrop" onClick={()=>setOcQuote(null)}>
+          <div className="modal" style={{ width:480, padding:24 }} onClick={e=>e.stopPropagation()}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
+              <div>
+                <h2 style={{ fontWeight:700, color:"#0F172A", fontSize:"1rem" }}>Asociar orden de compra</h2>
+                <p style={{ fontSize:"0.75rem", color:"#64748B", marginTop:3 }}>{ocQuote.id} · {ocQuote.cliente}</p>
+              </div>
+              <button onClick={()=>setOcQuote(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"#94A3B8" }}><Ico p={I.x} size={18}/></button>
+            </div>
+            <div className="field"><label className="label">Orden de compra relacionada</label><select className="select" value={selectedOc} onChange={e=>setSelectedOc(e.target.value)}><option value="">Seleccionar OC…</option><option>OC-2024-041</option><option>OC-2024-040</option><option>OC-2024-039</option></select></div>
+            <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginTop:20 }}>
+              <button className="btn btn-ghost" onClick={()=>setOcQuote(null)}>Cancelar</button>
+              <button className="btn btn-primary" disabled={!selectedOc} onClick={()=>{setAssociatedOcs({...associatedOcs,[ocQuote.id]:selectedOc});setOcQuote(null);}}><Ico p={I.check} size={14}/> Guardar asociación</button>
+            </div>
+          </div>
+        </div>
+      )}
       {showCrear && <CreadorCotizacion onClose={()=>setShowCrear(false)}/>}
     </div>
   );
