@@ -484,7 +484,7 @@ function Clientes() {
                 <td style={{ fontFamily:"JetBrains Mono, monospace", fontSize:"0.75rem", color:"#475569" }}>{c.tel}</td>
                 <td style={{ textAlign:"center" }}><Badge t={c.dirs.length>0?"info":"neutral"}>{c.dirs.length}</Badge></td>
                 <td><Badge t={c.estado==="Activo"?"ok":"neutral"}>{c.estado}</Badge></td>
-                <td><button className="btn btn-ghost btn-sm" onClick={e=>{e.stopPropagation();setSelected(c);}}>Abrir <Ico p={I.chevR} size={12} /></button></td>
+                <td><button className="btn btn-ghost btn-sm" onClick={e=>{e.stopPropagation();setSelected(c);}}>Ver detalles <Ico p={I.chevR} size={12} /></button></td>
               </tr>
             ))}
           </tbody>
