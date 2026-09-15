@@ -128,7 +128,7 @@ export default function Clientes({ clientes }: { clientes: Client[] }) {
                       setSelected(client)
                     }}
                   >
-                    Ver detalles <Ico p={I.chevR} size={12} />
+                    Detalles <Ico p={I.chevR} size={12} />
                   </button>
                 </td>
               </tr>
@@ -243,6 +243,13 @@ export default function Clientes({ clientes }: { clientes: Client[] }) {
                   <input className="input" placeholder={label} />
                 </div>
               ))}
+              <div className="field">
+                <label className="label">Estado</label>
+                <select className="input" defaultValue="Activo">
+                  <option value="Activo">Activo</option>
+                  <option value="Inactivo">Inactivo</option>
+                </select>
+              </div>
             </div>
             <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
               <button
