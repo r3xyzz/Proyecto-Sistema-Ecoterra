@@ -123,7 +123,6 @@ const lotes = [
   {
     id: "LT-2024-001",
     prod: "POL-001",
-    batch: "B240115",
     qty: 1200,
     envase: "IBC 1000 L",
     fabr: "2024-01-15",
@@ -135,7 +134,6 @@ const lotes = [
   {
     id: "LT-2024-002",
     prod: "POL-001",
-    batch: "B240320",
     qty: 1760,
     envase: "Tambor 200 L",
     fabr: "2024-03-20",
@@ -147,7 +145,6 @@ const lotes = [
   {
     id: "LT-2024-003",
     prod: "POL-002",
-    batch: "B240210",
     qty: 300,
     envase: "Tambor 200 L",
     fabr: "2024-02-10",
@@ -159,7 +156,6 @@ const lotes = [
   {
     id: "LT-2024-004",
     prod: "POL-003",
-    batch: "B240401",
     qty: 0,
     envase: "IBC 1000 L",
     fabr: "2024-04-01",
@@ -171,7 +167,6 @@ const lotes = [
   {
     id: "LT-2024-005",
     prod: "POL-004",
-    batch: "B240512",
     qty: 1340,
     envase: "Tambor 200 L",
     fabr: "2024-05-12",
@@ -183,7 +178,6 @@ const lotes = [
   {
     id: "LT-2024-006",
     prod: "POL-005",
-    batch: "B240603",
     qty: 200,
     envase: "Tambor 200 L",
     fabr: "2024-06-03",
