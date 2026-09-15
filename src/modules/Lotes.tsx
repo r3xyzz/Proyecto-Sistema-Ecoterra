@@ -5,7 +5,6 @@ import { Badge, fmt, I, Ico, PageTitle } from "../shared"
 type Lot = {
   id: string
   prod: string
-  batch: string
   qty: number
   envase: string
   fabr: string
@@ -17,6 +16,17 @@ type Lot = {
 export default function Lotes({ lotes }: { lotes: Lot[] }) {
   const [envase, setEnvase] = useState("")
   const [estado, setEstado] = useState("")
+  const [showModal, setShowModal] = useState(false)
+
+  const lotFields = [
+    { label: "ID Lote", type: "text", span: 1 },
+    { label: "Producto", type: "text", span: 1 },
+    { label: "Cantidad", type: "number", span: 1 },
+    { label: "Envase", type: "text", span: 1 },
+    { label: "Fabricación", type: "date", span: 1 },
+    { label: "Vencimiento", type: "date", span: 1 },
+    { label: "Ubicación", type: "text", span: 2 },
+  ]
 
   const filtered = lotes.filter(
     (lot) =>
@@ -36,7 +46,7 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
         title="Control de Lotes"
         sub="Trazabilidad de inventario físico por lote"
       >
-        <button className="btn btn-primary">
+        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           <Ico p={I.plus} size={14} /> Registrar lote
         </button>
       </PageTitle>
@@ -105,7 +115,6 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
           <thead>
             <tr>
               <th>ID Lote</th>
-              <th>Batch</th>
               <th>Producto</th>
               <th>Cantidad</th>
               <th>Envase</th>
@@ -127,7 +136,6 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
                 >
                   {lot.id}
                 </td>
-                <td>{lot.batch}</td>
                 <td style={{ fontWeight: 600 }}>{lot.prod}</td>
                 <td
                   style={{
@@ -180,6 +188,86 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
           </tbody>
         </table>
       </div>
+      {showModal && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="modal"
+            style={{ width: 540, padding: 24 }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 18,
+              }}
+            >
+              <h2 style={{ fontWeight: 700, color: "#0F172A" }}>
+                Registrar lote
+              </h2>
+              <button
+                onClick={() => setShowModal(false)}
+                aria-label="Cerrar formulario"
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94A3B8",
+                }}
+              >
+                <Ico p={I.x} size={18} />
+              </button>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+              }}
+            >
+              {lotFields.map((field) => (
+                <div
+                  className="field"
+                  key={field.label}
+                  style={{ gridColumn: `span ${field.span}` }}
+                >
+                  <label className="label">{field.label}</label>
+                  <input
+                    className="input"
+                    placeholder={field.label}
+                    type={field.type}
+                  />
+                </div>
+              ))}
+              <div className="field" style={{ gridColumn: "span 1" }}>
+                <label className="label">Estado</label>
+                <select className="input" defaultValue="Disponible">
+                  <option value="Disponible">Disponible</option>
+                  <option value="Reservado">Reservado</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+              <button
+                className="btn btn-primary"
+                style={{ flex: 1, justifyContent: "center" }}
+                onClick={() => setShowModal(false)}
+              >
+                <Ico p={I.check} size={14} /> Guardar
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => setShowModal(false)}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
