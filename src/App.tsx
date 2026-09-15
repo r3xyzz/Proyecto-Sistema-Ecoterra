@@ -40,6 +40,7 @@ const productos = [
     unidad: "Litros",
     stockMin: 600,
     stock: 2960,
+    estado: "Activo",
   },
 
   {
@@ -51,6 +52,7 @@ const productos = [
     unidad: "Litros",
     stockMin: 1000,
     stock: 300,
+    estado: "Activo",
   },
 
   {
@@ -62,6 +64,7 @@ const productos = [
     unidad: "Litros",
     stockMin: 2000,
     stock: 0,
+    estado: "Inactivo",
   },
 
   {
@@ -73,6 +76,7 @@ const productos = [
     unidad: "Litros",
     stockMin: 400,
     stock: 1340,
+    estado: "Activo",
   },
 
   {
@@ -84,6 +88,7 @@ const productos = [
     unidad: "Litros",
     stockMin: 800,
     stock: 200,
+    estado: "Activo",
   },
 ]
 
