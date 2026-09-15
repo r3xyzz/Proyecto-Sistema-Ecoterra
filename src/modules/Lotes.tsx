@@ -23,6 +23,8 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
       (!envase || lot.envase === envase) && (!estado || lot.estado === estado),
   )
 
+  const maxQty = Math.max(...lotes.map((lot) => lot.qty), 1)
+
   const expiringSoon = (date: string) => {
     const ms = new Date(date).getTime() - Date.now()
     return ms > 0 && ms < 1000 * 60 * 60 * 24 * 180
@@ -133,7 +135,24 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
                     color: lot.qty === 0 ? "#DC2626" : "#0F172A",
                   }}
                 >
-                  {fmt(lot.qty)} L
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                    }}
+                  >
+                    <span>{fmt(lot.qty)} L</span>
+                    <div className="progress" style={{ width: 80 }}>
+                      <div
+                        className="progress-fill"
+                        style={{
+                          width: `${(lot.qty / maxQty) * 100}%`,
+                          background: lot.qty === 0 ? "#DC2626" : "#00995A",
+                        }}
+                      />
+                    </div>
+                  </div>
                 </td>
                 <td>
                   <Badge t="neutral">{lot.envase}</Badge>
