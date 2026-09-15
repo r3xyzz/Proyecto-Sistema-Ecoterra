@@ -111,10 +111,18 @@ export default function Productos({ productos }: { productos: Product[] }) {
                   </td>
                   <td>
                     <div style={{ display: "flex", gap: 4 }}>
-                      <button className="btn btn-ghost btn-sm">
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        title="Editar producto"
+                        aria-label="Editar producto"
+                      >
                         <Ico p={I.edit} size={13} />
                       </button>
-                      <button className="btn btn-ghost btn-sm">
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        title="Eliminar producto"
+                        aria-label="Eliminar producto"
+                      >
                         <Ico p={I.trash} size={13} />
                       </button>
                     </div>
