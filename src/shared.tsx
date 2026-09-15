@@ -83,6 +83,7 @@ export type Product = {
   unidad: string
   stockMin: number
   stock: number
+  estado: string
 }
 
 export type BadgeType = "ok" | "warn" | "danger" | "info" | "neutral" | "purple"
