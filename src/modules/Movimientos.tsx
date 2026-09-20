@@ -11,8 +11,9 @@ type Movement = {
   prod: string
   qty: number
   batch: string
-  user: string
   ref: string
+  observacion: string
+  user: string
 }
 
 export default function Movimientos({
@@ -25,9 +26,11 @@ export default function Movimientos({
   const [type, setType] = useState<"Entrada" | "Salida" | "Ajuste">("Entrada")
   const [prod, setProd] = useState("")
   const [qty, setQty] = useState("")
+  const [reference, setReference] = useState("")
+  const [observation, setObservation] = useState("")
   const [done, setDone] = useState(false)
 
-  const history: Movement[] = [
+  const [history, setHistory] = useState<Movement[]>([
     {
       id: "MOV-00314",
       ts: "2024-06-13 09:22",
@@ -35,8 +38,9 @@ export default function Movimientos({
       prod: "POL-001",
       qty: 1200,
       batch: "LT-2024-002",
-      user: "Juan Rojas",
       ref: "EMB-2024-010",
+      observacion: "Recepción conforme de embarque.",
+      user: "Juan Rojas",
     },
     {
       id: "MOV-00313",
@@ -45,15 +49,44 @@ export default function Movimientos({
       prod: "POL-002",
       qty: -320,
       batch: "LT-2024-003",
-      user: "María López",
       ref: "OC-2024-040",
+      observacion: "Despacho parcial solicitado por operaciones.",
+      user: "María López",
     },
-  ]
+  ])
 
   const colors: Record<string, string> = {
     Entrada: "#00995A",
     Salida: "#DC2626",
     Ajuste: "#D97706",
+  }
+
+  const registerMovement = () => {
+    const now = new Date()
+    const pad = (value: number) => String(value).padStart(2, "0")
+    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+    const nextId =
+      Math.max(
+        ...history.map((movement) => Number(movement.id.replace("MOV-", ""))),
+        0,
+      ) + 1
+    const signedQuantity = Number(qty) * (type === "Salida" ? -1 : 1)
+
+    setHistory((current) => [
+      {
+        id: `MOV-${String(nextId).padStart(5, "0")}`,
+        ts: timestamp,
+        tipo: type,
+        prod,
+        qty: signedQuantity,
+        batch: "—",
+        ref: reference || "—",
+        observacion: observation,
+        user: "Usuario actual",
+      },
+      ...current,
+    ])
+    setDone(true)
   }
 
   return (
@@ -82,6 +115,8 @@ export default function Movimientos({
                   setDone(false)
                   setProd("")
                   setQty("")
+                  setReference("")
+                  setObservation("")
                 }}
               >
                 Nuevo registro
@@ -154,10 +189,30 @@ export default function Movimientos({
                     onChange={(event) => setQty(event.target.value)}
                   />
                 </div>
+                <div className="field">
+                  <label className="label">Referencia</label>
+                  <input
+                    className="input"
+                    placeholder="Ej. OC-2024-040"
+                    value={reference}
+                    onChange={(event) => setReference(event.target.value)}
+                  />
+                </div>
+                <div className="field">
+                  <label className="label">Observación</label>
+                  <textarea
+                    className="input"
+                    placeholder="Detalle adicional del movimiento"
+                    rows={3}
+                    value={observation}
+                    onChange={(event) => setObservation(event.target.value)}
+                    style={{ resize: "vertical" }}
+                  />
+                </div>
                 <button
                   className="btn btn-primary"
                   disabled={!prod || !qty}
-                  onClick={() => setDone(true)}
+                  onClick={registerMovement}
                 >
                   <Ico p={I.check} size={14} /> Confirmar {type}
                 </button>
@@ -177,6 +232,7 @@ export default function Movimientos({
                 <th>Cantidad</th>
                 <th>Lote</th>
                 <th>Referencia</th>
+                <th>Observación</th>
                 <th>Usuario</th>
               </tr>
             </thead>
@@ -207,6 +263,7 @@ export default function Movimientos({
                   </td>
                   <td>{movement.batch}</td>
                   <td>{movement.ref}</td>
+                  <td>{movement.observacion || "—"}</td>
                   <td>{movement.user}</td>
                 </tr>
               ))}
