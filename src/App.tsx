@@ -312,7 +312,7 @@ export default function App() {
         productos={productos}
       />
     ),
-    oc: <OrdenesCompra ordenes={ordenes} />,
+    oc: <OrdenesCompra ordenes={ordenes} facturas={facturas} />,
     facturacion: <Facturacion facturas={facturas} />,
     nc: <NotasCredito facturas={facturas} />,
     ia: <IaPanel productos={productos} />,
