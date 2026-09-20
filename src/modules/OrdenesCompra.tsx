@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useRef, useState } from "react"
 import { fmtCLP, I, Ico, PageTitle } from "../shared"
 
 type PurchaseOrder = {
@@ -34,6 +34,7 @@ export default function OrdenesCompra({
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState("")
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
   const [uploadedPdf, setUploadedPdf] = useState<File | null>(null)
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState("")
   const [detectedOrder, setDetectedOrder] = useState({
@@ -134,11 +135,16 @@ export default function OrdenesCompra({
         title="Órdenes de Compra"
         sub="OC recibidas de clientes y trazabilidad documental"
       >
-        <label className="btn btn-ghost" htmlFor="purchase-order-pdf">
+        <button
+          className="btn btn-ghost"
+          type="button"
+          onClick={() => pdfInputRef.current?.click()}
+        >
           <Ico p={I.upload} size={14} /> Subir OC en PDF
-        </label>
+        </button>
         <input
           id="purchase-order-pdf"
+          ref={pdfInputRef}
           type="file"
           accept="application/pdf,.pdf"
           onChange={handlePdfUpload}
