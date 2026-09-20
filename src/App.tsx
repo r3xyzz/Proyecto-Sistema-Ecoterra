@@ -308,6 +308,8 @@ export default function App() {
         cotizaciones={cotizaciones}
         ordenes={ordenes}
         facturas={facturas}
+        clientes={clientes}
+        productos={productos}
       />
     ),
     oc: <OrdenesCompra ordenes={ordenes} />,
