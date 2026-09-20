@@ -1,5 +1,5 @@
 import React, { useState } from "react"
-import { Badge, fmtCLP, I, Ico, PageTitle } from "../shared"
+import { Badge, fmtCLP, I, Ico, PageTitle, Product } from "../shared"
 
 type Quote = {
   id: string
@@ -27,14 +27,30 @@ type Invoice = {
   oc: string
 }
 
+type Client = {
+  id: number
+  razon: string
+  ciudad: string
+}
+
+type QuoteLine = {
+  productId: string
+  quantity: string
+  unitPrice: string
+}
+
 export default function Cotizaciones({
   cotizaciones,
   ordenes,
   facturas,
+  clientes,
+  productos,
 }: {
   cotizaciones: Quote[]
   ordenes: PurchaseOrder[]
   facturas: Invoice[]
+  clientes: Client[]
+  productos: Product[]
 }) {
   const [show, setShow] = useState(false)
   const [quotes, setQuotes] = useState(cotizaciones)
@@ -42,6 +58,17 @@ export default function Cotizaciones({
   const [quoteToLink, setQuoteToLink] = useState<Quote | null>(null)
   const [selectedOrder, setSelectedOrder] = useState("")
   const [linkedOrders, setLinkedOrders] = useState<Record<string, string>>({})
+  const [quoteClient, setQuoteClient] = useState("")
+  const [quoteAddress, setQuoteAddress] = useState("")
+  const [quoteDate, setQuoteDate] = useState(new Date().toISOString().slice(0, 10))
+  const [quoteValidity, setQuoteValidity] = useState("30")
+  const [paymentTerm, setPaymentTerm] = useState("30 días")
+  const [currency, setCurrency] = useState("CLP")
+  const [quoteStatus, setQuoteStatus] = useState("Borrador")
+  const [quoteObservation, setQuoteObservation] = useState("")
+  const [quoteLines, setQuoteLines] = useState<QuoteLine[]>([
+    { productId: "", quantity: "", unitPrice: "" },
+  ])
 
   const activeQuotes = quotes.filter((quote) => quote.estado === "Vigente")
   const convertedQuotes = quotes.filter(
@@ -85,6 +112,70 @@ export default function Cotizaciones({
       `Estimado cliente, adjuntamos la cotización ${quote.id} por ${fmtCLP(quote.total)}.`,
     )
     window.location.href = `mailto:?subject=${subject}&body=${body}`
+  }
+
+  const selectedClient = clientes.find(
+    (client) => client.razon === quoteClient,
+  )
+  const lineSubtotal = quoteLines.reduce(
+    (sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0),
+    0,
+  )
+  const lineIva = Math.round(lineSubtotal * 0.19)
+  const lineTotal = lineSubtotal + lineIva
+
+  const resetQuoteForm = () => {
+    setQuoteClient("")
+    setQuoteAddress("")
+    setQuoteDate(new Date().toISOString().slice(0, 10))
+    setQuoteValidity("30")
+    setPaymentTerm("30 días")
+    setCurrency("CLP")
+    setQuoteStatus("Borrador")
+    setQuoteObservation("")
+    setQuoteLines([{ productId: "", quantity: "", unitPrice: "" }])
+  }
+
+  const closeQuoteForm = () => {
+    setShow(false)
+    resetQuoteForm()
+  }
+
+  const saveQuote = (status = quoteStatus) => {
+    if (!quoteClient || !quoteLines.some((line) => line.productId && line.quantity)) return
+
+    const nextId =
+      Math.max(
+        ...quotes.map((quote) => Number(quote.id.replace("COT-2024-", ""))),
+        0,
+      ) + 1
+    const expiration = new Date(quoteDate)
+    expiration.setDate(expiration.getDate() + Number(quoteValidity))
+    const expirationDate = expiration.toISOString().slice(0, 10)
+
+    setQuotes((current) => [
+      {
+        id: `COT-2024-${String(nextId).padStart(3, "0")}`,
+        cliente: quoteClient,
+        fecha: quoteDate,
+        vigencia: expirationDate,
+        subtotal: lineSubtotal,
+        iva: lineIva,
+        total: lineTotal,
+        observacion: quoteObservation,
+        estado: status,
+      },
+      ...current,
+    ])
+    closeQuoteForm()
+  }
+
+  const updateLine = (index: number, changes: Partial<QuoteLine>) => {
+    setQuoteLines((current) =>
+      current.map((line, lineIndex) =>
+        lineIndex === index ? { ...line, ...changes } : line,
+      ),
+    )
   }
 
   return (
@@ -232,40 +323,125 @@ export default function Cotizaciones({
         </table>
       </div>
       {show && (
-        <div className="modal-backdrop" onClick={() => setShow(false)}>
+        <div className="modal-backdrop" onClick={closeQuoteForm}>
           <div
             className="modal"
-            style={{ width: 480, padding: 24 }}
+            style={{ width: 820, maxWidth: "calc(100vw - 32px)", padding: 24 }}
             onClick={(event) => event.stopPropagation()}
           >
-            <h2 style={{ fontWeight: 700, marginBottom: 18 }}>
-              Nueva Cotización
-            </h2>
-            <div className="field">
-              <label className="label">Cliente</label>
-              <select className="select">
-                <option>Seleccionar cliente…</option>
-              </select>
-            </div>
-            <div className="field" style={{ marginTop: 12 }}>
-              <label className="label">Vigencia</label>
-              <select className="select">
-                <option>7 días</option>
-                <option>10 días</option>
-                <option>15 días</option>
-                <option>30 días</option>
-              </select>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+              <div>
+                <h2 style={{ fontWeight: 700, color: "#0F172A" }}>Nueva Cotización</h2>
+                <p style={{ color: "#64748B", fontSize: "0.75rem", marginTop: 3 }}>
+                  COT-2024-{String(Math.max(...quotes.map((quote) => Number(quote.id.replace("COT-2024-", ""))), 0) + 1).padStart(3, "0")} · {quoteStatus}
+                </p>
+              </div>
               <button
-                className="btn btn-primary"
-                onClick={() => setShow(false)}
+                onClick={closeQuoteForm}
+                aria-label="Cerrar nueva cotización"
+                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B" }}
               >
-                Guardar borrador
+                <Ico p={I.x} size={18} />
               </button>
-              <button className="btn btn-ghost" onClick={() => setShow(false)}>
-                Cancelar
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="field">
+                <label className="label">Cliente *</label>
+                <select className="select" value={quoteClient} onChange={(event) => { setQuoteClient(event.target.value); setQuoteAddress("") }}>
+                  <option value="">Seleccionar cliente…</option>
+                  {clientes.map((client) => <option key={client.id}>{client.razon}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Dirección de despacho *</label>
+                <select className="select" value={quoteAddress} onChange={(event) => setQuoteAddress(event.target.value)} disabled={!selectedClient}>
+                  <option value="">Seleccionar dirección…</option>
+                  {selectedClient && <option value={selectedClient.ciudad}>{selectedClient.ciudad} · Dirección principal</option>}
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Fecha</label>
+                <input className="input" type="date" value={quoteDate} onChange={(event) => setQuoteDate(event.target.value)} />
+              </div>
+              <div className="field">
+                <label className="label">Vigencia</label>
+                <select className="select" value={quoteValidity} onChange={(event) => setQuoteValidity(event.target.value)}>
+                  <option value="30">30 días</option>
+                  <option value="15">15 días</option>
+                  <option value="45">45 días</option>
+                  <option value="60">60 días</option>
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Condición de pago</label>
+                <select className="select" value={paymentTerm} onChange={(event) => setPaymentTerm(event.target.value)}>
+                  <option>30 días</option>
+                  <option>60 días</option>
+                  <option>Contado</option>
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Moneda</label>
+                <select className="select" value={currency} onChange={(event) => setCurrency(event.target.value)}>
+                  <option>CLP</option>
+                  <option>USD</option>
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Estado *</label>
+                <select className="select" value={quoteStatus} onChange={(event) => setQuoteStatus(event.target.value)}>
+                  <option>Borrador</option>
+                  <option>Vigente</option>
+                  <option>Vencida</option>
+                  <option>Convertida</option>
+                </select>
+              </div>
+            </div>
+            <div style={{ marginTop: 22 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <strong>Productos / Servicios</strong>
+                <button className="btn btn-ghost btn-sm" onClick={() => setQuoteLines((current) => [...current, { productId: "", quantity: "", unitPrice: "" }])}>
+                  <Ico p={I.plus} size={13} /> Agregar línea
+                </button>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 1fr) 90px 130px 130px 32px", gap: 8, alignItems: "center", color: "#64748B", fontSize: "0.6875rem", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>
+                <span>Producto</span><span>Cant.</span><span>P. Unit. ({currency})</span><span>Subtotal</span><span />
+              </div>
+              {quoteLines.map((line, index) => {
+                const product = productos.find((item) => String(item.id) === line.productId)
+                const subtotal = Number(line.quantity || 0) * Number(line.unitPrice || 0)
+                return (
+                  <div key={index} style={{ display: "grid", gridTemplateColumns: "minmax(220px, 1fr) 90px 130px 130px 32px", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                    <select className="select" value={line.productId} onChange={(event) => updateLine(index, { productId: event.target.value })}>
+                      <option value="">Seleccionar producto…</option>
+                      {productos.map((item) => <option key={item.id} value={item.id}>{item.codigo} · {item.nombre}</option>)}
+                    </select>
+                    <input className="input" type="number" min={1} placeholder="0" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} />
+                    <input className="input" type="number" min={0} placeholder="0" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} />
+                    <span style={{ textAlign: "right", fontWeight: 600 }}>{product ? fmtCLP(subtotal) : "$0"}</span>
+                    <button className="btn btn-ghost btn-sm" title="Eliminar línea" aria-label="Eliminar línea" disabled={quoteLines.length === 1} onClick={() => setQuoteLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}>
+                      <Ico p={I.trash} size={13} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="field" style={{ marginTop: 16 }}>
+              <label className="label">Observaciones</label>
+              <textarea className="input" rows={3} placeholder="Notas adicionales de la cotización" value={quoteObservation} onChange={(event) => setQuoteObservation(event.target.value)} />
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5, marginTop: 16, borderTop: "1px solid #E2E8F0", paddingTop: 14 }}>
+              <span>Subtotal neto <strong>{fmtCLP(lineSubtotal)}</strong></span>
+              <span>IVA (19%) <strong>{fmtCLP(lineIva)}</strong></span>
+              <strong style={{ fontSize: "1rem", marginTop: 5 }}>Total <span style={{ marginLeft: 34 }}>{fmtCLP(lineTotal)}</span></strong>
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 20 }}>
+              <button className="btn btn-primary" disabled={!quoteClient || !quoteAddress || !quoteLines.some((line) => line.productId && line.quantity)} onClick={() => saveQuote("Borrador")}>
+                <Ico p={I.check} size={14} /> Guardar borrador
               </button>
+              <button className="btn btn-ghost" onClick={() => window.print()}><Ico p={I.download} size={14} /> Exportar PDF</button>
+              <button className="btn btn-ghost" onClick={() => { const subject = encodeURIComponent("Nueva cotización Ecoterra"); window.location.href = `mailto:?subject=${subject}` }}><Ico p={I.mail} size={14} /> Enviar por correo</button>
+              <button className="btn btn-navy" disabled={!quoteClient || !quoteAddress || !quoteLines.some((line) => line.productId && line.quantity)} onClick={() => saveQuote("Vigente")}><Ico p={I.check} size={14} /> Emitir cotización</button>
             </div>
           </div>
         </div>
