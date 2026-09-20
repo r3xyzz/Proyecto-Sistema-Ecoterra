@@ -1,6 +1,8 @@
 import React from "react"
 
-import { Badge, fmt, I, Ico, PageTitle, Product, Screen } from "../shared"
+import logoEcoterra from "@/imports/logo_ecoterra.png"
+
+import { Badge, fmt, I, Ico, Product, Screen } from "../shared"
 
 export default function Dashboard({
   productos,
@@ -12,6 +14,12 @@ export default function Dashboard({
   const stockAlerts = productos.filter(
     (product) => product.stock < product.stockMin,
   )
+  const today = new Date().toLocaleDateString("es-CL", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
 
   const activity = [
     {
@@ -41,28 +49,41 @@ export default function Dashboard({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-      <PageTitle
-        title="Dashboard"
-        sub="Métricas operativas y alertas IA · Actualizado hace 4 min"
-      />
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(2,1fr)",
-          gap: 10,
-        }}
-      >
-        <div className="kpi">
-          <div className="kpi-label">Cotizaciones vigentes</div>
-          <div className="kpi-value tabular">6</div>
-          <div className="kpi-sub">$12,4M CLP en cartera</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-label">Facturas pendientes</div>
-          <div className="kpi-value tabular" style={{ color: "#B45309" }}>
-            3
+      <div className="dashboard-hero">
+        <div className="dashboard-hero-orb dashboard-hero-orb-top" />
+        <div className="dashboard-hero-orb dashboard-hero-orb-bottom" />
+        <div className="dashboard-hero-brand">
+          <div className="dashboard-hero-logo">
+            <img src={logoEcoterra} alt="Ecoterra" />
           </div>
-          <div className="kpi-sub">$10,09M CLP por cobrar</div>
+          <div>
+            <div className="dashboard-hero-eyebrow">
+              Sistema de Gestión Operativa
+            </div>
+            <div className="dashboard-hero-title">Panel de Control</div>
+            <div className="dashboard-hero-date">
+              Actualizado hace 4 min · {today}
+            </div>
+          </div>
+        </div>
+        <div className="dashboard-hero-kpis">
+          {stockAlerts.length > 0 && (
+            <button
+              className="dashboard-hero-kpi dashboard-hero-kpi-alert"
+              onClick={() => onNav("ia")}
+            >
+              <span>Alertas stock</span>
+              <strong>{stockAlerts.length}</strong>
+            </button>
+          )}
+          <div className="dashboard-hero-kpi">
+            <span>Cotizaciones</span>
+            <strong>6</strong>
+          </div>
+          <div className="dashboard-hero-kpi">
+            <span>Fact. pendientes</span>
+            <strong className="dashboard-hero-kpi-warn">3</strong>
+          </div>
         </div>
       </div>
       <div className="panel">
