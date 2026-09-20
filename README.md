@@ -1,13 +1,15 @@
 <div align="center">
 
+<img src="src/imports/logo_ecoterra.png" alt="EcoTerra Logo" width="320" />
+
 # 🌍 EcoTerra — Sistema de Gestión Operativa, Facturación e Inteligencia Artificial
 
-[![React](https://img.shields.io/badge/Frontend-React-61DAFB?style=for-the-badge&logo=react&logoColor=black)][cite: 1]
-[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind_CSS-38BDF8?style=for-the-badge&logo=tailwind-css&logoColor=white)][cite: 1]
-[![Django REST](https://img.shields.io/badge/Backend-Django_REST_Framework-092E20?style=for-the-badge&logo=django&logoColor=white)][cite: 1]
-[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)][cite: 1]
-[![Scikit-Learn](https://img.shields.io/badge/AI/ML-Scikit--Learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)][cite: 1]
-[![Python](https://img.shields.io/badge/Language-Python_3.x-3776AB?style=for-the-badge&logo=python&logoColor=white)][cite: 1]
+[![React](https://img.shields.io/badge/Frontend-React-61DAFB?style=for-the-badge&logo=react&logoColor=black)]
+[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind_CSS-38BDF8?style=for-the-badge&logo=tailwind-css&logoColor=white)]
+[![Django REST](https://img.shields.io/badge/Backend-Django_REST_Framework-092E20?style=for-the-badge&logo=django&logoColor=white)]
+[![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)]
+[![Scikit-Learn](https://img.shields.io/badge/AI/ML-Scikit--Learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)]
+[![Python](https://img.shields.io/badge/Language-Python_3.x-3776AB?style=for-the-badge&logo=python&logoColor=white)]
 
 <p align="center">
   <b>Sistema integral para la centralización de clientes, inventario, cotizaciones, facturación y análisis predictivo en el control de polvo y estabilización de caminos.</b>
@@ -63,15 +65,15 @@ Desarrollados en **Python** utilizando **Scikit-Learn**, orientados al apoyo en 
 
 | Modelo | Entradas (Features) | Salida (Target) | Propósito |
 | :--- | :--- | :--- | :--- |
-| **⏱️ Tiempo de Llegada** | Puerto de origen, Naviera, Tipo de carga, Mes | Días estimados de arribo[cite: 1] | Estimar tiempos de traslado marítimo EE.UU. ➔ Chile[cite: 1]. |
-| **💰 Predicción de Precio** | Producto, Fecha, Cantidad[cite: 1] | Precio esperado ($)[cite: 1] | Proyectar variaciones de precios basadas en historial de ventas[cite: 1]. |
-| **📊 Reposición de Stock** | Stock actual, Ventas promedio, Stock mínimo[cite: 1] | Días restantes antes del desabastecimiento[cite: 1] | Planificar compras y evitar quiebres de inventario[cite: 1]. |
+| **⏱️ Tiempo de Llegada** | Puerto de origen, Naviera, Tipo de carga, Mes | Días estimados de arribo | Estimar tiempos de traslado marítimo EE.UU. ➔ Chile. |
+| **💰 Predicción de Precio** | Producto, Fecha, Cantidad | Precio esperado ($) | Proyectar variaciones de precios basadas en historial de ventas. |
+| **📊 Reposición de Stock** | Stock actual, Ventas promedio, Stock mínimo | Días restantes antes del desabastecimiento | Planificar compras y evitar quiebres de inventario. |
 
 ---
 
 ## 🏗️ Arquitectura del Sistema
 
-El sistema utiliza una arquitectura cliente-servidor por capas[cite: 1]:
+El sistema utiliza una arquitectura cliente-servidor por capas:
 
 ```mermaid
 graph TD
