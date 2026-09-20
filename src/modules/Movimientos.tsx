@@ -1,5 +1,4 @@
 import React, { useState } from "react"
-
 import { Badge, fmt, I, Ico, PageTitle, Product } from "../shared"
 
 type Lot = { id: string; prod: string; ubic: string; qty: number }

@@ -1,5 +1,4 @@
 import React from "react"
-
 import { Badge, fmtCLP, I, Ico, PageTitle } from "../shared"
 
 type PurchaseOrder = {
