@@ -1,34 +1,20 @@
 import React, { useState } from "react"
-
 import AppLayout from "./layout/AppLayout"
-
 import Dashboard from "./modules/Dashboard"
-
 import Clientes from "./modules/Clientes"
-
 import Proveedores from "./modules/Proveedores"
-
 import Productos from "./modules/Productos"
-
 import Lotes from "./modules/Lotes"
-
 import Movimientos from "./modules/Movimientos"
-
 import Cotizaciones from "./modules/Cotizaciones"
-
 import OrdenesCompra from "./modules/OrdenesCompra"
-
 import Facturacion from "./modules/Facturacion"
-
 import NotasCredito from "./modules/NotasCredito"
-
 import IaPanel from "./modules/IaPanel"
-
 import Login from "./modules/Login"
-
 import Usuarios from "./modules/Usuarios"
-
 import { Screen } from "./shared"
+
 
 const productos = [
   {
@@ -193,10 +179,11 @@ const cotizaciones = [
     cliente: "Minera Los Bronces S.A.",
     fecha: "2024-06-10",
     vigencia: "2024-07-10",
+    subtotal: 3571429,
+    iva: 678571,
     total: 4250000,
+    observacion: "Entrega estimada en dos despachos según disponibilidad de bodega.",
     estado: "Vigente",
-    oc: null,
-    factura: null,
   },
 
   {
@@ -204,10 +191,11 @@ const cotizaciones = [
     cliente: "Constructora Vial Sur Ltda.",
     fecha: "2024-06-05",
     vigencia: "2024-07-05",
+    subtotal: 1546218,
+    iva: 293782,
     total: 1840000,
+    observacion: "Precios sujetos a confirmación de volumen.",
     estado: "Convertida",
-    oc: "OC-2024-040",
-    factura: "FAC-2024-121",
   },
 
   {
@@ -215,10 +203,11 @@ const cotizaciones = [
     cliente: "Portuaria del Pacífico",
     fecha: "2024-05-28",
     vigencia: "2024-06-28",
+    subtotal: 6453782,
+    iva: 1226218,
     total: 7680000,
+    observacion: "Considerar coordinación previa con el área de operaciones.",
     estado: "Vencida",
-    oc: null,
-    factura: null,
   },
 
   {
@@ -226,10 +215,11 @@ const cotizaciones = [
     cliente: "Agrícola Atacama SpA",
     fecha: "2024-05-20",
     vigencia: "2024-06-20",
+    subtotal: 478992,
+    iva: 91008,
     total: 570000,
+    observacion: "Despacho a confirmar con el cliente.",
     estado: "Vigente",
-    oc: "OC-2024-038",
-    factura: null,
   },
 ]
 
@@ -313,7 +303,13 @@ export default function App() {
     productos: <Productos productos={productos} />,
     lotes: <Lotes lotes={lotes} />,
     movimientos: <Movimientos productos={productos} lotes={lotes} />,
-    cotizaciones: <Cotizaciones cotizaciones={cotizaciones} />,
+    cotizaciones: (
+      <Cotizaciones
+        cotizaciones={cotizaciones}
+        ordenes={ordenes}
+        facturas={facturas}
+      />
+    ),
     oc: <OrdenesCompra ordenes={ordenes} />,
     facturacion: <Facturacion facturas={facturas} />,
     nc: <NotasCredito facturas={facturas} />,

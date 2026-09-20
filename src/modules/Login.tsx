@@ -1,5 +1,4 @@
 import React from "react"
-
 import { I, Ico } from "../shared"
 
 export default function Login({ onEnter }: { onEnter: () => void }) {

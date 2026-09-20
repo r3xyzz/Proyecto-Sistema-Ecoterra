@@ -1,5 +1,4 @@
 import React, { useState } from "react"
-
 import { Badge, fmt, I, Ico, PageTitle } from "../shared"
 
 type Lot = {

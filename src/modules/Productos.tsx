@@ -1,5 +1,4 @@
 import React, { useState } from "react"
-
 import { Badge, fmt, I, Ico, PageTitle, Product } from "../shared"
 
 export default function Productos({ productos }: { productos: Product[] }) {

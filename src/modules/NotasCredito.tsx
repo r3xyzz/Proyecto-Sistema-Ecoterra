@@ -1,5 +1,4 @@
 import React, { useState } from "react"
-
 import { Badge, fmtCLP, I, Ico, PageTitle } from "../shared"
 
 type CreditNote = {
@@ -14,7 +13,7 @@ type CreditNote = {
 export default function NotasCredito({
   facturas,
 }: {
-  facturas: { id: string cliente: string total: number }[]
+  facturas: { id: string; cliente: string; total: number }[]
 }) {
   const [showNew, setShowNew] = useState(false)
 
