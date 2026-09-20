@@ -52,6 +52,10 @@ export const I = {
 
   pdf: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6",
 
+  download: "M12 3v12m0 0l-4-4m4 4l4-4M5 21h14",
+
+  link: "M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71",
+
   edit: "M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7 M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z",
 
   trash:
@@ -88,7 +92,7 @@ export type Product = {
 
 export type BadgeType = "ok" | "warn" | "danger" | "info" | "neutral" | "purple"
 
-export function Badge({ t, children }: { t: BadgeType children: ReactNode }) {
+export function Badge({ t, children }: { t: BadgeType; children: ReactNode }) {
   return <span className={`badge badge-${t}`}>{children}</span>
 }
 

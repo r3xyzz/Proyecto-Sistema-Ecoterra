@@ -1,5 +1,4 @@
 import React from "react"
-
 import { Badge, I, Ico, PageTitle, Product } from "../shared"
 
 export default function IaPanel({ productos }: { productos: Product[] }) {

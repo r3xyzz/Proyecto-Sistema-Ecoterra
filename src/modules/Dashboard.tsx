@@ -1,7 +1,5 @@
 import React from "react"
-
 import logoEcoterra from "@/imports/logo_ecoterra.png"
-
 import { Badge, fmt, I, Ico, Product, Screen } from "../shared"
 
 export default function Dashboard({
