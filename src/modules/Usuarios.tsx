@@ -96,42 +96,24 @@ export default function Usuarios() {
           </tbody>
         </table>
       </div>
-      <div className="panel" style={{ marginTop: 16 }}>
+      <div className="panel usuarios-panel">
         <div className="panel-header">
-          <span style={{ fontWeight: 700, color: "#0F172A" }}>
+          <span className="usuarios-section-title">
             Roles y permisos
           </span>
           <Badge t="neutral">Prototipo</Badge>
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 12,
-            padding: 18,
-          }}
-        >
+        <div className="usuarios-roles-grid">
           {roles.map((role, index) => (
             <button
               key={role}
               onClick={() => setSelectedRole(role)}
-              style={{
-                textAlign: "left",
-                padding: 16,
-                border: `1px solid ${
-                  selectedRole === role ? "#00995A" : "#E2E8F0"
-                }`,
-                borderRadius: 8,
-                background: selectedRole === role ? "#F0FDF4" : "white",
-                cursor: "pointer",
-              }}
+              className={`usuarios-role-card ${selectedRole === role ? "active" : "inactive"}`}
             >
-              <div
-                style={{ fontWeight: 700, color: "#0F172A", marginBottom: 8 }}
-              >
+              <div className="usuarios-role-title">
                 {role}
               </div>
-              <div style={{ fontSize: "0.75rem", color: "#64748B" }}>
+              <div className="usuarios-role-desc">
                 {index === 0
                   ? "Acceso total a todos los módulos."
                   : index === 1
@@ -145,14 +127,13 @@ export default function Usuarios() {
       {showNew && (
         <div className="modal-backdrop" onClick={() => setShowNew(false)}>
           <div
-            className="modal"
-            style={{ width: 480, padding: 24 }}
+            className="modal usuarios-modal"
             onClick={(event) => event.stopPropagation()}
           >
-            <h2 style={{ fontWeight: 700, color: "#0F172A", marginBottom: 18 }}>
+            <h2 className="usuarios-modal-title">
               Nuevo usuario
             </h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="usuarios-form">
               <div className="field">
                 <label className="label">Nombre completo</label>
                 <input className="input" placeholder="Nombre del usuario" />
@@ -178,7 +159,7 @@ export default function Usuarios() {
                 </select>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+            <div className="usuarios-form-actions">
               <button
                 className="btn btn-primary"
                 onClick={() => setShowNew(false)}

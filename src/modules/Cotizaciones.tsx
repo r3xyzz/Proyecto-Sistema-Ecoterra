@@ -185,33 +185,26 @@ export default function Cotizaciones({
           <Ico p={I.plus} size={14} /> Nueva cotización
         </button>
       </PageTitle>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 10,
-          marginBottom: 14,
-        }}
-      >
+      <div className="cotizaciones-kpi-grid">
         <div className="kpi">
           <div className="kpi-label">Vigentes</div>
           <div className="kpi-value tabular">{activeQuotes.length}</div>
-          <div style={{ color: "#64748B", fontSize: "0.75rem", marginTop: 4 }}>
+          <div className="cotizaciones-kpi-note">
             {fmtCLP(activeQuotes.reduce((sum, quote) => sum + quote.total, 0))} CLP
           </div>
         </div>
         <div className="kpi">
           <div className="kpi-label">Convertidas (mes)</div>
-          <div className="kpi-value tabular" style={{ color: "#00995A" }}>
+          <div className="kpi-value tabular cotizaciones-kpi-positive">
             {convertedQuotes.length}
           </div>
-          <div style={{ color: "#64748B", fontSize: "0.75rem", marginTop: 4 }}>
+          <div className="cotizaciones-kpi-note">
             Tasa: {quotes.length ? Math.round((convertedQuotes.length / quotes.length) * 100) : 0}%
           </div>
         </div>
         <div className="kpi">
           <div className="kpi-label">Vencidas</div>
-          <div className="kpi-value tabular" style={{ color: "#DC2626" }}>
+          <div className="kpi-value tabular cotizaciones-kpi-negative">
             {expiredQuotes.length}
           </div>
         </div>
@@ -220,7 +213,7 @@ export default function Cotizaciones({
           <div className="kpi-value tabular">
             {fmtCLP(totalQuoted)}
           </div>
-          <div style={{ color: "#64748B", fontSize: "0.75rem", marginTop: 4 }}>
+          <div className="cotizaciones-kpi-note">
             CLP mes actual
           </div>
         </div>
@@ -251,69 +244,69 @@ export default function Cotizaciones({
 
                   return (
                     <>
-                <td style={{ fontWeight: 700, color: "#0052CC" }}>
-                  {quote.id}
-                </td>
-                <td>{quote.cliente}</td>
-                <td>{quote.fecha}</td>
-                <td>{quote.vigencia}</td>
-                <td>{fmtCLP(quote.subtotal)}</td>
-                <td>{fmtCLP(quote.iva)}</td>
-                <td>{fmtCLP(quote.total)}</td>
-                <td>{order?.id ?? "—"}</td>
-                <td>{invoice?.id ?? "—"}</td>
-                <td>
-                  <Badge
-                    t={
-                      quote.estado === "Convertida"
-                        ? "ok"
-                        : quote.estado === "Vencida"
-                          ? "danger"
-                          : "info"
-                    }
-                  >
-                    {quote.estado}
-                  </Badge>
-                </td>
-                <td>
-                  <div style={{ display: "flex", gap: 4 }}>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      title="Vista previa"
-                      aria-label={`Vista previa ${quote.id}`}
-                      onClick={() => setPreview(quote)}
-                    >
-                      <Ico p={I.pdf} size={13} />
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      title="Descargar PDF"
-                      aria-label={`Descargar PDF ${quote.id}`}
-                      onClick={() => {
-                        setPreview(quote)
-                        window.setTimeout(() => window.print(), 0)
-                      }}
-                    >
-                      <Ico p={I.download} size={13} />
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      title="Enviar por correo"
-                      aria-label={`Enviar ${quote.id} por correo`}
-                      onClick={() => sendByEmail(quote)}
-                    >
-                      <Ico p={I.mail} size={13} />
-                    </button>
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      title="Asociar a orden de compra"
-                      aria-label={`Asociar ${quote.id} a una orden de compra`}
-                      onClick={() => setQuoteToLink(quote)}
-                    >
-                      <Ico p={I.link} size={13} />
-                    </button>
-                  </div>
-                </td>
+                      <td className="cotizaciones-table-id">
+                        {quote.id}
+                      </td>
+                      <td>{quote.cliente}</td>
+                      <td>{quote.fecha}</td>
+                      <td>{quote.vigencia}</td>
+                      <td>{fmtCLP(quote.subtotal)}</td>
+                      <td>{fmtCLP(quote.iva)}</td>
+                      <td>{fmtCLP(quote.total)}</td>
+                      <td>{order?.id ?? "—"}</td>
+                      <td>{invoice?.id ?? "—"}</td>
+                      <td>
+                        <Badge
+                          t={
+                            quote.estado === "Convertida"
+                              ? "ok"
+                              : quote.estado === "Vencida"
+                                ? "danger"
+                                : "info"
+                          }
+                        >
+                          {quote.estado}
+                        </Badge>
+                      </td>
+                      <td>
+                        <div className="cotizaciones-row-actions">
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            title="Vista previa"
+                            aria-label={`Vista previa ${quote.id}`}
+                            onClick={() => setPreview(quote)}
+                          >
+                            <Ico p={I.pdf} size={13} />
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            title="Descargar PDF"
+                            aria-label={`Descargar PDF ${quote.id}`}
+                            onClick={() => {
+                              setPreview(quote)
+                              window.setTimeout(() => window.print(), 0)
+                            }}
+                          >
+                            <Ico p={I.download} size={13} />
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            title="Enviar por correo"
+                            aria-label={`Enviar ${quote.id} por correo`}
+                            onClick={() => sendByEmail(quote)}
+                          >
+                            <Ico p={I.mail} size={13} />
+                          </button>
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            title="Asociar a orden de compra"
+                            aria-label={`Asociar ${quote.id} a una orden de compra`}
+                            onClick={() => setQuoteToLink(quote)}
+                          >
+                            <Ico p={I.link} size={13} />
+                          </button>
+                        </div>
+                      </td>
                     </>
                   )
                 })()}
@@ -325,26 +318,25 @@ export default function Cotizaciones({
       {show && (
         <div className="modal-backdrop" onClick={closeQuoteForm}>
           <div
-            className="modal"
-            style={{ width: 820, maxWidth: "calc(100vw - 32px)", padding: 24 }}
+            className="modal cotizaciones-modal cotizaciones-modal-wide"
             onClick={(event) => event.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
+            <div className="cotizaciones-modal-head">
               <div>
-                <h2 style={{ fontWeight: 700, color: "#0F172A" }}>Nueva Cotización</h2>
-                <p style={{ color: "#64748B", fontSize: "0.75rem", marginTop: 3 }}>
+                <h2 className="cotizaciones-modal-title">Nueva Cotización</h2>
+                <p className="cotizaciones-modal-subtitle">
                   COT-2024-{String(Math.max(...quotes.map((quote) => Number(quote.id.replace("COT-2024-", ""))), 0) + 1).padStart(3, "0")} · {quoteStatus}
                 </p>
               </div>
               <button
                 onClick={closeQuoteForm}
                 aria-label="Cerrar nueva cotización"
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#64748B" }}
+                className="cotizaciones-modal-close"
               >
                 <Ico p={I.x} size={18} />
               </button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div className="cotizaciones-grid-2">
               <div className="field">
                 <label className="label">Cliente *</label>
                 <select className="select" value={quoteClient} onChange={(event) => { setQuoteClient(event.target.value); setQuoteAddress("") }}>
@@ -397,28 +389,28 @@ export default function Cotizaciones({
                 </select>
               </div>
             </div>
-            <div style={{ marginTop: 22 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div className="cotizaciones-lines">
+              <div className="cotizaciones-lines-header">
                 <strong>Productos / Servicios</strong>
                 <button className="btn btn-ghost btn-sm" onClick={() => setQuoteLines((current) => [...current, { productId: "", quantity: "", unitPrice: "" }])}>
                   <Ico p={I.plus} size={13} /> Agregar línea
                 </button>
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(220px, 1fr) 90px 130px 130px 32px", gap: 8, alignItems: "center", color: "#64748B", fontSize: "0.6875rem", fontWeight: 700, textTransform: "uppercase", marginBottom: 6 }}>
+              <div className="cotizaciones-lines-grid cotizaciones-lines-grid-head">
                 <span>Producto</span><span>Cant.</span><span>P. Unit. ({currency})</span><span>Subtotal</span><span />
               </div>
               {quoteLines.map((line, index) => {
                 const product = productos.find((item) => String(item.id) === line.productId)
                 const subtotal = Number(line.quantity || 0) * Number(line.unitPrice || 0)
                 return (
-                  <div key={index} style={{ display: "grid", gridTemplateColumns: "minmax(220px, 1fr) 90px 130px 130px 32px", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                  <div key={index} className="cotizaciones-lines-grid">
                     <select className="select" value={line.productId} onChange={(event) => updateLine(index, { productId: event.target.value })}>
                       <option value="">Seleccionar producto…</option>
                       {productos.map((item) => <option key={item.id} value={item.id}>{item.codigo} · {item.nombre}</option>)}
                     </select>
                     <input className="input" type="number" min={1} placeholder="0" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} />
                     <input className="input" type="number" min={0} placeholder="0" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} />
-                    <span style={{ textAlign: "right", fontWeight: 600 }}>{product ? fmtCLP(subtotal) : "$0"}</span>
+                    <span className="cotizaciones-line-subtotal">{product ? fmtCLP(subtotal) : "$0"}</span>
                     <button className="btn btn-ghost btn-sm" title="Eliminar línea" aria-label="Eliminar línea" disabled={quoteLines.length === 1} onClick={() => setQuoteLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}>
                       <Ico p={I.trash} size={13} />
                     </button>
@@ -426,16 +418,16 @@ export default function Cotizaciones({
                 )
               })}
             </div>
-            <div className="field" style={{ marginTop: 16 }}>
+            <div className="field cotizaciones-observation">
               <label className="label">Observaciones</label>
               <textarea className="input" rows={3} placeholder="Notas adicionales de la cotización" value={quoteObservation} onChange={(event) => setQuoteObservation(event.target.value)} />
             </div>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 5, marginTop: 16, borderTop: "1px solid #E2E8F0", paddingTop: 14 }}>
+            <div className="cotizaciones-summary">
               <span>Subtotal neto <strong>{fmtCLP(lineSubtotal)}</strong></span>
               <span>IVA (19%) <strong>{fmtCLP(lineIva)}</strong></span>
-              <strong style={{ fontSize: "1rem", marginTop: 5 }}>Total <span style={{ marginLeft: 34 }}>{fmtCLP(lineTotal)}</span></strong>
+              <strong className="cotizaciones-summary-total">Total <span className="cotizaciones-summary-total-value">{fmtCLP(lineTotal)}</span></strong>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 20 }}>
+            <div className="cotizaciones-summary-actions">
               <button className="btn btn-primary" disabled={!quoteClient || !quoteAddress || !quoteLines.some((line) => line.productId && line.quantity)} onClick={() => saveQuote("Borrador")}>
                 <Ico p={I.check} size={14} /> Guardar borrador
               </button>
@@ -449,39 +441,38 @@ export default function Cotizaciones({
       {preview && (
         <div className="modal-backdrop" onClick={() => setPreview(null)}>
           <div
-            className="modal"
-            style={{ width: 680, padding: 24 }}
+            className="modal cotizaciones-modal cotizaciones-preview-modal"
             onClick={(event) => event.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
+            <div className="cotizaciones-preview-head">
               <div>
-                <h2 style={{ fontWeight: 700, color: "#0F172A" }}>
+                <h2 className="cotizaciones-preview-title">
                   Vista Previa · {preview.id}
                 </h2>
-                <p style={{ fontSize: "0.75rem", color: "#64748B" }}>
+                <p className="cotizaciones-preview-subtitle">
                   Cotización comercial · {preview.fecha}
                 </p>
               </div>
               <button
                 onClick={() => setPreview(null)}
                 aria-label="Cerrar vista previa"
-                style={{ background: "none", border: "none", cursor: "pointer" }}
+                className="cotizaciones-modal-close"
               >
                 <Ico p={I.x} size={18} />
               </button>
             </div>
-            <div style={{ border: "1px solid #E2E8F0", padding: 28 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "2px solid #00995A", paddingBottom: 16, marginBottom: 20 }}>
-                <strong style={{ color: "#00995A", fontSize: "1.2rem" }}>Ecoterra</strong>
+            <div className="cotizaciones-preview-shell">
+              <div className="cotizaciones-preview-brand">
+                <strong className="cotizaciones-preview-brand-name">Ecoterra</strong>
                 <strong>{preview.id}</strong>
               </div>
-              <p style={{ fontWeight: 700 }}>{preview.cliente}</p>
-              <p style={{ color: "#64748B", marginTop: 6 }}>Vigencia hasta {preview.vigencia}</p>
-              <p style={{ color: "#475569", marginTop: 18 }}>{preview.observacion}</p>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, marginTop: 28, borderTop: "1px solid #E2E8F0", paddingTop: 14 }}>
+              <p className="cotizaciones-preview-customer">{preview.cliente}</p>
+              <p className="cotizaciones-preview-meta">Vigencia hasta {preview.vigencia}</p>
+              <p className="cotizaciones-preview-note">{preview.observacion}</p>
+              <div className="cotizaciones-preview-summary">
                 <span>Subtotal: {fmtCLP(preview.subtotal)}</span>
                 <span>IVA: {fmtCLP(preview.iva)}</span>
-                <strong style={{ fontSize: "1rem" }}>Total: {fmtCLP(preview.total)}</strong>
+                <strong className="cotizaciones-summary-total">Total: {fmtCLP(preview.total)}</strong>
               </div>
             </div>
           </div>
@@ -490,12 +481,11 @@ export default function Cotizaciones({
       {quoteToLink && (
         <div className="modal-backdrop" onClick={() => setQuoteToLink(null)}>
           <div
-            className="modal"
-            style={{ width: 520, padding: 24 }}
+            className="modal cotizaciones-modal cotizaciones-link-modal"
             onClick={(event) => event.stopPropagation()}
           >
-            <h2 style={{ fontWeight: 700, marginBottom: 8 }}>Asociar Orden de Compra</h2>
-            <p style={{ color: "#64748B", fontSize: "0.8125rem", marginBottom: 18 }}>
+            <h2 className="cotizaciones-link-title">Asociar Orden de Compra</h2>
+            <p className="cotizaciones-link-subtitle">
               Selecciona una OC existente para {quoteToLink.id}.
             </p>
             <div className="field">
@@ -509,7 +499,7 @@ export default function Cotizaciones({
                 ))}
               </select>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+            <div className="cotizaciones-link-actions">
               <button className="btn btn-primary" disabled={!selectedOrder} onClick={linkOrder}>
                 <Ico p={I.link} size={14} /> Asociar OC
               </button>

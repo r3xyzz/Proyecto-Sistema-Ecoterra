@@ -94,22 +94,20 @@ export default function Movimientos({
         title="Movimientos de Stock"
         sub="Registro de entradas, salidas y ajustes"
       />
-      <div
-        style={{ display: "grid", gridTemplateColumns: "360px 1fr", gap: 16 }}
-      >
-        <div className="panel" style={{ padding: 20 }}>
-          <div style={{ fontWeight: 700, marginBottom: 16 }}>
+      <div className="mov-grid">
+        <div className="panel mov-card">
+          <div className="mov-title">
             Registrar Movimiento
           </div>
           {done ? (
-            <div style={{ textAlign: "center", padding: "32px 0" }}>
+            <div className="mov-success-wrap">
               <Ico p={I.check} size={30} />
-              <p style={{ fontWeight: 700, color: "#15803D" }}>
+              <p className="mov-success-text">
                 Movimiento registrado
               </p>
               <button
                 className="btn btn-primary"
-                style={{ marginTop: 16 }}
+                className="btn btn-primary mov-success-button"
                 onClick={() => {
                   setDone(false)
                   setProd("")
@@ -123,35 +121,19 @@ export default function Movimientos({
             </div>
           ) : (
             <>
-              <div
-                style={{
-                  display: "flex",
-                  border: "1px solid #E2E8F0",
-                  borderRadius: 8,
-                  overflow: "hidden",
-                  marginBottom: 16,
-                }}
-              >
+              <div className="mov-toggle">
                 {(["Entrada", "Salida", "Ajuste"] as const).map((value) => (
                   <button
                     key={value}
-                    style={{
-                      flex: 1,
-                      padding: 8,
-                      border: "none",
-                      background:
-                        type === value ? colors[value] : "transparent",
-                      color: type === value ? "white" : "#94A3B8",
-                    }}
+                    className={`mov-toggle-btn ${type === value ? "active" : ""}`}
+                    style={{ background: type === value ? colors[value] : "transparent", color: type === value ? "white" : "#94A3B8" }}
                     onClick={() => setType(value)}
                   >
                     {value}
                   </button>
                 ))}
               </div>
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 12 }}
-              >
+              <div className="mov-form-stack">
                 <div className="field">
                   <label className="label">Producto *</label>
                   <select
@@ -201,11 +183,11 @@ export default function Movimientos({
                   <label className="label">Observación</label>
                   <textarea
                     className="input"
+                    className="input mov-observation"
                     placeholder="Detalle adicional del movimiento"
                     rows={3}
                     value={observation}
                     onChange={(event) => setObservation(event.target.value)}
-                    style={{ resize: "vertical" }}
                   />
                 </div>
                 <button
@@ -256,7 +238,7 @@ export default function Movimientos({
                   <td>{movement.prod}</td>
                   <td
                     style={{ color: movement.qty < 0 ? "#DC2626" : "#15803D" }}
-                  >
+                    className={movement.qty < 0 ? "mov-history-qty-negative" : "mov-history-qty-positive"}
                     {movement.qty > 0 ? "+" : ""}
                     {fmt(movement.qty)} L
                   </td>
