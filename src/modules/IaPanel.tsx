@@ -1,8 +1,12 @@
-import React from "react"
+import React, { useState } from "react"
 import { Badge, I, Ico, PageTitle, Product } from "../shared"
 
 export default function IaPanel({ productos }: { productos: Product[] }) {
-  // Datos de ejemplo para las alertas de stockout (hardcodeados según la captura)
+  // ── Estados para resultados de predicción ──────────────
+  const [showArrivalResult, setShowArrivalResult] = useState(false)
+  const [showPriceResult, setShowPriceResult] = useState(false)
+
+  // ── Datos de ejemplo para las alertas de stockout ──────
   const stockAlerts = [
     {
       id: "POL-002",
@@ -34,6 +38,15 @@ export default function IaPanel({ productos }: { productos: Product[] }) {
   ]
 
   const totalAlertas = stockAlerts.length
+
+  // ── Simulación de predicciones ─────────────────────────
+  const handlePredictArrival = () => {
+    setShowArrivalResult(true)
+  }
+
+  const handlePredictPrice = () => {
+    setShowPriceResult(true)
+  }
 
   return (
     <div>
@@ -86,9 +99,33 @@ export default function IaPanel({ productos }: { productos: Product[] }) {
                 </select>
               </div>
             </div>
-            <button className="btn btn-primary ia-button">
+            <button
+              className="btn btn-primary ia-button"
+              onClick={handlePredictArrival}
+            >
               <Ico p={I.sparkle} size={14} /> Calcular Predicción
             </button>
+
+            {/* Resultado Tiempo de Llegada */}
+            {showArrivalResult && (
+              <div className="ia-result ia-result-green">
+                <div className="ia-result-main">
+                  <span className="ia-result-value">42</span>
+                  <span className="ia-result-unit">días estimados</span>
+                </div>
+                <div className="ia-result-meta">
+                  Confianza: <strong>93%</strong> · Rango: 39–47 días
+                </div>
+                <div className="ia-result-progress">
+                  <div className="ia-result-progress-fill" style={{ width: "93%" }} />
+                </div>
+                <div className="ia-result-note">
+                  → Emitir OC con al menos{" "}
+                  <strong>47 días de anticipación</strong> para garantizar
+                  continuidad.
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -126,12 +163,33 @@ export default function IaPanel({ productos }: { productos: Product[] }) {
                 <input className="input" type="number" defaultValue="10" />
               </div>
             </div>
-            <button className="btn btn-navy ia-button">
+            <button
+              className="btn btn-navy ia-button"
+              onClick={handlePredictPrice}
+            >
               <Ico p={I.sparkle} size={14} /> Predecir Precio
             </button>
-            <div className="ia-empty-state">
-              Selecciona producto y fecha para ver predicción.
-            </div>
+
+            {/* Resultado Precio de Compra */}
+            {showPriceResult ? (
+              <div className="ia-result ia-result-blue">
+                <div className="ia-result-main">
+                  <span className="ia-result-value">$43.085</span>
+                  <span className="ia-result-unit">/ unidad</span>
+                </div>
+                <div className="ia-result-meta">
+                  Variación vs. precio actual:{" "}
+                  <span className="ia-result-positive">+1,4%</span>
+                </div>
+                <div className="ia-result-note">
+                  Total estimado (10 uds.): <strong>$430.858</strong>
+                </div>
+              </div>
+            ) : (
+              <div className="ia-empty-state">
+                Selecciona producto y fecha para ver predicción.
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -167,12 +225,16 @@ export default function IaPanel({ productos }: { productos: Product[] }) {
                 <div className="ia-alert-progress">
                   <div
                     className={`ia-alert-progress-fill ${alert.badgeT === "danger" ? "bg-danger" : "bg-warn"}`}
-                    style={{ width: `${Math.min((alert.stock / alert.minimo) * 100, 100)}%` }}
+                    style={{
+                      width: `${Math.min((alert.stock / alert.minimo) * 100, 100)}%`,
+                    }}
                   />
                 </div>
               </div>
               <div className="ia-alert-side">
-                <div className={`ia-alert-days ${alert.badgeT === "danger" ? "text-danger" : "text-warn"}`}>
+                <div
+                  className={`ia-alert-days ${alert.badgeT === "danger" ? "text-danger" : "text-warn"}`}
+                >
                   {alert.dias}
                 </div>
                 <div className="ia-alert-days-label">días restantes</div>
