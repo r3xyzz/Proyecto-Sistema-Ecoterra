@@ -148,7 +148,7 @@ export default function OrdenesCompra({
           type="file"
           accept="application/pdf,.pdf"
           onChange={handlePdfUpload}
-          style={{ display: "none" }}
+          className="oc-hidden-input"
         />
         <button
           className="btn btn-primary"
@@ -172,9 +172,7 @@ export default function OrdenesCompra({
           <tbody>
             {orders.map((order) => (
               <tr key={order.id}>
-                <td style={{ fontWeight: 700, color: "#0052CC" }}>
-                  {order.id}
-                </td>
+                <td className="oc-id">{order.id}</td>
                 <td>{order.cot}</td>
                 <td>{order.cliente}</td>
                 <td>{order.fecha}</td>
@@ -197,33 +195,22 @@ export default function OrdenesCompra({
           onClick={() => setShowInvoiceModal(false)}
         >
           <div
-            className="modal"
-            style={{ width: 520, padding: 24 }}
+            className="modal oc-modal"
             onClick={(event) => event.stopPropagation()}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 18,
-              }}
-            >
+            <div className="oc-modal-header">
               <div>
-                <h2 style={{ fontWeight: 700, color: "#0F172A" }}>
+                <h2 className="oc-modal-title">
                   Generar factura
                 </h2>
-                <p style={{ fontSize: "0.75rem", color: "#64748B" }}>
+                <p className="oc-modal-subtitle">
                   Selecciona una orden de compra sin factura.
                 </p>
               </div>
               <button
                 onClick={() => setShowInvoiceModal(false)}
                 aria-label="Cerrar generación de factura"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                }}
+                className="oc-modal-close"
               >
                 <Ico p={I.x} size={18} />
               </button>
@@ -245,7 +232,7 @@ export default function OrdenesCompra({
                   ))}
               </select>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+            <div className="oc-form-actions">
               <button
                 className="btn btn-primary"
                 disabled={!selectedOrderId}
@@ -266,37 +253,36 @@ export default function OrdenesCompra({
       {showUploadModal && (
         <div className="modal-backdrop" onClick={closeUploadModal}>
           <div
-            className="modal"
-            style={{ width: 960, maxWidth: "calc(100vw - 32px)", padding: 24 }}
+            className="modal oc-modal-wide"
             onClick={(event) => event.stopPropagation()}
           >
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 18 }}>
+            <div className="oc-modal-header">
               <div>
-                <h2 style={{ fontWeight: 700, color: "#0F172A" }}>Importar Orden de Compra</h2>
-                <p style={{ fontSize: "0.75rem", color: "#64748B" }}>
+                <h2 className="oc-modal-title">Importar Orden de Compra</h2>
+                <p className="oc-modal-subtitle">
                   Datos detectados automáticamente. Revisa y edita antes de guardar.
                 </p>
               </div>
-              <button onClick={closeUploadModal} aria-label="Cerrar importación" style={{ background: "none", border: "none", cursor: "pointer" }}>
+              <button onClick={closeUploadModal} aria-label="Cerrar importación" className="oc-modal-close">
                 <Ico p={I.x} size={18} />
               </button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
-              <div style={{ minHeight: 500, border: "1px solid #E2E8F0", background: "#F8FAFC", display: "flex", flexDirection: "column" }}>
-                <div style={{ padding: "10px 14px", borderBottom: "1px solid #E2E8F0", fontWeight: 700 }}>
+            <div className="oc-upload-grid">
+              <div className="oc-preview-box">
+                <div className="oc-preview-header">
                   Vista previa del PDF
                 </div>
                 {pdfPreviewUrl ? (
-                  <iframe title="Vista previa de la orden de compra" src={pdfPreviewUrl} style={{ width: "100%", flex: 1, minHeight: 450, border: 0 }} />
+                  <iframe title="Vista previa de la orden de compra" src={pdfPreviewUrl} className="oc-preview-frame" />
                 ) : (
-                  <div style={{ display: "grid", placeItems: "center", flex: 1, color: "#64748B" }}>Sin archivo seleccionado</div>
+                  <div className="oc-preview-empty">Sin archivo seleccionado</div>
                 )}
-                <div style={{ padding: 10, fontSize: "0.75rem", color: "#64748B", borderTop: "1px solid #E2E8F0" }}>
+                <div className="oc-preview-note">
                   {uploadedPdf?.name}
                 </div>
               </div>
               <div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div className="oc-edit-form">
                   <div className="field">
                     <label className="label">N° Orden de Compra *</label>
                     <input className="input" value={detectedOrder.id} onChange={(event) => setDetectedOrder({ ...detectedOrder, id: event.target.value })} />
@@ -327,7 +313,7 @@ export default function OrdenesCompra({
                     </select>
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+                <div className="oc-edit-actions">
                   <button className="btn btn-primary" disabled={!detectedOrder.id || !detectedOrder.cliente} onClick={saveUploadedOrder}>
                     <Ico p={I.check} size={14} /> Guardar orden
                   </button>

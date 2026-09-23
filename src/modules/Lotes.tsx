@@ -49,14 +49,7 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
           <Ico p={I.plus} size={14} /> Registrar lote
         </button>
       </PageTitle>
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4,1fr)",
-          gap: 10,
-          marginBottom: 14,
-        }}
-      >
+      <div className="lotes-kpi-grid">
         <div className="kpi">
           <div className="kpi-label">Lotes activos</div>
           <div className="kpi-value tabular">
@@ -71,23 +64,22 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
         </div>
         <div className="kpi">
           <div className="kpi-label">Sin stock</div>
-          <div className="kpi-value tabular" style={{ color: "#DC2626" }}>
+          <div className="kpi-value tabular lotes-danger-value">
             {lotes.filter((lot) => lot.qty === 0).length}
           </div>
         </div>
         <div className="kpi">
           <div className="kpi-label">Próx. a vencer</div>
-          <div className="kpi-value tabular" style={{ color: "#B45309" }}>
+          <div className="kpi-value tabular lotes-warn-value">
             {lotes.filter((lot) => expiringSoon(lot.venc)).length}
           </div>
         </div>
       </div>
       <div className="panel">
         <div className="panel-header">
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="lotes-filter-row">
             <select
-              className="select"
-              style={{ width: 180 }}
+              className="select lotes-filter-a"
               value={envase}
               onChange={(event) => setEnvase(event.target.value)}
             >
@@ -96,8 +88,7 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
               <option>IBC 1000 L</option>
             </select>
             <select
-              className="select"
-              style={{ width: 160 }}
+              className="select lotes-filter-b"
               value={estado}
               onChange={(event) => setEstado(event.target.value)}
             >
@@ -106,9 +97,7 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
               <option>Reservado</option>
             </select>
           </div>
-          <span style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
-            {filtered.length} lotes
-          </span>
+          <span className="lotes-count">{filtered.length} lotes</span>
         </div>
         <table className="dt w-full">
           <thead>
@@ -126,31 +115,12 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
           <tbody>
             {filtered.map((lot) => (
               <tr key={lot.id}>
-                <td
-                  style={{
-                    fontFamily: "JetBrains Mono, monospace",
-                    fontWeight: 700,
-                    color: "#0052CC",
-                  }}
-                >
-                  {lot.id}
-                </td>
-                <td style={{ fontWeight: 600 }}>{lot.prod}</td>
-                <td
-                  style={{
-                    fontWeight: 700,
-                    color: lot.qty === 0 ? "#DC2626" : "#0F172A",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 4,
-                    }}
-                  >
+                <td className="lotes-id">{lot.id}</td>
+                <td className="lotes-prod">{lot.prod}</td>
+                <td className={`lotes-qty ${lot.qty === 0 ? "lotes-qty-danger" : "lotes-qty-normal"}`}>
+                  <div className="lotes-qty-stack">
                     <span>{fmt(lot.qty)} L</span>
-                    <div className="progress" style={{ width: 80 }}>
+                    <div className="progress lotes-progress">
                       <div
                         className="progress-fill"
                         style={{
@@ -165,17 +135,12 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
                   <Badge t="neutral">{lot.envase}</Badge>
                 </td>
                 <td>{lot.fabr}</td>
-                <td
-                  style={{
-                    color: expiringSoon(lot.venc) ? "#B45309" : "#475569",
-                    fontWeight: expiringSoon(lot.venc) ? 700 : 400,
-                  }}
-                >
+                <td className={expiringSoon(lot.venc) ? "lotes-venc-warn" : "lotes-venc"}>
                   {expiringSoon(lot.venc) && "⚠ "}
                   {lot.venc}
                 </td>
                 <td>
-                  <code>{lot.ubic}</code>
+                  <code className="lotes-location">{lot.ubic}</code>
                 </td>
                 <td>
                   <Badge t={lot.estado === "Disponible" ? "ok" : "warn"}>
@@ -193,45 +158,26 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
           onClick={() => setShowModal(false)}
         >
           <div
-            className="modal"
-            style={{ width: 540, padding: 24 }}
+            className="modal lotes-modal"
             onClick={(event) => event.stopPropagation()}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 18,
-              }}
-            >
-              <h2 style={{ fontWeight: 700, color: "#0F172A" }}>
+            <div className="lotes-modal-header">
+              <h2 className="lotes-modal-title">
                 Registrar lote
               </h2>
               <button
                 onClick={() => setShowModal(false)}
                 aria-label="Cerrar formulario"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#94A3B8",
-                }}
+                className="lotes-modal-close"
               >
                 <Ico p={I.x} size={18} />
               </button>
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-              }}
-            >
+            <div className="lotes-form-grid">
               {lotFields.map((field) => (
                 <div
-                  className="field"
+                  className={`field ${field.span === 2 ? "lotes-span-2" : "lotes-span-1"}`}
                   key={field.label}
-                  style={{ gridColumn: `span ${field.span}` }}
                 >
                   <label className="label">{field.label}</label>
                   <input
@@ -241,7 +187,7 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
                   />
                 </div>
               ))}
-              <div className="field" style={{ gridColumn: "span 1" }}>
+              <div className="field lotes-span-1">
                 <label className="label">Estado</label>
                 <select className="input" defaultValue="Disponible">
                   <option value="Disponible">Disponible</option>
@@ -249,10 +195,9 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
                 </select>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+            <div className="lotes-form-actions">
               <button
-                className="btn btn-primary"
-                style={{ flex: 1, justifyContent: "center" }}
+                className="btn btn-primary lotes-save"
                 onClick={() => setShowModal(false)}
               >
                 <Ico p={I.check} size={14} /> Guardar

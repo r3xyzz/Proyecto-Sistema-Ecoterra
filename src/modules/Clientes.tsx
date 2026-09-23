@@ -45,29 +45,18 @@ export default function Clientes({ clientes }: { clientes: Client[] }) {
       </PageTitle>
       <div className="panel">
         <div className="panel-header">
-          <div style={{ position: "relative", width: 280 }}>
-            <span
-              style={{
-                position: "absolute",
-                left: 9,
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#94A3B8",
-              }}
-            >
+          <div className="clientes-search-wrap">
+            <span className="clientes-search-icon">
               <Ico p={I.search ?? I.clients} size={14} />
             </span>
             <input
-              className="input"
-              style={{ paddingLeft: 30 }}
+              className="input clientes-search-input"
               placeholder="Buscar por razón social o RUT…"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
-          <span style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
-            {filtered.length} clientes
-          </span>
+          <span className="clientes-count">{filtered.length} clientes</span>
         </div>
         <table className="dt w-full">
           <thead>
@@ -87,24 +76,12 @@ export default function Clientes({ clientes }: { clientes: Client[] }) {
               <tr
                 key={client.id}
                 onClick={() => setSelected(client)}
-                style={{ cursor: "pointer" }}
+                className="clientes-row"
               >
-                <td
-                  style={{
-                    fontFamily: "JetBrains Mono, monospace",
-                    fontSize: "0.75rem",
-                    color: "#64748B",
-                  }}
-                >
-                  {client.rut}
-                </td>
+                <td className="clientes-rut">{client.rut}</td>
                 <td>
-                  <div style={{ fontWeight: 600, color: "#0F172A" }}>
-                    {client.razon}
-                  </div>
-                  <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>
-                    {client.fantasia}
-                  </div>
+                  <div className="clientes-name">{client.razon}</div>
+                  <div className="clientes-fantasia">{client.fantasia}</div>
                 </td>
                 <td>{client.ciudad}</td>
                 <td>{client.rep}</td>
@@ -141,39 +118,21 @@ export default function Clientes({ clientes }: { clientes: Client[] }) {
             className="slideover"
             onClick={(event) => event.stopPropagation()}
           >
-            <div style={{ padding: 20, borderBottom: "1px solid #E2E8F0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div className="clientes-detail-header">
+              <div className="clientes-detail-title-row">
                 <div>
-                  <span style={{ fontSize: "0.6875rem", color: "#64748B" }}>
-                    {selected.rut}
-                  </span>
-                  <h2
-                    style={{
-                      fontSize: "1rem",
-                      fontWeight: 700,
-                      color: "#0F172A",
-                    }}
-                  >
-                    {selected.razon}
-                  </h2>
-                  <p style={{ fontSize: "0.75rem", color: "#64748B" }}>
+                  <span className="clientes-detail-rut">{selected.rut}</span>
+                  <h2 className="clientes-detail-title">{selected.razon}</h2>
+                  <p className="clientes-detail-subtitle">
                     {selected.fantasia} · {selected.ciudad}
                   </p>
                 </div>
-                <button
-                  onClick={() => setSelected(null)}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "#94A3B8",
-                  }}
-                >
+                <button onClick={() => setSelected(null)} className="clientes-detail-close">
                   <Ico p={I.x} size={18} />
                 </button>
               </div>
             </div>
-            <div style={{ padding: 20, display: "grid", gap: 14 }}>
+            <div className="clientes-detail-body">
               {[
                 { label: "Estado", value: selected.estado },
                 { label: "Teléfono", value: selected.tel },
@@ -192,13 +151,7 @@ export default function Clientes({ clientes }: { clientes: Client[] }) {
                 {selected.dirs.map((address) => (
                   <div
                     key={address.id}
-                    style={{
-                      marginTop: 8,
-                      padding: 10,
-                      background: "#F8FAFC",
-                      borderRadius: 7,
-                      fontSize: "0.75rem",
-                    }}
+                    className="clientes-address"
                   >
                     {address.nombre} · {address.ciudad}{" "}
                     <Badge t={address.principal ? "ok" : "neutral"}>
