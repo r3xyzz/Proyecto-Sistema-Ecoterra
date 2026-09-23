@@ -1476,6 +1476,87 @@ body,
   }
 }
 
+/* ── IA Result Cards ─────────────────────── */
+.ia-result {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.ia-result-green {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.ia-result-blue {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.ia-result-main {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.ia-result-value {
+  font-size: 1.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.ia-result-green .ia-result-value {
+  color: #15803d;
+}
+
+.ia-result-blue .ia-result-value {
+  color: #1d4ed8;
+}
+
+.ia-result-unit {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.ia-result-meta {
+  font-size: 0.75rem;
+  color: #475569;
+  margin-bottom: 10px;
+}
+
+.ia-result-positive {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.ia-result-progress {
+  height: 6px;
+  background: #dcfce7;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.ia-result-progress-fill {
+  height: 100%;
+  background: #15803d;
+  border-radius: 3px;
+}
+
+.ia-result-note {
+  font-size: 0.75rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.ia-result-note strong {
+  color: #0f172a;
+}
+
 /* ── Movimientos ────────────────────────── */
 .mov-grid {
   display: grid;
