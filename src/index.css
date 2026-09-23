@@ -1301,14 +1301,179 @@ body,
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
+  margin-bottom: 16px;
 }
+
 .ia-card-body {
   padding: 18px;
 }
+
+.ia-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .ia-button {
   width: 100%;
   justify-content: center;
   margin-top: 14px;
+}
+
+.ia-empty-state {
+  margin-top: 16px;
+  padding: 32px 20px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
+/* ── Alertas de Stockout ─────────────────── */
+.ia-alerts-panel {
+  margin-top: 0;
+}
+
+.ia-alerts-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ia-alerts-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: #0f172a;
+}
+
+.ia-alerts-title .nav-icon {
+  color: #dc2626;
+}
+
+.ia-alerts-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.ia-alert-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.ia-alert-item:last-child {
+  border-bottom: none;
+}
+
+.ia-alert-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #fef3c7;
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ia-alert-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.ia-alert-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.ia-alert-name {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: #0f172a;
+}
+
+.ia-alert-code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6875rem;
+  color: #64748b;
+}
+
+.ia-alert-meta {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.ia-alert-progress {
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 3px;
+  overflow: hidden;
+  max-width: 240px;
+}
+
+.ia-alert-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.ia-alert-progress-fill.bg-warn {
+  background: #d97706;
+}
+
+.ia-alert-progress-fill.bg-danger {
+  background: #dc2626;
+}
+
+.ia-alert-side {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.ia-alert-days {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ia-alert-days.text-warn {
+  color: #d97706;
+}
+
+.ia-alert-days.text-danger {
+  color: #dc2626;
+}
+
+.ia-alert-days-label {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .ia-grid {
+    grid-template-columns: 1fr;
+  }
+  .ia-form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Movimientos ────────────────────────── */
