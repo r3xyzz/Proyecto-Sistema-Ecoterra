@@ -45,6 +45,70 @@ export default function NotasCredito({
     },
   ]
 
+  const downloadCreditNotePdf = (note: CreditNote) => {
+    const printWindow = window.open(
+      "",
+      "_blank",
+      "noopener,noreferrer,width=900,height=700",
+    )
+    if (!printWindow) return
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Nota de Crédito ${note.id}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 32px; color: #0f172a; }
+            .card { border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px; }
+            .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #dc2626; padding-bottom: 14px; margin-bottom: 18px; }
+            .brand { color: #dc2626; font-size: 20px; font-weight: 700; }
+            .meta { color: #64748b; font-size: 12px; margin-top: 6px; }
+            .totals { margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 14px; display: flex; justify-content: space-between; font-weight: 700; }
+            .muted { color: #64748b; }
+            .motivo { background: #f8fafc; padding: 12px; border-radius: 8px; margin-top: 16px; font-size: 13px; color: #475569; }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="header">
+              <div>
+                <div class="brand">Ecoterra</div>
+                <div class="meta">Nota de Crédito Electrónica</div>
+              </div>
+              <strong>${note.id}</strong>
+            </div>
+            <p><strong>${note.cliente}</strong></p>
+            <p class="muted">Factura origen ${note.factura} · Emisión ${note.fecha}</p>
+            <div class="motivo"><strong>Motivo:</strong> ${note.motivo}</div>
+            <div class="totals">
+              <span>SUBTOTAL</span>
+              <span>${fmtCLP(note.subtotal)}</span>
+            </div>
+            <div class="totals" style="border-top: none; padding-top: 0; margin-top: 4px;">
+              <span>IVA (19%)</span>
+              <span>${fmtCLP(note.iva)}</span>
+            </div>
+            <div class="totals" style="border-top: 2px solid #dc2626; padding-top: 10px; margin-top: 10px;">
+              <span>TOTAL</span>
+              <span>${fmtCLP(note.total)}</span>
+            </div>
+            <div class="totals" style="border-top: none; padding-top: 4px; margin-top: 0; font-weight: 400; color: #64748b; font-size: 12px;">
+              <span>Estado</span>
+              <span>${note.estado}</span>
+            </div>
+          </div>
+          <script>
+            window.onload = function () {
+              window.focus();
+              window.print();
+            };
+          </script>
+        </body>
+      </html>
+    `)
+    printWindow.document.close()
+  }
+
   return (
     <div>
       <PageTitle
@@ -86,7 +150,11 @@ export default function NotasCredito({
                   <Badge t="ok">{note.estado}</Badge>
                 </td>
                 <td>
-                  <button className="btn btn-ghost btn-sm" title="Ver PDF">
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    title="Ver PDF"
+                    onClick={() => downloadCreditNotePdf(note)}
+                  >
                     <Ico p={I.pdf} size={13} />
                   </button>
                 </td>
@@ -120,6 +188,14 @@ export default function NotasCredito({
                     </option>
                   ))}
                 </select>
+              </div>
+              <div className="field">
+                <label className="label">Fecha</label>
+                <input
+                  className="input"
+                  type="date"
+                  defaultValue={new Date().toISOString().slice(0, 10)}
+                />
               </div>
               <div className="field">
                 <label className="label">Subtotal NC (CLP)</label>

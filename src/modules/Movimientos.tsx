@@ -106,7 +106,6 @@ export default function Movimientos({
                 Movimiento registrado
               </p>
               <button
-                className="btn btn-primary"
                 className="btn btn-primary mov-success-button"
                 onClick={() => {
                   setDone(false)
@@ -182,7 +181,6 @@ export default function Movimientos({
                 <div className="field">
                   <label className="label">Observación</label>
                   <textarea
-                    className="input"
                     className="input mov-observation"
                     placeholder="Detalle adicional del movimiento"
                     rows={3}
@@ -237,8 +235,12 @@ export default function Movimientos({
                   </td>
                   <td>{movement.prod}</td>
                   <td
-                    style={{ color: movement.qty < 0 ? "#DC2626" : "#15803D" }}
-                    className={movement.qty < 0 ? "mov-history-qty-negative" : "mov-history-qty-positive"}
+                    className={
+                      movement.qty < 0
+                        ? "mov-history-qty-negative"
+                        : "mov-history-qty-positive"
+                    }
+                  >
                     {movement.qty > 0 ? "+" : ""}
                     {fmt(movement.qty)} L
                   </td>
