@@ -108,29 +108,18 @@ export default function Proveedores() {
       </PageTitle>
       <div className="panel">
         <div className="panel-header">
-          <div style={{ position: "relative", width: 280 }}>
-            <span
-              style={{
-                position: "absolute",
-                left: 9,
-                top: "50%",
-                transform: "translateY(-50%)",
-                color: "#94A3B8",
-              }}
-            >
+          <div className="proveedores-search-wrap">
+            <span className="proveedores-search-icon">
               <Ico p={I.search ?? I.clients} size={14} />
             </span>
             <input
-              className="input"
-              style={{ paddingLeft: 30 }}
+              className="input proveedores-search-input"
               placeholder="Buscar por empresa, país o contacto…"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
-          <span style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
-            {filtered.length} proveedores
-          </span>
+          <span className="proveedores-count">{filtered.length} proveedores</span>
         </div>
         <table className="dt w-full">
           <thead>
@@ -146,28 +135,22 @@ export default function Proveedores() {
           <tbody>
             {filtered.map((provider) => (
               <tr key={provider.id}>
-                <td style={{ fontWeight: 600, color: "#0F172A" }}>
-                  {provider.nombre}
-                </td>
+                <td className="proveedores-name">{provider.nombre}</td>
                 <td>
                   <Badge t="info">{provider.pais}</Badge>
                 </td>
                 <td>
                   <div>{provider.contacto}</div>
-                  <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>
-                    {provider.tel}
-                  </div>
+                  <div className="proveedores-phone">{provider.tel}</div>
                 </td>
-                <td style={{ color: "#0052CC", fontSize: "0.8125rem" }}>
-                  {provider.email}
-                </td>
+                <td className="proveedores-email">{provider.email}</td>
                 <td>
                   <Badge t={provider.estado === "Activo" ? "ok" : "neutral"}>
                     {provider.estado}
                   </Badge>
                 </td>
                 <td>
-                  <div style={{ display: "flex", gap: 4 }}>
+                  <div className="proveedores-actions">
                     <button
                       className="btn btn-ghost btn-sm"
                       title="Editar proveedor"
@@ -196,46 +179,21 @@ export default function Proveedores() {
       {showModal && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div
-            className="modal"
-            style={{ width: 480, padding: 24 }}
+            className="modal proveedores-modal"
             onClick={(event) => event.stopPropagation()}
             key={editingProvider?.id ?? "new"}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 18,
-              }}
-            >
-              <h2 style={{ fontWeight: 700, color: "#0F172A" }}>
+            <div className="proveedores-modal-header">
+              <h2 className="proveedores-modal-title">
                 {editingProvider ? "Editar Proveedor" : "Nuevo Proveedor"}
               </h2>
-              <button
-                onClick={closeModal}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#94A3B8",
-                }}
-              >
+              <button onClick={closeModal} className="proveedores-modal-close">
                 <Ico p={I.x} size={18} />
               </button>
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-              }}
-            >
+            <div className="proveedores-form-grid">
               {providerFields.map((field) => (
-                <div
-                  key={field.l}
-                  className="field"
-                  style={{ gridColumn: `span ${field.s}` }}
-                >
+                <div key={field.l} className={`field ${field.s === 2 ? "proveedores-field-span-2" : "proveedores-field-span-1"}`}>
                   <label className="label">{field.l}</label>
                   <input
                     className="input"
@@ -244,7 +202,7 @@ export default function Proveedores() {
                   />
                 </div>
               ))}
-              <div className="field" style={{ gridColumn: "span 1" }}>
+              <div className="field proveedores-field-span-1">
                 <label className="label">Estado</label>
                 <select
                   className="input"
@@ -255,10 +213,10 @@ export default function Proveedores() {
                 </select>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+            <div className="proveedores-form-actions">
               <button
                 className="btn btn-primary"
-                style={{ flex: 1, justifyContent: "center" }}
+                className="btn btn-primary proveedores-save"
                 onClick={closeModal}
               >
                 <Ico p={I.check} size={14} /> Guardar

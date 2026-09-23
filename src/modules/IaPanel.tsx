@@ -8,7 +8,7 @@ export default function IaPanel({ productos }: { productos: Product[] }) {
         title="Panel de Inteligencia Artificial"
         sub="Modelos predictivos entrenados con datos operativos de Ecoterra"
       />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+      <div className="ia-grid">
         <div className="panel">
           <div className="panel-header">
             <span>
@@ -16,7 +16,7 @@ export default function IaPanel({ productos }: { productos: Product[] }) {
             </span>
             <Badge t="neutral">Sin resultado</Badge>
           </div>
-          <div style={{ padding: 18 }}>
+          <div className="ia-card-body">
             <div className="field">
               <label className="label">Puerto de origen</label>
               <select className="select">
@@ -27,7 +27,7 @@ export default function IaPanel({ productos }: { productos: Product[] }) {
             </div>
             <button
               className="btn btn-primary"
-              style={{ width: "100%", justifyContent: "center", marginTop: 14 }}
+              className="btn btn-primary ia-button"
             >
               <Ico p={I.sparkle} size={14} /> Calcular Predicción
             </button>
@@ -40,7 +40,7 @@ export default function IaPanel({ productos }: { productos: Product[] }) {
             </span>
             <Badge t="info">Modelo v1.4</Badge>
           </div>
-          <div style={{ padding: 18 }}>
+          <div className="ia-card-body">
             <div className="field">
               <label className="label">Producto</label>
               <select className="select">
@@ -54,7 +54,7 @@ export default function IaPanel({ productos }: { productos: Product[] }) {
             </div>
             <button
               className="btn btn-navy"
-              style={{ width: "100%", justifyContent: "center", marginTop: 14 }}
+              className="btn btn-navy ia-button"
             >
               Predecir Precio
             </button>

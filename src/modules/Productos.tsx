@@ -52,10 +52,9 @@ export default function Productos({ productos }: { productos: Product[] }) {
       </PageTitle>
       <div className="panel">
         <div className="panel-header">
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="productos-filter-row">
             <select
-              className="select"
-              style={{ width: 190 }}
+              className="select productos-filter-a"
               value={tipo}
               onChange={(event) => setTipo(event.target.value)}
             >
@@ -67,8 +66,7 @@ export default function Productos({ productos }: { productos: Product[] }) {
               ))}
             </select>
             <select
-              className="select"
-              style={{ width: 170 }}
+              className="select productos-filter-b"
               value={estado}
               onChange={(event) => setEstado(event.target.value)}
             >
@@ -80,9 +78,7 @@ export default function Productos({ productos }: { productos: Product[] }) {
               ))}
             </select>
           </div>
-          <span style={{ fontSize: "0.75rem", color: "#94A3B8" }}>
-            {filtered.length} productos
-          </span>
+          <span className="productos-count">{filtered.length} productos</span>
         </div>
         <table className="dt w-full">
           <thead>
@@ -100,29 +96,16 @@ export default function Productos({ productos }: { productos: Product[] }) {
             {filtered.map((product) => {
               return (
                 <tr key={product.id}>
-                  <td
-                    style={{
-                      fontFamily: "JetBrains Mono, monospace",
-                      fontSize: "0.75rem",
-                      fontWeight: 700,
-                      color: "#0052CC",
-                    }}
-                  >
-                    {product.codigo}
-                  </td>
+                  <td className="productos-code">{product.codigo}</td>
                   <td>
-                    <div style={{ fontWeight: 600, color: "#0F172A" }}>
-                      {product.nombre}
-                    </div>
-                    <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>
-                      {product.desc}
-                    </div>
+                    <div className="productos-name">{product.nombre}</div>
+                    <div className="productos-desc">{product.desc}</div>
                   </td>
                   <td>
                     <Badge t="info">{product.tipo}</Badge>
                   </td>
-                  <td style={{ color: "#475569" }}>{product.unidad}</td>
-                  <td style={{ fontFamily: "JetBrains Mono, monospace" }}>
+                  <td className="productos-unit">{product.unidad}</td>
+                  <td className="productos-meta">
                     {fmt(product.stockMin)} L
                   </td>
                   <td>
@@ -133,16 +116,11 @@ export default function Productos({ productos }: { productos: Product[] }) {
                     </Badge>
                   </td>
                   <td>
-                    <div style={{ display: "flex", gap: 4 }}>
+                    <div className="productos-actions">
                       <button
-                        className="btn btn-ghost btn-sm"
+                        className="btn btn-ghost btn-sm productos-edit-btn"
                         title="Editar producto"
                         aria-label="Editar producto"
-                        style={{
-                          background: "#FFFFFF",
-                          border: "1px solid #0052CC",
-                          color: "#0052CC",
-                        }}
                         onClick={() => {
                           setEditingProduct(product)
                           setShowModal(true)
@@ -151,14 +129,9 @@ export default function Productos({ productos }: { productos: Product[] }) {
                         <Ico p={I.edit} size={13} />
                       </button>
                       <button
-                        className="btn btn-ghost btn-sm"
+                        className="btn btn-ghost btn-sm productos-delete-btn"
                         title="Eliminar producto"
                         aria-label="Eliminar producto"
-                        style={{
-                          background: "#FFFFFF",
-                          border: "1px solid #DC2626",
-                          color: "#DC2626",
-                        }}
                         onClick={() => setDeletingProduct(product)}
                       >
                         <Ico p={I.trash} size={13} />
@@ -174,46 +147,27 @@ export default function Productos({ productos }: { productos: Product[] }) {
       {showModal && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div
-            className="modal"
-            style={{ width: 540, padding: 24 }}
+            className="modal productos-modal"
             onClick={(event) => event.stopPropagation()}
             key={editingProduct?.id ?? "new"}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 18,
-              }}
-            >
-              <h2 style={{ fontWeight: 700, color: "#0F172A" }}>
+            <div className="productos-modal-header">
+              <h2 className="productos-modal-title">
                 {editingProduct ? "Editar Producto" : "Nuevo Producto"}
               </h2>
               <button
                 onClick={closeModal}
                 aria-label="Cerrar formulario"
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#94A3B8",
-                }}
+                className="productos-modal-close"
               >
                 <Ico p={I.x} size={18} />
               </button>
             </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 12,
-              }}
-            >
+            <div className="productos-form-grid">
               {productFields.map((field) => (
                 <div
-                  className="field"
                   key={field.label}
-                  style={{ gridColumn: `span ${field.span}` }}
+                  className={`field ${field.span === 2 ? "productos-span-2" : "productos-span-1"}`}
                 >
                   <label className="label">{field.label}</label>
                   <input
@@ -226,7 +180,7 @@ export default function Productos({ productos }: { productos: Product[] }) {
                   />
                 </div>
               ))}
-              <div className="field" style={{ gridColumn: "span 1" }}>
+              <div className="field productos-span-1">
                 <label className="label">Estado</label>
                 <select
                   className="input"
@@ -237,10 +191,9 @@ export default function Productos({ productos }: { productos: Product[] }) {
                 </select>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+            <div className="productos-form-actions">
               <button
-                className="btn btn-primary"
-                style={{ flex: 1, justifyContent: "center" }}
+                className="btn btn-primary productos-save"
                 onClick={closeModal}
               >
                 <Ico p={I.check} size={14} /> Guardar
@@ -258,27 +211,20 @@ export default function Productos({ productos }: { productos: Product[] }) {
           onClick={() => setDeletingProduct(null)}
         >
           <div
-            className="modal"
-            style={{ width: 420, padding: 24 }}
+            className="modal productos-delete-modal"
             onClick={(event) => event.stopPropagation()}
           >
-            <h2 style={{ fontWeight: 700, color: "#0F172A" }}>
-              Eliminar producto
-            </h2>
-            <p
-              style={{
-                color: "#475569",
-                fontSize: "0.875rem",
-                lineHeight: 1.5,
-                marginTop: 10,
-              }}
-            >
+            <div className="productos-delete-header">
+              <h2 className="productos-delete-title">
+                Eliminar producto
+              </h2>
+            </div>
+            <p className="productos-delete-text">
               ¿Deseas eliminar {deletingProduct.nombre} del catálogo?
             </p>
-            <div style={{ display: "flex", gap: 8, marginTop: 20 }}>
+            <div className="productos-delete-actions">
               <button
-                className="btn btn-danger"
-                style={{ flex: 1, justifyContent: "center" }}
+                className="btn btn-danger productos-delete-confirm"
                 onClick={() => setDeletingProduct(null)}
               >
                 Eliminar

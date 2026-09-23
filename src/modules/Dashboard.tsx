@@ -46,7 +46,7 @@ export default function Dashboard({
   ]
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+    <div className="dashboard-root">
       <div className="dashboard-hero">
         <div className="dashboard-hero-orb dashboard-hero-orb-top" />
         <div className="dashboard-hero-orb dashboard-hero-orb-bottom" />
@@ -86,19 +86,11 @@ export default function Dashboard({
       </div>
       <div className="panel">
         <div className="panel-header">
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ color: "#DC2626" }}>
+          <div className="dashboard-section-title-row">
+            <span className="dashboard-alert-icon">
               <Ico p={I.alert} size={15} />
             </span>
-            <span
-              style={{
-                fontWeight: 700,
-                fontSize: "0.875rem",
-                color: "#0F172A",
-              }}
-            >
-              Alertas IA · Stockout
-            </span>
+            <span className="dashboard-section-title">Alertas IA · Stockout</span>
             <Badge t="danger">{stockAlerts.length}</Badge>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={() => onNav("ia")}>
@@ -108,37 +100,13 @@ export default function Dashboard({
         {stockAlerts.map((product) => {
           const pct = Math.min(100, (product.stock / product.stockMin) * 100)
           return (
-            <div
-              key={product.id}
-              style={{
-                padding: "14px 18px",
-                borderBottom: "1px solid #F1F5F9",
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 12,
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <div
-                  style={{
-                    fontWeight: 600,
-                    fontSize: "0.8125rem",
-                    color: "#0F172A",
-                    marginBottom: 2,
-                  }}
-                >
-                  {product.nombre}
-                </div>
-                <div
-                  style={{
-                    fontSize: "0.75rem",
-                    color: "#64748B",
-                    marginBottom: 8,
-                  }}
-                >
+            <div key={product.id} className="dashboard-alert-item">
+              <div className="dashboard-alert-content">
+                <div className="dashboard-alert-name">{product.nombre}</div>
+                <div className="dashboard-alert-meta">
                   {product.codigo} · Mínimo: {fmt(product.stockMin)} L
                 </div>
-                <div className="progress" style={{ width: 200 }}>
+                <div className="progress dashboard-stock-progress">
                   <div
                     className="progress-fill"
                     style={{
@@ -147,26 +115,14 @@ export default function Dashboard({
                     }}
                   />
                 </div>
-                <div
-                  style={{
-                    fontSize: "0.6875rem",
-                    color: "#94A3B8",
-                    marginTop: 4,
-                  }}
-                >
-                  <span
-                    className="tabular"
-                    style={{
-                      color: product.stock === 0 ? "#DC2626" : "#B45309",
-                      fontWeight: 700,
-                    }}
-                  >
+                <div className="dashboard-alert-stock">
+                  <span className="tabular" style={{ color: product.stock === 0 ? "#DC2626" : "#B45309", fontWeight: 700 }}>
                     {fmt(product.stock)} L
                   </span>{" "}
                   disponibles
                 </div>
               </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div className="dashboard-alert-side">
                 <Badge t={product.stock === 0 ? "danger" : "warn"}>
                   {product.stock === 0 ? "Sin stock" : "Bajo mínimo"}
                 </Badge>
@@ -185,11 +141,7 @@ export default function Dashboard({
       </div>
       <div className="panel">
         <div className="panel-header">
-          <span
-            style={{ fontWeight: 700, fontSize: "0.875rem", color: "#0F172A" }}
-          >
-            Stock actual por producto
-          </span>
+          <span className="dashboard-section-title">Stock actual por producto</span>
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => onNav("productos")}
@@ -205,29 +157,9 @@ export default function Dashboard({
           const color =
             product.stock === 0 ? "#DC2626" : pct < 50 ? "#D97706" : "#00995A"
           return (
-            <div
-              key={product.id}
-              style={{
-                padding: "12px 18px",
-                borderBottom: "1px solid #F1F5F9",
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontWeight: 600,
-                    fontSize: "0.8125rem",
-                    color: "#0F172A",
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {product.nombre}
-                </div>
+            <div key={product.id} className="dashboard-stock-item">
+              <div className="dashboard-stock-content">
+                <div className="dashboard-stock-name">{product.nombre}</div>
                 <div className="progress" style={{ marginTop: 7 }}>
                   <div
                     className="progress-fill"
@@ -235,14 +167,11 @@ export default function Dashboard({
                   />
                 </div>
               </div>
-              <div style={{ textAlign: "right", flexShrink: 0 }}>
-                <div
-                  className="tabular"
-                  style={{ fontSize: "0.8125rem", fontWeight: 700, color }}
-                >
+              <div className="dashboard-stock-side">
+                <div className="tabular" style={{ fontSize: "0.8125rem", fontWeight: 700, color }}>
                   {fmt(product.stock)} L
                 </div>
-                <div style={{ fontSize: "0.6875rem", color: "#94A3B8" }}>
+                <div className="dashboard-stock-meta">
                   mín. {fmt(product.stockMin)} L
                 </div>
               </div>
@@ -252,39 +181,19 @@ export default function Dashboard({
       </div>
       <div className="panel">
         <div className="panel-header">
-          <span
-            style={{ fontWeight: 700, fontSize: "0.875rem", color: "#0F172A" }}
-          >
-            Actividad reciente
-          </span>
+          <span className="dashboard-activity-title">Actividad reciente</span>
         </div>
         {activity.map((item, index) => (
-          <div
-            key={index}
-            style={{
-              padding: "10px 18px",
-              borderBottom:
-                index < activity.length - 1 ? "1px solid #F1F5F9" : "none",
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 12,
-            }}
-          >
+          <div key={index} className="dashboard-activity-item" style={{ borderBottom: index < activity.length - 1 ? "1px solid #F1F5F9" : "none" }}>
             <div
+              className="dashboard-activity-icon"
               style={{
-                width: 28,
-                height: 28,
-                borderRadius: "50%",
                 background:
                   item.type === "alert"
                     ? "#FEE2E2"
                     : item.type === "invoice"
                       ? "#DCFCE7"
                       : "#F1F5F9",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                flexShrink: 0,
               }}
             >
               <Ico
@@ -300,17 +209,10 @@ export default function Dashboard({
                 size={13}
               />
             </div>
-            <p style={{ flex: 1, fontSize: "0.8125rem", color: "#1E293B" }}>
+                  <p className="dashboard-activity-desc">
               {item.desc}
             </p>
-            <span
-              style={{
-                fontSize: "0.6875rem",
-                color: "#94A3B8",
-                flexShrink: 0,
-                fontFamily: "JetBrains Mono, monospace",
-              }}
-            >
+                  <span className="dashboard-activity-time">
               {item.time}
             </span>
           </div>

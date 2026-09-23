@@ -62,11 +62,11 @@ export default function NotasCredito({
           <tbody>
             {notes.map((note) => (
               <tr key={note.id}>
-                <td style={{ fontWeight: 700, color: "#DC2626" }}>{note.id}</td>
-                <td style={{ color: "#0052CC" }}>{note.factura}</td>
-                <td style={{ fontWeight: 600 }}>{note.cliente}</td>
+                <td className="nc-id">{note.id}</td>
+                <td className="nc-factura">{note.factura}</td>
+                <td className="nc-cliente">{note.cliente}</td>
                 <td>{note.fecha}</td>
-                <td style={{ fontWeight: 700, color: "#DC2626" }}>
+                <td className="nc-monto">
                   {fmtCLP(note.monto)}
                 </td>
                 <td>{note.motivo}</td>
@@ -83,32 +83,18 @@ export default function NotasCredito({
       {showNew && (
         <div className="modal-backdrop" onClick={() => setShowNew(false)}>
           <div
-            className="modal"
-            style={{ width: 520, padding: 24 }}
+            className="modal nc-modal"
             onClick={(event) => event.stopPropagation()}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 18,
-              }}
-            >
-              <h2 style={{ fontWeight: 700, color: "#0F172A" }}>
+            <div className="nc-modal-header">
+              <h2 className="nc-modal-title">
                 Nueva Nota de Crédito
               </h2>
-              <button
-                onClick={() => setShowNew(false)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                }}
-              >
+              <button onClick={() => setShowNew(false)} className="nc-modal-close">
                 <Ico p={I.x} size={18} />
               </button>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div className="nc-form-stack">
               <div className="field">
                 <label className="label">Factura de Origen *</label>
                 <select className="select">
@@ -133,7 +119,7 @@ export default function NotasCredito({
                 </select>
               </div>
             </div>
-            <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+            <div className="nc-actions">
               <button
                 className="btn btn-primary"
                 onClick={() => setShowNew(false)}
