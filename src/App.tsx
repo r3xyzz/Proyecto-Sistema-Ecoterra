@@ -1,7 +1,7 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import AppLayout from "./layout/AppLayout"
 import Dashboard from "./modules/Dashboard"
-import Clientes from "./modules/Clientes"
+import Clientes, { NewClientInput } from "./modules/Clientes"
 import Proveedores from "./modules/Proveedores"
 import Productos from "./modules/Productos"
 import Lotes from "./modules/Lotes"
@@ -14,6 +14,46 @@ import IaPanel from "./modules/IaPanel"
 import Login from "./modules/Login"
 import Usuarios from "./modules/Usuarios"
 import { Screen } from "./shared"
+
+const fallbackClientes = [
+  {
+    id: 1,
+    rut: "76.234.567-8",
+    razon: "Minera Los Bronces S.A.",
+    fantasia: "Los Bronces",
+    ciudad: "Santiago",
+    tel: "+56 2 2345 6789",
+    email: "compras@losbronces.cl",
+    rep: "Carlos Muñoz",
+    estado: "Activo",
+    dirs: [],
+  },
+  {
+    id: 2,
+    rut: "77.891.234-5",
+    razon: "Constructora Vial Sur Ltda.",
+    fantasia: "Vial Sur",
+    ciudad: "Concepción",
+    tel: "+56 41 223 4567",
+    email: "logistica@vialsur.cl",
+    rep: "Ana Rodríguez",
+    estado: "Activo",
+    dirs: [],
+  },
+]
+
+const mapClientFromApi = (item: any) => ({
+  id: item.id,
+  rut: item.rut,
+  razon: item.razon_social,
+  fantasia: item.nombre_fantasia || item.razon_social,
+  ciudad: item.ciudad,
+  tel: item.telefono || "-",
+  email: item.email || "-",
+  rep: item.representante || "-",
+  estado: item.estado,
+  dirs: Array.isArray(item.direcciones) ? item.direcciones : [],
+})
 
 
 const productos = [
@@ -75,33 +115,6 @@ const productos = [
     stockMin: 800,
     stock: 200,
     estado: "Activo",
-  },
-]
-
-const clientes = [
-  {
-    id: 1,
-    rut: "76.234.567-8",
-    razon: "Minera Los Bronces S.A.",
-    fantasia: "Los Bronces",
-    ciudad: "Santiago",
-    tel: "+56 2 2345 6789",
-    email: "compras@losbronces.cl",
-    rep: "Carlos Muñoz",
-    estado: "Activo",
-    dirs: [],
-  },
-  {
-    id: 2,
-    rut: "77.891.234-5",
-    razon: "Constructora Vial Sur Ltda.",
-    fantasia: "Vial Sur",
-    ciudad: "Concepción",
-    tel: "+56 41 223 4567",
-    email: "logistica@vialsur.cl",
-    rep: "Ana Rodríguez",
-    estado: "Activo",
-    dirs: [],
   },
 ]
 
@@ -294,11 +307,56 @@ const ordenes = [
 ]
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("login")
+  const [screen, setScreen] = useState<Screen>("clientes")
+  const [clientes, setClientes] = useState<
+    React.ComponentProps<typeof Clientes>["clientes"]
+  >(fallbackClientes)
+
+  useEffect(() => {
+    fetch("http://localhost:8000/api/clientes/")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar clientes")
+        return response.json()
+      })
+      .then((data) => {
+        setClientes(Array.isArray(data) ? data.map(mapClientFromApi) : fallbackClientes)
+      })
+      .catch(() => {
+        setClientes(fallbackClientes)
+      })
+  }, [])
+
+  const createClient = async (input: NewClientInput) => {
+    const response = await fetch("http://localhost:8000/api/clientes/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rut: input.rut,
+        razon_social: input.razon_social,
+        nombre_fantasia: input.nombre_fantasia,
+        ciudad: input.ciudad,
+        telefono: input.telefono,
+        email: input.email,
+        representante: input.representante,
+        estado: input.estado,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo guardar el cliente",
+      )
+    }
+
+    const created = mapClientFromApi(await response.json())
+    setClientes((current) => [...current, created])
+    return created
+  }
 
   const views: Record<Screen, React.ReactNode> = {
     dashboard: <Dashboard productos={productos} onNav={setScreen} />,
-    clientes: <Clientes clientes={clientes} />,
+    clientes: <Clientes clientes={clientes} onCreate={createClient} />,
     proveedores: <Proveedores />,
     productos: <Productos productos={productos} />,
     lotes: <Lotes lotes={lotes} />,
@@ -318,11 +376,11 @@ export default function App() {
     ia: <IaPanel productos={productos} />,
 
     usuarios: <Usuarios />,
-    login: <Login onEnter={() => setScreen("dashboard")} />,
+    login: <Login onEnter={() => setScreen("clientes")} />,
   }
 
   if (screen === "login")
-    return <Login onEnter={() => setScreen("dashboard")} />
+    return <Login onEnter={() => setScreen("clientes")} />
 
   return (
     <AppLayout screen={screen} onNav={setScreen}>
