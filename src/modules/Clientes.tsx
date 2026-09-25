@@ -45,9 +45,11 @@ const emptyNewClient: NewClientInput = {
 export default function Clientes({
   clientes,
   onCreate,
+  onDelete,
 }: {
   clientes: Client[]
   onCreate: (client: NewClientInput) => Promise<Client>
+  onDelete: (client: Client) => Promise<void>
 }) {
   const [search, setSearch] = useState("")
 
@@ -57,6 +59,7 @@ export default function Clientes({
   const [newClient, setNewClient] = useState(emptyNewClient)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
+  const [deleteError, setDeleteError] = useState("")
 
   const openNewClient = () => {
     setNewClient(emptyNewClient)
@@ -80,6 +83,20 @@ export default function Clientes({
       setSaveError(error instanceof Error ? error.message : "No se pudo guardar el cliente")
     } finally {
       setSaving(false)
+    }
+  }
+
+  const deleteSelectedClient = async () => {
+    if (!selected || !window.confirm(`¿Eliminar a ${selected.razon}?`)) return
+
+    setDeleteError("")
+    try {
+      await onDelete(selected)
+      setSelected(null)
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error ? error.message : "No se pudo eliminar el cliente",
+      )
     }
   }
 
@@ -216,6 +233,15 @@ export default function Clientes({
                   </div>
                 ))}
               </div>
+              {deleteError && <p style={{ color: "#B91C1C", marginTop: 12 }}>{deleteError}</p>}
+              <button
+                className="btn btn-danger"
+                type="button"
+                onClick={deleteSelectedClient}
+                style={{ marginTop: 18 }}
+              >
+                <Ico p={I.trash} size={14} /> Eliminar cliente
+              </button>
             </div>
           </div>
         </div>
