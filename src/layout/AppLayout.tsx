@@ -6,7 +6,7 @@ import { I, Ico, Screen } from "../shared"
 
 type NavGroup = {
   label: string
-  items: { id: Screen label: string icon: string }[]
+  items: { id: Screen; label: string; icon: string }[]
 }
 
 const NAV: NavGroup[] = [
@@ -44,7 +44,7 @@ const NAV: NavGroup[] = [
 
   {
     label: "Inteligencia Artificial",
-    items: [{ id: "ia", label: "Panel Predictivo IA", icon: I.ai }],
+    items: [{ id: "ia", label: "Panel Predictivo IA", icon: I.sparkle }],
   },
 
   {

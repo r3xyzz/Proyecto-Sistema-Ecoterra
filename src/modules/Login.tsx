@@ -28,7 +28,6 @@ export default function Login({ onEnter }: { onEnter: () => void }) {
             <input className="input" type="password" placeholder="••••••••" />
           </div>
           <button
-            className="btn btn-primary"
             className="btn btn-primary login-button"
             onClick={onEnter}
           >
