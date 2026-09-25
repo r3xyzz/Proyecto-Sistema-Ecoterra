@@ -215,7 +215,6 @@ export default function Proveedores() {
             </div>
             <div className="proveedores-form-actions">
               <button
-                className="btn btn-primary"
                 className="btn btn-primary proveedores-save"
                 onClick={closeModal}
               >
