@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
 import AppLayout from "./layout/AppLayout"
 import Dashboard from "./modules/Dashboard"
-import Clientes, { Client, NewClientInput } from "./modules/Clientes"
+import Clientes, { Address, AddressInput, Client, NewClientInput } from "./modules/Clientes"
 import Proveedores from "./modules/Proveedores"
 import Productos from "./modules/Productos"
 import Lotes from "./modules/Lotes"
@@ -394,6 +394,71 @@ export default function App() {
     return updated
   }
 
+  const createAddress = async (client: Client, input: AddressInput) => {
+    const response = await fetch(`/api/clientes/${client.id}/direcciones/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo crear la dirección",
+      )
+    }
+    const created = (await response.json()) as Address
+    setClientes((current) =>
+      current.map((item) =>
+        item.id === client.id ? { ...item, dirs: [...item.dirs, created] } : item,
+      ),
+    )
+    return created
+  }
+
+  const updateAddress = async (client: Client, address: Address, input: AddressInput) => {
+    const response = await fetch(`/api/clientes/${client.id}/direcciones/${address.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo actualizar la dirección",
+      )
+    }
+    const updated = (await response.json()) as Address
+    setClientes((current) =>
+      current.map((item) =>
+        item.id === client.id
+          ? {
+              ...item,
+              dirs: item.dirs.map((currentAddress) =>
+                currentAddress.id === updated.id ? updated : currentAddress,
+              ),
+            }
+          : item,
+      ),
+    )
+    return updated
+  }
+
+  const deleteAddress = async (client: Client, address: Address) => {
+    const response = await fetch(`/api/clientes/${client.id}/direcciones/${address.id}/`, {
+      method: "DELETE",
+    })
+    if (!response.ok) throw new Error("No se pudo eliminar la dirección")
+    setClientes((current) =>
+      current.map((item) =>
+        item.id === client.id
+          ? { ...item, dirs: item.dirs.filter((currentAddress) => currentAddress.id !== address.id) }
+          : item,
+      ),
+    )
+  }
+
   const views: Record<Screen, React.ReactNode> = {
     dashboard: <Dashboard productos={productos} onNav={setScreen} />,
     clientes: (
@@ -402,6 +467,9 @@ export default function App() {
         onCreate={createClient}
         onDelete={deleteClient}
         onUpdate={updateClient}
+        onCreateAddress={createAddress}
+        onUpdateAddress={updateAddress}
+        onDeleteAddress={deleteAddress}
       />
     ),
     proveedores: <Proveedores />,
