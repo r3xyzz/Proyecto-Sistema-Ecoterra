@@ -125,3 +125,76 @@ class ClienteModelTests(TestCase):
         cliente.refresh_from_db()
         self.assertEqual(cliente.razon_social, "Cliente Actualizado")
         self.assertEqual(cliente.ciudad, "Concepción")
+
+    def test_endpoint_api_gestiona_direcciones_de_cliente(self):
+        api = APIClient()
+        cliente = Cliente.objects.create(
+            rut="79.654.321-0",
+            razon_social="Cliente con Direcciones",
+            ciudad="Santiago",
+        )
+
+        create_response = api.post(
+            f"/api/clientes/{cliente.id}/direcciones/",
+            {
+                "nombre": "Bodega central",
+                "ciudad": "Santiago",
+                "tipo": "Despacho",
+                "principal": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(create_response.status_code, 201)
+        address_id = create_response.data["id"]
+        self.assertEqual(create_response.data["nombre"], "Bodega central")
+
+        update_response = api.patch(
+            f"/api/clientes/{cliente.id}/direcciones/{address_id}/",
+            {"nombre": "Bodega actualizada"},
+            format="json",
+        )
+        self.assertEqual(update_response.status_code, 200)
+        self.assertEqual(update_response.data["nombre"], "Bodega actualizada")
+
+        list_response = api.get(f"/api/clientes/{cliente.id}/direcciones/")
+        self.assertEqual(list_response.status_code, 200)
+        self.assertEqual(len(list_response.data), 1)
+
+        delete_response = api.delete(
+            f"/api/clientes/{cliente.id}/direcciones/{address_id}/",
+        )
+        self.assertEqual(delete_response.status_code, 204)
+        self.assertFalse(Direccion.objects.filter(id=address_id).exists())
+
+    def test_endpoint_api_explica_direccion_principal_duplicada(self):
+        api = APIClient()
+        cliente = Cliente.objects.create(
+            rut="79.765.432-1",
+            razon_social="Cliente Principal",
+            ciudad="Santiago",
+        )
+        Direccion.objects.create(
+            cliente=cliente,
+            nombre="Bodega existente",
+            ciudad="Santiago",
+            tipo=Direccion.Tipo.DESPACHO,
+            principal=True,
+        )
+
+        response = api.post(
+            f"/api/clientes/{cliente.id}/direcciones/",
+            {
+                "nombre": "Otra bodega",
+                "ciudad": "Santiago",
+                "tipo": "Despacho",
+                "principal": True,
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data["principal"][0],
+            "Este cliente ya tiene una dirección principal.",
+        )

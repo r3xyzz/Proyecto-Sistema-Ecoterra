@@ -20,6 +20,10 @@ export type Client = {
   }[]
 }
 
+export type Address = Client["dirs"][number]
+
+export type AddressInput = Omit<Address, "id">
+
 export type NewClientInput = Omit<Client, "id" | "dirs"> & {
   razon_social: string
   nombre_fantasia: string
@@ -40,6 +44,13 @@ const emptyNewClient: NewClientInput = {
   nombre_fantasia: "",
   telefono: "",
   representante: "",
+}
+
+const emptyAddress: AddressInput = {
+  nombre: "",
+  ciudad: "",
+  tipo: "Despacho",
+  principal: false,
 }
 
 const clientToInput = (client: Client): NewClientInput => ({
@@ -63,11 +74,17 @@ export default function Clientes({
   onCreate,
   onDelete,
   onUpdate,
+  onCreateAddress,
+  onUpdateAddress,
+  onDeleteAddress,
 }: {
   clientes: Client[]
   onCreate: (client: NewClientInput) => Promise<Client>
   onDelete: (client: Client) => Promise<void>
   onUpdate: (client: Client, input: NewClientInput) => Promise<Client>
+  onCreateAddress: (client: Client, input: AddressInput) => Promise<Address>
+  onUpdateAddress: (client: Client, address: Address, input: AddressInput) => Promise<Address>
+  onDeleteAddress: (client: Client, address: Address) => Promise<void>
 }) {
   const [search, setSearch] = useState("")
 
@@ -81,6 +98,10 @@ export default function Clientes({
   const [editing, setEditing] = useState(false)
   const [editClient, setEditClient] = useState<NewClientInput>(emptyNewClient)
   const [editError, setEditError] = useState("")
+  const [addressForm, setAddressForm] = useState<AddressInput>(emptyAddress)
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null)
+  const [showAddressForm, setShowAddressForm] = useState(false)
+  const [addressError, setAddressError] = useState("")
 
   const openNewClient = () => {
     setNewClient(emptyNewClient)
@@ -146,6 +167,58 @@ export default function Clientes({
       setEditError(error instanceof Error ? error.message : "No se pudo actualizar el cliente")
     } finally {
       setSaving(false)
+    }
+  }
+
+  const openAddressForm = (address?: Address) => {
+    setEditingAddress(address ?? null)
+    setAddressForm(
+      address
+        ? { nombre: address.nombre, ciudad: address.ciudad, tipo: address.tipo, principal: address.principal }
+        : { ...emptyAddress },
+    )
+    setShowAddressForm(true)
+    setAddressError("")
+  }
+
+  const saveAddress = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selected) return
+
+    setSaving(true)
+    setAddressError("")
+    try {
+      const saved = editingAddress
+        ? await onUpdateAddress(selected, editingAddress, addressForm)
+        : await onCreateAddress(selected, addressForm)
+      setSelected((current) => {
+        if (!current) return current
+        const dirs = editingAddress
+          ? current.dirs.map((address) => (address.id === saved.id ? saved : address))
+          : [...current.dirs, saved]
+        return { ...current, dirs }
+      })
+      setEditingAddress(null)
+      setAddressForm({ ...emptyAddress })
+      setShowAddressForm(false)
+    } catch (error) {
+      setAddressError(error instanceof Error ? error.message : "No se pudo guardar la dirección")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const deleteAddress = async (address: Address) => {
+    if (!selected || !window.confirm(`¿Eliminar la dirección ${address.nombre}?`)) return
+
+    setAddressError("")
+    try {
+      await onDeleteAddress(selected, address)
+      setSelected((current) =>
+        current ? { ...current, dirs: current.dirs.filter((item) => item.id !== address.id) } : current,
+      )
+    } catch (error) {
+      setAddressError(error instanceof Error ? error.message : "No se pudo eliminar la dirección")
     }
   }
 
@@ -313,13 +386,57 @@ export default function Clientes({
                   </div>
                 ))}
                 <div>
-                  <label className="label">Direcciones ({selected.dirs.length})</label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label className="label">Direcciones ({selected.dirs.length})</label>
+                    <button className="btn btn-ghost btn-sm" type="button" onClick={() => openAddressForm()}>
+                      <Ico p={I.plus} size={12} /> Agregar
+                    </button>
+                  </div>
                   {selected.dirs.map((address) => (
-                    <div key={address.id} className="clientes-address">
-                      {address.nombre} · {address.ciudad}{" "}
-                      <Badge t={address.principal ? "ok" : "neutral"}>{address.tipo}</Badge>
+                    <div key={address.id} className="clientes-address" style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                      <span>
+                        {address.nombre} · {address.ciudad}{" "}
+                        <Badge t={address.principal ? "ok" : "neutral"}>{address.tipo}</Badge>
+                      </span>
+                      <span style={{ display: "flex", gap: 4 }}>
+                        <button className="btn btn-ghost btn-sm" type="button" onClick={() => openAddressForm(address)} title="Editar dirección" aria-label={`Editar ${address.nombre}`}>
+                          <Ico p={I.edit} size={12} />
+                        </button>
+                        <button className="btn btn-ghost btn-sm" type="button" onClick={() => deleteAddress(address)} title="Eliminar dirección" aria-label={`Eliminar ${address.nombre}`}>
+                          <Ico p={I.trash} size={12} />
+                        </button>
+                      </span>
                     </div>
                   ))}
+                  {addressError && <p style={{ color: "#B91C1C", marginTop: 12 }}>{addressError}</p>}
+                  {showAddressForm && (
+                    <form onSubmit={saveAddress} style={{ marginTop: 12, padding: 12, border: "1px solid #E2E8F0" }}>
+                      <div className="field">
+                        <label className="label">Nombre de dirección</label>
+                        <input className="input" value={addressForm.nombre} onChange={(event) => setAddressForm((current) => ({ ...current, nombre: event.target.value }))} required />
+                      </div>
+                      <div className="field">
+                        <label className="label">Ciudad</label>
+                        <input className="input" value={addressForm.ciudad} onChange={(event) => setAddressForm((current) => ({ ...current, ciudad: event.target.value }))} required />
+                      </div>
+                      <div className="field">
+                        <label className="label">Tipo</label>
+                        <select className="input" value={addressForm.tipo} onChange={(event) => setAddressForm((current) => ({ ...current, tipo: event.target.value }))}>
+                          <option value="Despacho">Despacho</option>
+                          <option value="Facturación">Facturación</option>
+                          <option value="Otro">Otro</option>
+                        </select>
+                      </div>
+                      <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                        <input type="checkbox" checked={addressForm.principal} onChange={(event) => setAddressForm((current) => ({ ...current, principal: event.target.checked }))} />
+                        Dirección principal
+                      </label>
+                      <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                        <button className="btn btn-primary btn-sm" type="submit" disabled={saving}><Ico p={I.check} size={12} /> Guardar dirección</button>
+                        <button className="btn btn-ghost btn-sm" type="button" onClick={() => { setEditingAddress(null); setAddressForm({ ...emptyAddress }); setShowAddressForm(false) }}>Cancelar</button>
+                      </div>
+                    </form>
+                  )}
                 </div>
                 {deleteError && <p style={{ color: "#B91C1C", marginTop: 12 }}>{deleteError}</p>}
                 <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
