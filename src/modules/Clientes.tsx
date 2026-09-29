@@ -42,14 +42,32 @@ const emptyNewClient: NewClientInput = {
   representante: "",
 }
 
+const clientToInput = (client: Client): NewClientInput => ({
+  ...emptyNewClient,
+  rut: client.rut,
+  razon: client.razon,
+  fantasia: client.fantasia,
+  ciudad: client.ciudad,
+  tel: client.tel,
+  email: client.email,
+  rep: client.rep,
+  estado: client.estado,
+  razon_social: client.razon,
+  nombre_fantasia: client.fantasia,
+  telefono: client.tel === "-" ? "" : client.tel,
+  representante: client.rep === "-" ? "" : client.rep,
+})
+
 export default function Clientes({
   clientes,
   onCreate,
   onDelete,
+  onUpdate,
 }: {
   clientes: Client[]
   onCreate: (client: NewClientInput) => Promise<Client>
   onDelete: (client: Client) => Promise<void>
+  onUpdate: (client: Client, input: NewClientInput) => Promise<Client>
 }) {
   const [search, setSearch] = useState("")
 
@@ -60,6 +78,9 @@ export default function Clientes({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
   const [deleteError, setDeleteError] = useState("")
+  const [editing, setEditing] = useState(false)
+  const [editClient, setEditClient] = useState<NewClientInput>(emptyNewClient)
+  const [editError, setEditError] = useState("")
 
   const openNewClient = () => {
     setNewClient(emptyNewClient)
@@ -97,6 +118,34 @@ export default function Clientes({
       setDeleteError(
         error instanceof Error ? error.message : "No se pudo eliminar el cliente",
       )
+    }
+  }
+
+  const startEditing = () => {
+    if (!selected) return
+    setEditClient(clientToInput(selected))
+    setEditError("")
+    setEditing(true)
+  }
+
+  const updateEditClient = (field: keyof NewClientInput, value: string) => {
+    setEditClient((current) => ({ ...current, [field]: value }))
+  }
+
+  const saveEditedClient = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!selected) return
+
+    setSaving(true)
+    setEditError("")
+    try {
+      const updated = await onUpdate(selected, editClient)
+      setSelected(updated)
+      setEditing(false)
+    } catch (error) {
+      setEditError(error instanceof Error ? error.message : "No se pudo actualizar el cliente")
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -205,44 +254,84 @@ export default function Clientes({
                 </button>
               </div>
             </div>
-            <div className="clientes-detail-body">
-              {[
-                { label: "Estado", value: selected.estado },
-                { label: "Teléfono", value: selected.tel },
-                { label: "Correo Electrónico", value: selected.email },
-                { label: "Representante", value: selected.rep },
-              ].map((field) => (
-                <div className="field" key={field.label}>
-                  <label className="label">{field.label}</label>
-                  <input className="input" value={field.value} readOnly />
-                </div>
-              ))}
-              <div>
-                <label className="label">
-                  Direcciones ({selected.dirs.length})
-                </label>
-                {selected.dirs.map((address) => (
-                  <div
-                    key={address.id}
-                    className="clientes-address"
-                  >
-                    {address.nombre} · {address.ciudad}{" "}
-                    <Badge t={address.principal ? "ok" : "neutral"}>
-                      {address.tipo}
-                    </Badge>
+            {editing ? (
+              <form className="clientes-detail-body" onSubmit={saveEditedClient}>
+                {[
+                  ["RUT", "rut"],
+                  ["Razón Social", "razon_social"],
+                  ["Nombre de Fantasía", "nombre_fantasia"],
+                  ["Ciudad", "ciudad"],
+                  ["Teléfono", "telefono"],
+                  ["Correo Electrónico", "email"],
+                  ["Representante", "representante"],
+                ].map(([label, field]) => (
+                  <div className="field" key={label}>
+                    <label className="label">{label}</label>
+                    <input
+                      className="input"
+                      value={editClient[field as keyof NewClientInput]}
+                      onChange={(event) =>
+                        updateEditClient(field as keyof NewClientInput, event.target.value)
+                      }
+                      required={field === "rut" || field === "razon_social" || field === "ciudad"}
+                      type={field === "email" ? "email" : "text"}
+                    />
                   </div>
                 ))}
+                <div className="field">
+                  <label className="label">Estado</label>
+                  <select
+                    className="input"
+                    value={editClient.estado}
+                    onChange={(event) => updateEditClient("estado", event.target.value)}
+                  >
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                  </select>
+                </div>
+                {editError && <p style={{ color: "#B91C1C" }}>{editError}</p>}
+                <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+                  <button className="btn btn-primary" type="submit" disabled={saving}>
+                    <Ico p={I.check} size={14} /> Guardar cambios
+                  </button>
+                  <button className="btn btn-ghost" type="button" onClick={() => setEditing(false)}>
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="clientes-detail-body">
+                {[
+                  { label: "Estado", value: selected.estado },
+                  { label: "Teléfono", value: selected.tel },
+                  { label: "Correo Electrónico", value: selected.email },
+                  { label: "Representante", value: selected.rep },
+                ].map((field) => (
+                  <div className="field" key={field.label}>
+                    <label className="label">{field.label}</label>
+                    <input className="input" value={field.value} readOnly />
+                  </div>
+                ))}
+                <div>
+                  <label className="label">Direcciones ({selected.dirs.length})</label>
+                  {selected.dirs.map((address) => (
+                    <div key={address.id} className="clientes-address">
+                      {address.nombre} · {address.ciudad}{" "}
+                      <Badge t={address.principal ? "ok" : "neutral"}>{address.tipo}</Badge>
+                    </div>
+                  ))}
+                </div>
+                {deleteError && <p style={{ color: "#B91C1C", marginTop: 12 }}>{deleteError}</p>}
+                <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
+                  <button className="btn btn-primary" type="button" onClick={startEditing}>
+                    <Ico p={I.edit} size={14} /> Editar cliente
+                  </button>
+                  <button className="btn btn-danger" type="button" onClick={deleteSelectedClient}>
+                    <Ico p={I.trash} size={14} /> Eliminar cliente
+                  </button>
+                </div>
               </div>
-              {deleteError && <p style={{ color: "#B91C1C", marginTop: 12 }}>{deleteError}</p>}
-              <button
-                className="btn btn-danger"
-                type="button"
-                onClick={deleteSelectedClient}
-                style={{ marginTop: 18 }}
-              >
-                <Ico p={I.trash} size={14} /> Eliminar cliente
-              </button>
-            </div>
+            )}
           </div>
         </div>
       )}

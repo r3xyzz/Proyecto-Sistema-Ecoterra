@@ -102,3 +102,26 @@ class ClienteModelTests(TestCase):
 
         self.assertEqual(delete_response.status_code, 204)
         self.assertFalse(Cliente.objects.filter(id=cliente_id).exists())
+
+    def test_endpoint_api_actualiza_cliente(self):
+        cliente = Cliente.objects.create(
+            rut="79.123.456-8",
+            razon_social="Cliente Original",
+            ciudad="Santiago",
+        )
+
+        response = APIClient().patch(
+            f"/api/clientes/{cliente.id}/",
+            {
+                "razon_social": "Cliente Actualizado",
+                "ciudad": "Concepción",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["razon_social"], "Cliente Actualizado")
+        self.assertEqual(response.data["ciudad"], "Concepción")
+        cliente.refresh_from_db()
+        self.assertEqual(cliente.razon_social, "Cliente Actualizado")
+        self.assertEqual(cliente.ciudad, "Concepción")
