@@ -313,7 +313,7 @@ export default function App() {
   >(fallbackClientes)
 
   useEffect(() => {
-    fetch("http://localhost:8000/api/clientes/")
+    fetch("/api/clientes/")
       .then((response) => {
         if (!response.ok) throw new Error("No se pudo cargar clientes")
         return response.json()
@@ -327,7 +327,7 @@ export default function App() {
   }, [])
 
   const createClient = async (input: NewClientInput) => {
-    const response = await fetch("http://localhost:8000/api/clientes/", {
+    const response = await fetch("/api/clientes/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -355,7 +355,7 @@ export default function App() {
   }
 
   const deleteClient = async (client: React.ComponentProps<typeof Clientes>["clientes"][number]) => {
-    const response = await fetch(`http://localhost:8000/api/clientes/${client.id}/`, {
+    const response = await fetch(`/api/clientes/${client.id}/`, {
       method: "DELETE",
     })
 
