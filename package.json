@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently -k -n backend,frontend -c blue,green \"pnpm backend\" \"pnpm frontend\"",
-    "backend": "py backend/manage.py runserver 0.0.0.0:8000",
-    "frontend": "vite --host 0.0.0.0",
+    "backend": "py backend/manage.py runserver 0.0.0.0:8444",
+    "frontend": "vite --host 0.0.0.0 --port 5173",
     "build": "vite build",
     "preview": "vite preview",
     "format": "oxfmt"
