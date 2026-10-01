@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from dotenv import load_dotenv
 
@@ -59,8 +59,25 @@ DB_USER = os.environ.get("DB_USER")
 DB_PASSWORD = os.environ.get("DB_PASSWORD")
 DB_HOST = os.environ.get("DB_HOST")
 DB_PORT = os.environ.get("DB_PORT")
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-if DB_NAME and DB_USER and DB_PASSWORD and DB_HOST:
+if DATABASE_URL:
+    database_url = urlparse(DATABASE_URL)
+    database_options = parse_qs(database_url.query)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": unquote(database_url.path.lstrip("/")),
+            "USER": unquote(database_url.username or ""),
+            "PASSWORD": unquote(database_url.password or ""),
+            "HOST": database_url.hostname,
+            "PORT": database_url.port or 5432,
+            "OPTIONS": {
+                "sslmode": database_options.get("sslmode", ["require"])[0],
+            },
+        }
+    }
+elif DB_NAME and DB_USER and DB_PASSWORD and DB_HOST:
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
