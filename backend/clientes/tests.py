@@ -11,19 +11,31 @@ class ClienteModelTests(TestCase):
             rut="76.123.456-7",
             razon_social="EcoTerra SpA",
             ciudad="Santiago",
+            telefono="+56 9 1111 1111",
+            email="ecoterra@example.com",
         )
         Direccion.objects.create(
             cliente=cliente,
             nombre="Bodega principal",
+            calle="Av. Principal 100",
             ciudad="Santiago",
+            region="Metropolitana",
+            pais="Chile",
             tipo=Direccion.Tipo.DESPACHO,
+            contacto_recepcion="Ana Pérez",
+            telefono_contacto="+56 9 2222 2222",
             principal=True,
         )
         Direccion.objects.create(
             cliente=cliente,
             nombre="Oficina administrativa",
+            calle="Calle Oficina 200",
             ciudad="Santiago",
+            region="Metropolitana",
+            pais="Chile",
             tipo=Direccion.Tipo.FACTURACION,
+            contacto_recepcion="Luis Soto",
+            telefono_contacto="+56 9 3333 3333",
         )
 
         self.assertEqual(cliente.direcciones.count(), 2)
@@ -34,24 +46,36 @@ class ClienteModelTests(TestCase):
             rut="76.987.654-5",
             razon_social="Mina Norte Ltda.",
             ciudad="Antofagasta",
+            telefono="+56 9 4444 4444",
+            email="mina@example.com",
         )
 
         Direccion.objects.create(
             cliente=cliente,
             nombre="Patio principal",
+            calle="Ruta Minera 10",
             ciudad="Antofagasta",
+            region="Antofagasta",
+            pais="Chile",
             tipo=Direccion.Tipo.DESPACHO,
+            contacto_recepcion="Pedro Soto",
+            telefono_contacto="+56 9 5555 5555",
             principal=True,
         )
 
-        with self.assertRaises(IntegrityError):
-            Direccion.objects.create(
-                cliente=cliente,
-                nombre="Sucursal secundaria",
-                ciudad="Antofagasta",
-                tipo=Direccion.Tipo.OTRO,
-                principal=True,
-            )
+        Direccion.objects.create(
+            cliente=cliente,
+            nombre="Sucursal secundaria",
+            calle="Ruta Minera 20",
+            ciudad="Antofagasta",
+            region="Antofagasta",
+            pais="Chile",
+            tipo=Direccion.Tipo.OTRO,
+            contacto_recepcion="María Soto",
+            telefono_contacto="+56 9 6666 6666",
+            principal=True,
+        )
+        self.assertEqual(cliente.direcciones.filter(principal=True).count(), 2)
 
     def test_endpoint_api_devuelve_clientes(self):
         cliente = Cliente.objects.create(
@@ -65,8 +89,13 @@ class ClienteModelTests(TestCase):
         Direccion.objects.create(
             cliente=cliente,
             nombre="Oficina central",
+            calle="Av. Central 300",
             ciudad="Valparaíso",
+            region="Valparaíso",
+            pais="Chile",
             tipo=Direccion.Tipo.DESPACHO,
+            contacto_recepcion="María Pérez",
+            telefono_contacto="+56 9 7777 7777",
             principal=True,
         )
 
@@ -110,6 +139,8 @@ class ClienteModelTests(TestCase):
                 "rut": "11.111.111-1",
                 "razon_social": "Cliente con RUT válido",
                 "ciudad": "Santiago",
+                "telefono": "+56 9 1212 1212",
+                "email": "rut-valido@example.com",
             },
             format="json",
         )
@@ -181,8 +212,13 @@ class ClienteModelTests(TestCase):
             f"/api/clientes/{cliente.id}/direcciones/",
             {
                 "nombre": "Bodega central",
+                "calle": "Av. Bodega 10",
                 "ciudad": "Santiago",
+                "region": "Metropolitana",
+                "pais": "Chile",
                 "tipo": "Despacho",
+                "contacto_recepcion": "Ana Pérez",
+                "telefono_contacto": "+56 9 8888 8888",
                 "principal": True,
             },
             format="json",
@@ -216,12 +252,19 @@ class ClienteModelTests(TestCase):
             rut="79.765.432-1",
             razon_social="Cliente Principal",
             ciudad="Santiago",
+            telefono="+56 9 9999 9999",
+            email="principal@example.com",
         )
         Direccion.objects.create(
             cliente=cliente,
             nombre="Bodega existente",
+            calle="Av. Existente 10",
             ciudad="Santiago",
+            region="Metropolitana",
+            pais="Chile",
             tipo=Direccion.Tipo.DESPACHO,
+            contacto_recepcion="Ana Pérez",
+            telefono_contacto="+56 9 1010 1010",
             principal=True,
         )
 
@@ -229,8 +272,13 @@ class ClienteModelTests(TestCase):
             f"/api/clientes/{cliente.id}/direcciones/",
             {
                 "nombre": "Otra bodega",
+                "calle": "Av. Otra 20",
                 "ciudad": "Santiago",
+                "region": "Metropolitana",
+                "pais": "Chile",
                 "tipo": "Despacho",
+                "contacto_recepcion": "Luis Soto",
+                "telefono_contacto": "+56 9 1111 2222",
                 "principal": True,
             },
             format="json",

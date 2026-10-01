@@ -14,8 +14,15 @@ export type Client = {
   dirs: {
     id: number
     nombre: string
+    calle: string
     ciudad: string
+    region: string
+    pais: string
+    codigo_postal: string | null
     tipo: string
+    contacto_recepcion: string
+    telefono_contacto: string
+    instrucciones_entrega: string | null
     principal: boolean
   }[]
 }
@@ -48,8 +55,15 @@ const emptyNewClient: NewClientInput = {
 
 const emptyAddress: AddressInput = {
   nombre: "",
+  calle: "",
   ciudad: "",
+  region: "",
+  pais: "Chile",
+  codigo_postal: "",
   tipo: "Despacho",
+  contacto_recepcion: "",
+  telefono_contacto: "",
+  instrucciones_entrega: "",
   principal: false,
 }
 
@@ -174,7 +188,19 @@ export default function Clientes({
     setEditingAddress(address ?? null)
     setAddressForm(
       address
-        ? { nombre: address.nombre, ciudad: address.ciudad, tipo: address.tipo, principal: address.principal }
+        ? {
+            nombre: address.nombre,
+            calle: address.calle,
+            ciudad: address.ciudad,
+            region: address.region,
+            pais: address.pais,
+            codigo_postal: address.codigo_postal ?? "",
+            tipo: address.tipo,
+            contacto_recepcion: address.contacto_recepcion,
+            telefono_contacto: address.telefono_contacto,
+            instrucciones_entrega: address.instrucciones_entrega ?? "",
+            principal: address.principal,
+          }
         : { ...emptyAddress },
     )
     setShowAddressForm(true)
@@ -346,7 +372,13 @@ export default function Clientes({
                       onChange={(event) =>
                         updateEditClient(field as keyof NewClientInput, event.target.value)
                       }
-                      required={field === "rut" || field === "razon_social" || field === "ciudad"}
+                      required={
+                        field === "rut" ||
+                        field === "razon_social" ||
+                        field === "ciudad" ||
+                        field === "telefono" ||
+                        field === "email"
+                      }
                       type={field === "email" ? "email" : "text"}
                     />
                   </div>
@@ -416,8 +448,24 @@ export default function Clientes({
                         <input className="input" value={addressForm.nombre} onChange={(event) => setAddressForm((current) => ({ ...current, nombre: event.target.value }))} required />
                       </div>
                       <div className="field">
+                        <label className="label">Calle</label>
+                        <input className="input" value={addressForm.calle} onChange={(event) => setAddressForm((current) => ({ ...current, calle: event.target.value }))} required />
+                      </div>
+                      <div className="field">
                         <label className="label">Ciudad</label>
                         <input className="input" value={addressForm.ciudad} onChange={(event) => setAddressForm((current) => ({ ...current, ciudad: event.target.value }))} required />
+                      </div>
+                      <div className="field">
+                        <label className="label">Región</label>
+                        <input className="input" value={addressForm.region} onChange={(event) => setAddressForm((current) => ({ ...current, region: event.target.value }))} required />
+                      </div>
+                      <div className="field">
+                        <label className="label">País</label>
+                        <input className="input" value={addressForm.pais} onChange={(event) => setAddressForm((current) => ({ ...current, pais: event.target.value }))} required />
+                      </div>
+                      <div className="field">
+                        <label className="label">Código postal</label>
+                        <input className="input" value={addressForm.codigo_postal ?? ""} onChange={(event) => setAddressForm((current) => ({ ...current, codigo_postal: event.target.value }))} />
                       </div>
                       <div className="field">
                         <label className="label">Tipo</label>
@@ -426,6 +474,18 @@ export default function Clientes({
                           <option value="Facturación">Facturación</option>
                           <option value="Otro">Otro</option>
                         </select>
+                      </div>
+                      <div className="field">
+                        <label className="label">Contacto de recepción</label>
+                        <input className="input" value={addressForm.contacto_recepcion} onChange={(event) => setAddressForm((current) => ({ ...current, contacto_recepcion: event.target.value }))} required />
+                      </div>
+                      <div className="field">
+                        <label className="label">Teléfono de contacto</label>
+                        <input className="input" value={addressForm.telefono_contacto} onChange={(event) => setAddressForm((current) => ({ ...current, telefono_contacto: event.target.value }))} required />
+                      </div>
+                      <div className="field">
+                        <label className="label">Instrucciones de entrega</label>
+                        <textarea className="input" value={addressForm.instrucciones_entrega ?? ""} onChange={(event) => setAddressForm((current) => ({ ...current, instrucciones_entrega: event.target.value }))} />
                       </div>
                       <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
                         <input type="checkbox" checked={addressForm.principal} onChange={(event) => setAddressForm((current) => ({ ...current, principal: event.target.checked }))} />
