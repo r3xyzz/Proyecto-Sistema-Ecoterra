@@ -27,6 +27,108 @@
 
 </div>
 
+## Instalación y configuración
+
+### Requisitos previos
+
+- Python 3.12 o superior
+- Node.js 20 o superior
+- `pnpm`
+
+### 1. Instalar dependencias del frontend
+
+Desde la raíz del proyecto:
+
+```powershell
+pnpm install
+```
+
+Si `pnpm` no está instalado:
+
+```powershell
+corepack enable
+corepack prepare pnpm@10 --activate
+```
+
+### 2. Crear el entorno virtual del backend
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Si PowerShell bloquea la activación del entorno virtual, ejecutar una vez:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+Después, repetir:
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+### 3. Preparar la base de datos
+
+```powershell
+py backend\manage.py migrate
+```
+
+Para crear un usuario administrador de Django:
+
+```powershell
+py backend\manage.py createsuperuser
+```
+
+### 4. Ejecutar frontend y backend juntos
+
+Desde la raíz del proyecto, con el entorno virtual activo:
+
+```powershell
+pnpm dev
+```
+
+La aplicación se abrirá en el puerto que muestre Vite, normalmente:
+
+```text
+http://localhost:8443
+```
+
+El backend se inicia automáticamente en:
+
+```text
+http://localhost:8000
+```
+
+No es necesario abrir una segunda terminal. Si el puerto `8443` está ocupado, Vite seleccionará automáticamente otro puerto libre.
+
+### 5. Ejecutar las pruebas
+
+```powershell
+py backend\manage.py test clientes
+pnpm build
+```
+
+### Comandos útiles del backend
+
+```powershell
+py backend\manage.py check
+py backend\manage.py makemigrations
+py backend\manage.py migrate
+py backend\manage.py runserver 0.0.0.0:8000
+```
+
+### Detener la aplicación
+
+En la terminal donde se ejecuta `pnpm dev`, presionar:
+
+```text
+Ctrl+C
+```
+
 ## 📌 Descripción General
 
 **EcoTerra** es una empresa especializada en soluciones con polímeros para el control de polvo y la estabilización de caminos en áreas industriales y mineras. Parte de sus productos son adquiridos en Estados Unidos y trasladados a Chile vía transporte marítimo.
