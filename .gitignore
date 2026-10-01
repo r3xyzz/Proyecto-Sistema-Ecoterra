@@ -2,7 +2,14 @@ node_modules/
 dist/
 build/
 .cache/
-.env*
+.env
+.env.*
+!.env.example
+!.env.local.example
+!.env.*.example
+*.pem
+*.key
+*.crt
 .vite/
 vite.config.*.timestamp-*
 *.tsbuildinfo
