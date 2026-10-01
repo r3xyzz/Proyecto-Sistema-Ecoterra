@@ -85,6 +85,7 @@ const clientToInput = (client: Client): NewClientInput => ({
 
 export default function Clientes({
   clientes,
+  loadError,
   onCreate,
   onDelete,
   onUpdate,
@@ -93,6 +94,7 @@ export default function Clientes({
   onDeleteAddress,
 }: {
   clientes: Client[]
+  loadError: string
   onCreate: (client: NewClientInput) => Promise<Client>
   onDelete: (client: Client) => Promise<void>
   onUpdate: (client: Client, input: NewClientInput) => Promise<Client>
@@ -264,6 +266,11 @@ export default function Clientes({
           <Ico p={I.plus} size={14} /> Nuevo cliente
         </button>
       </PageTitle>
+      {loadError && (
+        <div className="panel" style={{ padding: 20, color: "#B91C1C" }}>
+          {loadError}
+        </div>
+      )}
       <div className="panel">
         <div className="panel-header">
           <div className="clientes-search-wrap">

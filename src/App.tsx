@@ -15,33 +15,6 @@ import Login from "./modules/Login"
 import Usuarios from "./modules/Usuarios"
 import { Screen } from "./shared"
 
-const fallbackClientes = [
-  {
-    id: 1,
-    rut: "76.234.567-8",
-    razon: "Minera Los Bronces S.A.",
-    fantasia: "Los Bronces",
-    ciudad: "Santiago",
-    tel: "+56 2 2345 6789",
-    email: "compras@losbronces.cl",
-    rep: "Carlos Muñoz",
-    estado: "Activo",
-    dirs: [],
-  },
-  {
-    id: 2,
-    rut: "77.891.234-5",
-    razon: "Constructora Vial Sur Ltda.",
-    fantasia: "Vial Sur",
-    ciudad: "Concepción",
-    tel: "+56 41 223 4567",
-    email: "logistica@vialsur.cl",
-    rep: "Ana Rodríguez",
-    estado: "Activo",
-    dirs: [],
-  },
-]
-
 const mapClientFromApi = (item: any) => ({
   id: item.id,
   rut: item.rut,
@@ -310,7 +283,8 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>("clientes")
   const [clientes, setClientes] = useState<
     React.ComponentProps<typeof Clientes>["clientes"]
-  >(fallbackClientes)
+  >([])
+  const [clientesError, setClientesError] = useState("")
 
   useEffect(() => {
     fetch("/api/clientes/")
@@ -319,10 +293,17 @@ export default function App() {
         return response.json()
       })
       .then((data) => {
-        setClientes(Array.isArray(data) ? data.map(mapClientFromApi) : fallbackClientes)
+        if (!Array.isArray(data)) throw new Error("La API devolvió un formato inválido")
+        setClientes(data.map(mapClientFromApi))
+        setClientesError("")
       })
-      .catch(() => {
-        setClientes(fallbackClientes)
+      .catch((error) => {
+        setClientes([])
+        setClientesError(
+          error instanceof Error
+            ? `${error.message}. Verifica que Django esté conectado a Supabase.`
+            : "No se pudieron cargar los clientes desde Supabase.",
+        )
       })
   }, [])
 
@@ -464,6 +445,7 @@ export default function App() {
     clientes: (
       <Clientes
         clientes={clientes}
+        loadError={clientesError}
         onCreate={createClient}
         onDelete={deleteClient}
         onUpdate={updateClient}
