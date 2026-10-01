@@ -1,6 +1,28 @@
+import re
+
 from rest_framework import serializers
 
 from .models import Cliente, Direccion
+
+
+def normalize_rut(value):
+    cleaned = re.sub(r"[.\s-]", "", value).upper()
+    if not re.fullmatch(r"\d{7,8}[0-9K]", cleaned):
+        raise serializers.ValidationError("Ingresa un RUT chileno válido.")
+
+    body, verifier = cleaned[:-1], cleaned[-1]
+    total = 0
+    factor = 2
+    for digit in reversed(body):
+        total += int(digit) * factor
+        factor = 2 if factor == 7 else factor + 1
+
+    remainder = 11 - (total % 11)
+    expected = "0" if remainder == 11 else "K" if remainder == 10 else str(remainder)
+    if verifier != expected:
+        raise serializers.ValidationError("Ingresa un RUT chileno válido.")
+
+    return f"{body}-{verifier}"
 
 
 class DireccionSerializer(serializers.ModelSerializer):
@@ -26,6 +48,9 @@ class DireccionSerializer(serializers.ModelSerializer):
 
 class ClienteSerializer(serializers.ModelSerializer):
     direcciones = DireccionSerializer(many=True, read_only=True)
+
+    def validate_rut(self, value):
+        return normalize_rut(value)
 
     class Meta:
         model = Cliente
