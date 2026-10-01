@@ -71,11 +71,11 @@ Después, repetir:
 .\.venv\Scripts\Activate.ps1
 ```
 
-### 3. Preparar la base de datos
+### 3. Configurar la base de datos existente
 
-```powershell
-py backend\manage.py migrate
-```
+Completa `DATABASE_URL` en `.env.local` con la cadena de conexión de Supabase.
+Las tablas ya existen en Supabase; por eso **no ejecutes `migrate` ni `makemigrations` contra esa base**.
+El proyecto usa los modelos con `managed = False` fuera del entorno de pruebas para evitar cambios de esquema.
 
 Para crear un usuario administrador de Django:
 
@@ -116,8 +116,6 @@ pnpm build
 
 ```powershell
 py backend\manage.py check
-py backend\manage.py makemigrations
-py backend\manage.py migrate
 py backend\manage.py runserver 0.0.0.0:8000
 ```
 
