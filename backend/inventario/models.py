@@ -19,9 +19,9 @@ class Producto(models.Model):
 class Inventario(models.Model):
     id = models.AutoField(primary_key=True, db_column="id_inventario")
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT, db_column="id_producto", related_name="existencias")
-    lote = models.CharField(max_length=30, db_column="lote_inventario")
+    lote = models.CharField(max_length=30, db_column="codigo_lote_inventario")
     cantidad = models.DecimalField(max_digits=12, decimal_places=2, db_column="cantidad_inventario")
-    envase = models.CharField(max_length=50, db_column="envase_inventario")
+    envase = models.CharField(max_length=50, db_column="tipo_envase_inventario")
     fecha_fabricacion = models.DateField(db_column="fecha_fabricacion_inventario")
     fecha_vencimiento = models.DateField(db_column="fecha_vencimiento_inventario")
     ubicacion = models.CharField(max_length=50, db_column="ubicacion_inventario")
