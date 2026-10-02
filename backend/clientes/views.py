@@ -25,7 +25,6 @@ class DireccionListCreateView(ListCreateAPIView):
 
     def get_queryset(self):
         return Direccion.objects.filter(cliente_id=self.kwargs["cliente_id"])
-
     def perform_create(self, serializer):
         try:
             cliente = Cliente.objects.get(pk=self.kwargs["cliente_id"])
@@ -39,3 +38,4 @@ class DireccionDetailView(RetrieveUpdateDestroyAPIView):
 
     def get_queryset(self):
         return Direccion.objects.filter(cliente_id=self.kwargs["cliente_id"])
+
