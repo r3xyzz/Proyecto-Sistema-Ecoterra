@@ -493,7 +493,7 @@ export default function App() {
         return response.json()
       })
       .then((data) => {
-        if (!Array.isArray(data) || data.length === 0) throw new Error("Catálogo vacío")
+        if (!Array.isArray(data)) throw new Error("Catálogo inválido")
         setProductos(data.map(mapProductFromApi))
       })
       .catch(() => setProductos(initialProductos))
@@ -504,7 +504,7 @@ export default function App() {
         return response.json()
       })
       .then((data) => {
-        if (!Array.isArray(data) || data.length === 0) throw new Error("Inventario vacío")
+        if (!Array.isArray(data)) throw new Error("Inventario inválido")
         setLotes(data.map(mapInventoryFromApi))
       })
       .catch(() => setLotes(initialLotes))
