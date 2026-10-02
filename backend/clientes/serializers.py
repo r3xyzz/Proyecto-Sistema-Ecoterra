@@ -92,3 +92,4 @@ class ClienteSerializer(serializers.ModelSerializer):
             "estado",
             "direcciones",
         ]
+

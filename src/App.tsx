@@ -3,7 +3,7 @@ import AppLayout from "./layout/AppLayout"
 import Dashboard from "./modules/Dashboard"
 import Clientes, { Address, AddressInput, Client, NewClientInput } from "./modules/Clientes"
 import Proveedores from "./modules/Proveedores"
-import Productos from "./modules/Productos"
+import Productos, { ProductInput } from "./modules/Productos"
 import Lotes from "./modules/Lotes"
 import Movimientos from "./modules/Movimientos"
 import Cotizaciones from "./modules/Cotizaciones"
@@ -28,8 +28,31 @@ const mapClientFromApi = (item: any) => ({
   dirs: Array.isArray(item.direcciones) ? item.direcciones : [],
 })
 
+const mapProductFromApi = (item: any) => ({
+  id: item.id,
+  codigo: item.codigo,
+  nombre: item.nombre,
+  desc: item.descripcion || "",
+  tipo: item.tipo,
+  unidad: item.unidad,
+  stockMin: Number(item.stock_minimo),
+  stock: Number(item.stock),
+  estado: item.estado ? "Activo" : "Inactivo",
+})
 
-const productos = [
+const mapInventoryFromApi = (item: any) => ({
+  id: item.lote,
+  prod: item.producto_codigo,
+  qty: Number(item.cantidad),
+  envase: item.envase,
+  fabr: item.fecha_fabricacion,
+  venc: item.fecha_vencimiento,
+  ubic: item.ubicacion,
+  estado: item.estado,
+})
+
+
+const initialProductos = [
   {
     id: 1,
     codigo: "POL-001",
@@ -91,7 +114,7 @@ const productos = [
   },
 ]
 
-const lotes = [
+const initialLotes = [
   {
     id: "LT-2024-001",
     prod: "POL-001",
@@ -281,6 +304,8 @@ const ordenes = [
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>("clientes")
+  const [productos, setProductos] = useState(initialProductos)
+  const [lotes, setLotes] = useState(initialLotes)
   const [clientes, setClientes] = useState<
     React.ComponentProps<typeof Clientes>["clientes"]
   >([])
@@ -305,6 +330,30 @@ export default function App() {
             : "No se pudieron cargar los clientes desde Supabase.",
         )
       })
+  }, [])
+
+  useEffect(() => {
+    fetch("/api/productos/")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar productos")
+        return response.json()
+      })
+      .then((data) => {
+        if (!Array.isArray(data) || data.length === 0) throw new Error("Catálogo vacío")
+        setProductos(data.map(mapProductFromApi))
+      })
+      .catch(() => setProductos(initialProductos))
+
+    fetch("/api/inventario/")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar inventario")
+        return response.json()
+      })
+      .then((data) => {
+        if (!Array.isArray(data) || data.length === 0) throw new Error("Inventario vacío")
+        setLotes(data.map(mapInventoryFromApi))
+      })
+      .catch(() => setLotes(initialLotes))
   }, [])
 
   const createClient = async (input: NewClientInput) => {
@@ -333,6 +382,54 @@ export default function App() {
     const created = mapClientFromApi(await response.json())
     setClientes((current) => [...current, created])
     return created
+  }
+
+  const productPayload = (input: ProductInput) => ({
+    codigo: input.codigo,
+    nombre: input.nombre,
+    descripcion: input.descripcion,
+    tipo: input.tipo,
+    unidad: input.unidad,
+    stock_minimo: input.stockMinimo,
+  })
+
+  const createProduct = async (input: ProductInput) => {
+    const response = await fetch("/api/productos/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(productPayload(input)),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(errorData ? Object.values(errorData).flat().join(" ") : "No se pudo crear el producto")
+    }
+    const created = mapProductFromApi(await response.json())
+    setProductos((current) => [...current, created])
+    return created
+  }
+
+  const updateProduct = async (product: React.ComponentProps<typeof Productos>["productos"][number], input: ProductInput) => {
+    const response = await fetch(`/api/productos/${product.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(productPayload(input)),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el producto")
+    }
+    const updated = mapProductFromApi(await response.json())
+    setProductos((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    return updated
+  }
+
+  const deleteProduct = async (product: React.ComponentProps<typeof Productos>["productos"][number]) => {
+    const response = await fetch(`/api/productos/${product.id}/`, { method: "DELETE" })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(errorData ? Object.values(errorData).flat().join(" ") : "No se pudo eliminar el producto")
+    }
+    setProductos((current) => current.filter((item) => item.id !== product.id))
   }
 
   const deleteClient = async (client: React.ComponentProps<typeof Clientes>["clientes"][number]) => {
@@ -455,7 +552,14 @@ export default function App() {
       />
     ),
     proveedores: <Proveedores />,
-    productos: <Productos productos={productos} />,
+    productos: (
+      <Productos
+        productos={productos}
+        onCreate={createProduct}
+        onUpdate={updateProduct}
+        onDelete={deleteProduct}
+      />
+    ),
     lotes: <Lotes lotes={lotes} />,
     movimientos: <Movimientos productos={productos} lotes={lotes} />,
     cotizaciones: (
