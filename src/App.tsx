@@ -12,7 +12,7 @@ import Facturacion from "./modules/Facturacion"
 import NotasCredito from "./modules/NotasCredito"
 import IaPanel from "./modules/IaPanel"
 import Login from "./modules/Login"
-import Usuarios from "./modules/Usuarios"
+import Usuarios, { User, UserInput } from "./modules/Usuarios"
 import { Screen } from "./shared"
 
 const mapClientFromApi = (item: any) => ({
@@ -51,6 +51,137 @@ const mapInventoryFromApi = (item: any) => ({
   estado: item.estado,
 })
 
+const mapUserFromApi = (item: any): User => ({
+  id: item.id,
+  nombre: item.nombre,
+  email: item.email,
+  rol: item.rol || "Usuario base",
+  estado: item.estado || "Activo",
+  permisos:
+    typeof item.permisos === "object" && item.permisos !== null
+      ? item.permisos
+      : undefined,
+})
+
+const initialUsers: User[] = [
+  {
+    id: 1,
+    nombre: "Juan Rojas",
+    email: "juan.rojas@ecoterra.cl",
+    rol: "Superusuario / Admin",
+    estado: "Activo",
+    permisos: {
+      "clientes:Crear": true,
+      "clientes:Consultar": true,
+      "clientes:Editar": true,
+      "clientes:Eliminar": true,
+      "direcciones:Crear": true,
+      "direcciones:Consultar": true,
+      "direcciones:Editar": true,
+      "direcciones:Eliminar": true,
+      "proveedores:Crear": true,
+      "proveedores:Consultar": true,
+      "proveedores:Editar": true,
+      "proveedores:Eliminar": true,
+      "productos:Crear": true,
+      "productos:Consultar": true,
+      "productos:Editar": true,
+      "productos:Eliminar": true,
+      "lotes:Crear": true,
+      "lotes:Consultar": true,
+      "lotes:Editar": true,
+      "lotes:Eliminar": true,
+      "movimientos:Crear": true,
+      "movimientos:Consultar": true,
+      "movimientos:Editar": true,
+      "movimientos:Eliminar": true,
+      "cotizaciones:Crear": true,
+      "cotizaciones:Consultar": true,
+      "cotizaciones:Editar": true,
+      "cotizaciones:Eliminar": true,
+      "cotizaciones:Descargar PDF": true,
+      "cotizaciones:Enviar por correo": true,
+      "cotizaciones:Asociar a Orden de Compra": true,
+      "ordenes_compra:Crear / Subir PDF": true,
+      "ordenes_compra:Consultar": true,
+      "ordenes_compra:Editar": true,
+      "ordenes_compra:Eliminar": true,
+      "ordenes_compra:Descargar PDF": true,
+      "ordenes_compra:Generar factura": true,
+      "facturacion:Crear": true,
+      "facturacion:Consultar": true,
+      "facturacion:Editar": true,
+      "facturacion:Eliminar": true,
+      "facturacion:Descargar PDF": true,
+      "facturacion:Enviar por correo": true,
+      "notas_credito:Crear": true,
+      "notas_credito:Consultar": true,
+      "notas_credito:Editar": true,
+      "notas_credito:Eliminar": true,
+      "notas_credito:Descargar PDF": true,
+      "notas_credito:Enviar por correo": true,
+      "ia:Predicción de tiempo de llegada": true,
+      "ia:Predicción de precio": true,
+      "ia:Predicción de reposición de stock": true,
+      "usuarios_roles:Crear usuarios": true,
+      "usuarios_roles:Consultar usuarios": true,
+      "usuarios_roles:Editar usuarios": true,
+      "usuarios_roles:Eliminar usuarios": true,
+      "usuarios_roles:Administrar roles y permisos": true,
+    },
+  },
+  {
+    id: 2,
+    nombre: "María López",
+    email: "maria.lopez@ecoterra.cl",
+    rol: "Usuario con privilegios",
+    estado: "Activo",
+    permisos: {
+      "clientes:Crear": true,
+      "clientes:Consultar": true,
+      "clientes:Editar": true,
+      "direcciones:Crear": true,
+      "direcciones:Consultar": true,
+      "direcciones:Editar": true,
+      "proveedores:Consultar": true,
+      "productos:Crear": true,
+      "productos:Consultar": true,
+      "productos:Editar": true,
+      "lotes:Consultar": true,
+      "lotes:Editar": true,
+      "movimientos:Consultar": true,
+      "cotizaciones:Crear": true,
+      "cotizaciones:Consultar": true,
+      "cotizaciones:Editar": true,
+      "ordenes_compra:Consultar": true,
+      "facturacion:Consultar": true,
+      "notas_credito:Consultar": true,
+      "ia:Predicción de tiempo de llegada": true,
+      "ia:Predicción de precio": true,
+      "ia:Predicción de reposición de stock": true,
+    },
+  },
+  {
+    id: 3,
+    nombre: "Pedro García",
+    email: "pedro.garcia@ecoterra.cl",
+    rol: "Usuario base",
+    estado: "Activo",
+    permisos: {
+      "clientes:Consultar": true,
+      "direcciones:Consultar": true,
+      "proveedores:Consultar": true,
+      "productos:Consultar": true,
+      "lotes:Consultar": true,
+      "movimientos:Consultar": true,
+      "cotizaciones:Consultar": true,
+      "ordenes_compra:Consultar": true,
+      "facturacion:Consultar": true,
+      "notas_credito:Consultar": true,
+      "ia:Predicción de tiempo de llegada": true,
+    },
+  },
+]
 
 const initialProductos = [
   {
@@ -310,6 +441,8 @@ export default function App() {
     React.ComponentProps<typeof Clientes>["clientes"]
   >([])
   const [clientesError, setClientesError] = useState("")
+  const [usuarios, setUsuarios] = useState<User[]>(initialUsers)
+  const [usuariosError, setUsuariosError] = useState("")
 
   useEffect(() => {
     fetch("/api/clientes/")
@@ -328,6 +461,27 @@ export default function App() {
           error instanceof Error
             ? `${error.message}. Verifica que Django esté conectado a Supabase.`
             : "No se pudieron cargar los clientes desde Supabase.",
+        )
+      })
+  }, [])
+
+  useEffect(() => {
+    fetch("/api/usuarios/")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar usuarios")
+        return response.json()
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) throw new Error("La API devolvió un formato inválido")
+        setUsuarios(data.map(mapUserFromApi))
+        setUsuariosError("")
+      })
+      .catch((error) => {
+        setUsuarios(initialUsers)
+        setUsuariosError(
+          error instanceof Error
+            ? `${error.message}. Usando datos locales hasta que la API esté disponible.`
+            : "No se pudieron cargar los usuarios.",
         )
       })
   }, [])
@@ -355,6 +509,31 @@ export default function App() {
       })
       .catch(() => setLotes(initialLotes))
   }, [])
+
+  const createUser = async (input: UserInput) => {
+    const response = await fetch("/api/usuarios/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: input.nombre,
+        email: input.email,
+        rol: input.rol,
+        estado: input.estado,
+        permisos: input.permisos ?? {},
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo guardar el usuario",
+      )
+    }
+
+    const created = mapUserFromApi(await response.json())
+    setUsuarios((current) => [...current, created])
+    return created
+  }
 
   const createClient = async (input: NewClientInput) => {
     const response = await fetch("/api/clientes/", {
@@ -430,6 +609,43 @@ export default function App() {
       throw new Error(errorData ? Object.values(errorData).flat().join(" ") : "No se pudo eliminar el producto")
     }
     setProductos((current) => current.filter((item) => item.id !== product.id))
+  }
+
+  const deleteUser = async (user: User) => {
+    const response = await fetch(`/api/usuarios/${user.id}/`, {
+      method: "DELETE",
+    })
+
+    if (!response.ok) {
+      throw new Error("No se pudo eliminar el usuario")
+    }
+
+    setUsuarios((current) => current.filter((item) => item.id !== user.id))
+  }
+
+  const updateUser = async (user: User, input: UserInput) => {
+    const response = await fetch(`/api/usuarios/${user.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: input.nombre,
+        email: input.email,
+        rol: input.rol,
+        estado: input.estado,
+        permisos: input.permisos ?? {},
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el usuario",
+      )
+    }
+
+    const updated = mapUserFromApi(await response.json())
+    setUsuarios((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    return updated
   }
 
   const deleteClient = async (client: React.ComponentProps<typeof Clientes>["clientes"][number]) => {
@@ -576,7 +792,15 @@ export default function App() {
     nc: <NotasCredito facturas={facturas} />,
     ia: <IaPanel productos={productos} />,
 
-    usuarios: <Usuarios />,
+    usuarios: (
+      <Usuarios
+        usuarios={usuarios}
+        loadError={usuariosError}
+        onCreate={createUser}
+        onDelete={deleteUser}
+        onUpdate={updateUser}
+      />
+    ),
     login: <Login onEnter={() => setScreen("clientes")} />,
   }
 
