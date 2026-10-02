@@ -1,9 +1,9 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import AppLayout from "./layout/AppLayout"
 import Dashboard from "./modules/Dashboard"
-import Clientes from "./modules/Clientes"
+import Clientes, { Address, AddressInput, Client, NewClientInput } from "./modules/Clientes"
 import Proveedores from "./modules/Proveedores"
-import Productos from "./modules/Productos"
+import Productos, { ProductInput } from "./modules/Productos"
 import Lotes from "./modules/Lotes"
 import Movimientos from "./modules/Movimientos"
 import Cotizaciones from "./modules/Cotizaciones"
@@ -12,11 +12,178 @@ import Facturacion from "./modules/Facturacion"
 import NotasCredito from "./modules/NotasCredito"
 import IaPanel from "./modules/IaPanel"
 import Login from "./modules/Login"
-import Usuarios from "./modules/Usuarios"
+import Usuarios, { User, UserInput } from "./modules/Usuarios"
 import { Screen } from "./shared"
 
+const mapClientFromApi = (item: any) => ({
+  id: item.id,
+  rut: item.rut,
+  razon: item.razon_social,
+  fantasia: item.nombre_fantasia || item.razon_social,
+  ciudad: item.ciudad,
+  tel: item.telefono || "-",
+  email: item.email || "-",
+  rep: item.representante || "-",
+  estado: item.estado,
+  dirs: Array.isArray(item.direcciones) ? item.direcciones : [],
+})
 
-const productos = [
+const mapProductFromApi = (item: any) => ({
+  id: item.id,
+  codigo: item.codigo,
+  nombre: item.nombre,
+  desc: item.descripcion || "",
+  tipo: item.tipo,
+  unidad: item.unidad,
+  stockMin: Number(item.stock_minimo),
+  stock: Number(item.stock),
+  estado: item.estado ? "Activo" : "Inactivo",
+})
+
+const mapInventoryFromApi = (item: any) => ({
+  id: item.lote,
+  prod: item.producto_codigo,
+  qty: Number(item.cantidad),
+  envase: item.envase,
+  fabr: item.fecha_fabricacion,
+  venc: item.fecha_vencimiento,
+  ubic: item.ubicacion,
+  estado: item.estado,
+})
+
+const mapUserFromApi = (item: any): User => ({
+  id: item.id,
+  nombre: item.nombre,
+  email: item.email,
+  rol: item.rol || "Usuario base",
+  estado: item.estado || "Activo",
+  permisos:
+    typeof item.permisos === "object" && item.permisos !== null
+      ? item.permisos
+      : undefined,
+})
+
+const initialUsers: User[] = [
+  {
+    id: 1,
+    nombre: "Juan Rojas",
+    email: "juan.rojas@ecoterra.cl",
+    rol: "Superusuario / Admin",
+    estado: "Activo",
+    permisos: {
+      "clientes:Crear": true,
+      "clientes:Consultar": true,
+      "clientes:Editar": true,
+      "clientes:Eliminar": true,
+      "direcciones:Crear": true,
+      "direcciones:Consultar": true,
+      "direcciones:Editar": true,
+      "direcciones:Eliminar": true,
+      "proveedores:Crear": true,
+      "proveedores:Consultar": true,
+      "proveedores:Editar": true,
+      "proveedores:Eliminar": true,
+      "productos:Crear": true,
+      "productos:Consultar": true,
+      "productos:Editar": true,
+      "productos:Eliminar": true,
+      "lotes:Crear": true,
+      "lotes:Consultar": true,
+      "lotes:Editar": true,
+      "lotes:Eliminar": true,
+      "movimientos:Crear": true,
+      "movimientos:Consultar": true,
+      "movimientos:Editar": true,
+      "movimientos:Eliminar": true,
+      "cotizaciones:Crear": true,
+      "cotizaciones:Consultar": true,
+      "cotizaciones:Editar": true,
+      "cotizaciones:Eliminar": true,
+      "cotizaciones:Descargar PDF": true,
+      "cotizaciones:Enviar por correo": true,
+      "cotizaciones:Asociar a Orden de Compra": true,
+      "ordenes_compra:Crear / Subir PDF": true,
+      "ordenes_compra:Consultar": true,
+      "ordenes_compra:Editar": true,
+      "ordenes_compra:Eliminar": true,
+      "ordenes_compra:Descargar PDF": true,
+      "ordenes_compra:Generar factura": true,
+      "facturacion:Crear": true,
+      "facturacion:Consultar": true,
+      "facturacion:Editar": true,
+      "facturacion:Eliminar": true,
+      "facturacion:Descargar PDF": true,
+      "facturacion:Enviar por correo": true,
+      "notas_credito:Crear": true,
+      "notas_credito:Consultar": true,
+      "notas_credito:Editar": true,
+      "notas_credito:Eliminar": true,
+      "notas_credito:Descargar PDF": true,
+      "notas_credito:Enviar por correo": true,
+      "ia:Predicción de tiempo de llegada": true,
+      "ia:Predicción de precio": true,
+      "ia:Predicción de reposición de stock": true,
+      "usuarios_roles:Crear usuarios": true,
+      "usuarios_roles:Consultar usuarios": true,
+      "usuarios_roles:Editar usuarios": true,
+      "usuarios_roles:Eliminar usuarios": true,
+      "usuarios_roles:Administrar roles y permisos": true,
+    },
+  },
+  {
+    id: 2,
+    nombre: "María López",
+    email: "maria.lopez@ecoterra.cl",
+    rol: "Usuario con privilegios",
+    estado: "Activo",
+    permisos: {
+      "clientes:Crear": true,
+      "clientes:Consultar": true,
+      "clientes:Editar": true,
+      "direcciones:Crear": true,
+      "direcciones:Consultar": true,
+      "direcciones:Editar": true,
+      "proveedores:Consultar": true,
+      "productos:Crear": true,
+      "productos:Consultar": true,
+      "productos:Editar": true,
+      "lotes:Consultar": true,
+      "lotes:Editar": true,
+      "movimientos:Consultar": true,
+      "cotizaciones:Crear": true,
+      "cotizaciones:Consultar": true,
+      "cotizaciones:Editar": true,
+      "ordenes_compra:Consultar": true,
+      "facturacion:Consultar": true,
+      "notas_credito:Consultar": true,
+      "ia:Predicción de tiempo de llegada": true,
+      "ia:Predicción de precio": true,
+      "ia:Predicción de reposición de stock": true,
+    },
+  },
+  {
+    id: 3,
+    nombre: "Pedro García",
+    email: "pedro.garcia@ecoterra.cl",
+    rol: "Usuario base",
+    estado: "Activo",
+    permisos: {
+      "clientes:Consultar": true,
+      "direcciones:Consultar": true,
+      "proveedores:Consultar": true,
+      "productos:Consultar": true,
+      "lotes:Consultar": true,
+      "movimientos:Consultar": true,
+      "cotizaciones:Consultar": true,
+      "ordenes_compra:Consultar": true,
+      "facturacion:Consultar": true,
+      "notas_credito:Consultar": true,
+      "ia:Predicción de tiempo de llegada": true,
+    },
+  },
+]
+
+const initialProductos = [
   {
     id: 1,
     codigo: "POL-001",
@@ -78,34 +245,7 @@ const productos = [
   },
 ]
 
-const clientes = [
-  {
-    id: 1,
-    rut: "76.234.567-8",
-    razon: "Minera Los Bronces S.A.",
-    fantasia: "Los Bronces",
-    ciudad: "Santiago",
-    tel: "+56 2 2345 6789",
-    email: "compras@losbronces.cl",
-    rep: "Carlos Muñoz",
-    estado: "Activo",
-    dirs: [],
-  },
-  {
-    id: 2,
-    rut: "77.891.234-5",
-    razon: "Constructora Vial Sur Ltda.",
-    fantasia: "Vial Sur",
-    ciudad: "Concepción",
-    tel: "+56 41 223 4567",
-    email: "logistica@vialsur.cl",
-    rep: "Ana Rodríguez",
-    estado: "Activo",
-    dirs: [],
-  },
-]
-
-const lotes = [
+const initialLotes = [
   {
     id: "LT-2024-001",
     prod: "POL-001",
@@ -294,13 +434,348 @@ const ordenes = [
 ]
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("login")
+  const [screen, setScreen] = useState<Screen>("clientes")
+  const [productos, setProductos] = useState(initialProductos)
+  const [lotes, setLotes] = useState(initialLotes)
+  const [clientes, setClientes] = useState<
+    React.ComponentProps<typeof Clientes>["clientes"]
+  >([])
+  const [clientesError, setClientesError] = useState("")
+  const [usuarios, setUsuarios] = useState<User[]>(initialUsers)
+  const [usuariosError, setUsuariosError] = useState("")
+
+  useEffect(() => {
+    fetch("/api/clientes/")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar clientes")
+        return response.json()
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) throw new Error("La API devolvió un formato inválido")
+        setClientes(data.map(mapClientFromApi))
+        setClientesError("")
+      })
+      .catch((error) => {
+        setClientes([])
+        setClientesError(
+          error instanceof Error
+            ? `${error.message}. Verifica que Django esté conectado a Supabase.`
+            : "No se pudieron cargar los clientes desde Supabase.",
+        )
+      })
+  }, [])
+
+  useEffect(() => {
+    fetch("/api/usuarios/")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar usuarios")
+        return response.json()
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) throw new Error("La API devolvió un formato inválido")
+        setUsuarios(data.map(mapUserFromApi))
+        setUsuariosError("")
+      })
+      .catch((error) => {
+        setUsuarios(initialUsers)
+        setUsuariosError(
+          error instanceof Error
+            ? `${error.message}. Usando datos locales hasta que la API esté disponible.`
+            : "No se pudieron cargar los usuarios.",
+        )
+      })
+  }, [])
+
+  useEffect(() => {
+    fetch("/api/productos/")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar productos")
+        return response.json()
+      })
+      .then((data) => {
+        if (!Array.isArray(data) || data.length === 0) throw new Error("Catálogo vacío")
+        setProductos(data.map(mapProductFromApi))
+      })
+      .catch(() => setProductos(initialProductos))
+
+    fetch("/api/inventario/")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar inventario")
+        return response.json()
+      })
+      .then((data) => {
+        if (!Array.isArray(data) || data.length === 0) throw new Error("Inventario vacío")
+        setLotes(data.map(mapInventoryFromApi))
+      })
+      .catch(() => setLotes(initialLotes))
+  }, [])
+
+  const createUser = async (input: UserInput) => {
+    const response = await fetch("/api/usuarios/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: input.nombre,
+        email: input.email,
+        rol: input.rol,
+        estado: input.estado,
+        permisos: input.permisos ?? {},
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo guardar el usuario",
+      )
+    }
+
+    const created = mapUserFromApi(await response.json())
+    setUsuarios((current) => [...current, created])
+    return created
+  }
+
+  const createClient = async (input: NewClientInput) => {
+    const response = await fetch("/api/clientes/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rut: input.rut,
+        razon_social: input.razon_social,
+        nombre_fantasia: input.nombre_fantasia,
+        ciudad: input.ciudad,
+        telefono: input.telefono,
+        email: input.email,
+        representante: input.representante,
+        estado: input.estado,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo guardar el cliente",
+      )
+    }
+
+    const created = mapClientFromApi(await response.json())
+    setClientes((current) => [...current, created])
+    return created
+  }
+
+  const productPayload = (input: ProductInput) => ({
+    codigo: input.codigo,
+    nombre: input.nombre,
+    descripcion: input.descripcion,
+    tipo: input.tipo,
+    unidad: input.unidad,
+    stock_minimo: input.stockMinimo,
+  })
+
+  const createProduct = async (input: ProductInput) => {
+    const response = await fetch("/api/productos/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(productPayload(input)),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(errorData ? Object.values(errorData).flat().join(" ") : "No se pudo crear el producto")
+    }
+    const created = mapProductFromApi(await response.json())
+    setProductos((current) => [...current, created])
+    return created
+  }
+
+  const updateProduct = async (product: React.ComponentProps<typeof Productos>["productos"][number], input: ProductInput) => {
+    const response = await fetch(`/api/productos/${product.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(productPayload(input)),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el producto")
+    }
+    const updated = mapProductFromApi(await response.json())
+    setProductos((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    return updated
+  }
+
+  const deleteProduct = async (product: React.ComponentProps<typeof Productos>["productos"][number]) => {
+    const response = await fetch(`/api/productos/${product.id}/`, { method: "DELETE" })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(errorData ? Object.values(errorData).flat().join(" ") : "No se pudo eliminar el producto")
+    }
+    setProductos((current) => current.filter((item) => item.id !== product.id))
+  }
+
+  const deleteUser = async (user: User) => {
+    const response = await fetch(`/api/usuarios/${user.id}/`, {
+      method: "DELETE",
+    })
+
+    if (!response.ok) {
+      throw new Error("No se pudo eliminar el usuario")
+    }
+
+    setUsuarios((current) => current.filter((item) => item.id !== user.id))
+  }
+
+  const updateUser = async (user: User, input: UserInput) => {
+    const response = await fetch(`/api/usuarios/${user.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: input.nombre,
+        email: input.email,
+        rol: input.rol,
+        estado: input.estado,
+        permisos: input.permisos ?? {},
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el usuario",
+      )
+    }
+
+    const updated = mapUserFromApi(await response.json())
+    setUsuarios((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    return updated
+  }
+
+  const deleteClient = async (client: React.ComponentProps<typeof Clientes>["clientes"][number]) => {
+    const response = await fetch(`/api/clientes/${client.id}/`, {
+      method: "DELETE",
+    })
+
+    if (!response.ok) {
+      throw new Error("No se pudo eliminar el cliente")
+    }
+
+    setClientes((current) => current.filter((item) => item.id !== client.id))
+  }
+
+  const updateClient = async (client: Client, input: NewClientInput) => {
+    const response = await fetch(`/api/clientes/${client.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rut: input.rut,
+        razon_social: input.razon_social,
+        nombre_fantasia: input.nombre_fantasia,
+        ciudad: input.ciudad,
+        telefono: input.telefono,
+        email: input.email,
+        representante: input.representante,
+        estado: input.estado,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el cliente",
+      )
+    }
+
+    const updated = mapClientFromApi(await response.json())
+    setClientes((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    return updated
+  }
+
+  const createAddress = async (client: Client, input: AddressInput) => {
+    const response = await fetch(`/api/clientes/${client.id}/direcciones/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo crear la dirección",
+      )
+    }
+    const created = (await response.json()) as Address
+    setClientes((current) =>
+      current.map((item) =>
+        item.id === client.id ? { ...item, dirs: [...item.dirs, created] } : item,
+      ),
+    )
+    return created
+  }
+
+  const updateAddress = async (client: Client, address: Address, input: AddressInput) => {
+    const response = await fetch(`/api/clientes/${client.id}/direcciones/${address.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo actualizar la dirección",
+      )
+    }
+    const updated = (await response.json()) as Address
+    setClientes((current) =>
+      current.map((item) =>
+        item.id === client.id
+          ? {
+              ...item,
+              dirs: item.dirs.map((currentAddress) =>
+                currentAddress.id === updated.id ? updated : currentAddress,
+              ),
+            }
+          : item,
+      ),
+    )
+    return updated
+  }
+
+  const deleteAddress = async (client: Client, address: Address) => {
+    const response = await fetch(`/api/clientes/${client.id}/direcciones/${address.id}/`, {
+      method: "DELETE",
+    })
+    if (!response.ok) throw new Error("No se pudo eliminar la dirección")
+    setClientes((current) =>
+      current.map((item) =>
+        item.id === client.id
+          ? { ...item, dirs: item.dirs.filter((currentAddress) => currentAddress.id !== address.id) }
+          : item,
+      ),
+    )
+  }
 
   const views: Record<Screen, React.ReactNode> = {
     dashboard: <Dashboard productos={productos} onNav={setScreen} />,
-    clientes: <Clientes clientes={clientes} />,
+    clientes: (
+      <Clientes
+        clientes={clientes}
+        loadError={clientesError}
+        onCreate={createClient}
+        onDelete={deleteClient}
+        onUpdate={updateClient}
+        onCreateAddress={createAddress}
+        onUpdateAddress={updateAddress}
+        onDeleteAddress={deleteAddress}
+      />
+    ),
     proveedores: <Proveedores />,
-    productos: <Productos productos={productos} />,
+    productos: (
+      <Productos
+        productos={productos}
+        onCreate={createProduct}
+        onUpdate={updateProduct}
+        onDelete={deleteProduct}
+      />
+    ),
     lotes: <Lotes lotes={lotes} />,
     movimientos: <Movimientos productos={productos} lotes={lotes} />,
     cotizaciones: (
@@ -317,12 +792,20 @@ export default function App() {
     nc: <NotasCredito facturas={facturas} />,
     ia: <IaPanel productos={productos} />,
 
-    usuarios: <Usuarios />,
-    login: <Login onEnter={() => setScreen("dashboard")} />,
+    usuarios: (
+      <Usuarios
+        usuarios={usuarios}
+        loadError={usuariosError}
+        onCreate={createUser}
+        onDelete={deleteUser}
+        onUpdate={updateUser}
+      />
+    ),
+    login: <Login onEnter={() => setScreen("clientes")} />,
   }
 
   if (screen === "login")
-    return <Login onEnter={() => setScreen("dashboard")} />
+    return <Login onEnter={() => setScreen("clientes")} />
 
   return (
     <AppLayout screen={screen} onNav={setScreen}>
