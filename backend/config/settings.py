@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "clientes",
     "inventario",
+    "proveedores", 
     "usuarios.apps.UsuariosConfig",
 ]
 

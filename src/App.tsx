@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react"
 import AppLayout from "./layout/AppLayout"
 import Dashboard from "./modules/Dashboard"
 import Clientes, { Address, AddressInput, Client, NewClientInput } from "./modules/Clientes"
-import Proveedores from "./modules/Proveedores"
+import Proveedores, { Proveedor, ProveedorInput } from "./modules/Proveedores"
 import Productos, { ProductInput } from "./modules/Productos"
 import Lotes from "./modules/Lotes"
 import Movimientos from "./modules/Movimientos"
@@ -15,6 +15,7 @@ import Login from "./modules/Login"
 import Usuarios, { User, UserInput } from "./modules/Usuarios"
 import { Screen } from "./shared"
 
+// ---------- Mappers API -> UI ----------
 const mapClientFromApi = (item: any) => ({
   id: item.id,
   rut: item.rut,
@@ -63,6 +64,21 @@ const mapUserFromApi = (item: any): User => ({
       : undefined,
 })
 
+const mapProveedorFromApi = (item: any): Proveedor => ({
+  id: item.id,
+  empresa: item.nombre_empresa,
+  pais: item.pais,
+  contacto: item.contacto,
+  tel: item.telefono || "-",
+  email: item.email || "-",
+  direccion: item.direccion || "",
+  estado:
+    item.estado === "Activo" || item.estado === "Inactivo"
+      ? item.estado
+      : "Activo",
+})
+
+// ---------- Datos iniciales (fallback) ----------
 const initialUsers: User[] = []
 
 const initialProductos = [
@@ -77,7 +93,6 @@ const initialProductos = [
     stock: 2960,
     estado: "Activo",
   },
-
   {
     id: 2,
     codigo: "POL-002",
@@ -89,7 +104,6 @@ const initialProductos = [
     stock: 300,
     estado: "Activo",
   },
-
   {
     id: 3,
     codigo: "POL-003",
@@ -101,7 +115,6 @@ const initialProductos = [
     stock: 0,
     estado: "Inactivo",
   },
-
   {
     id: 4,
     codigo: "POL-004",
@@ -113,7 +126,6 @@ const initialProductos = [
     stock: 1340,
     estado: "Activo",
   },
-
   {
     id: 5,
     codigo: "POL-005",
@@ -138,7 +150,6 @@ const initialLotes = [
     ubic: "A1-01",
     estado: "Disponible",
   },
-
   {
     id: "LT-2024-002",
     prod: "POL-001",
@@ -149,7 +160,6 @@ const initialLotes = [
     ubic: "A1-02",
     estado: "Disponible",
   },
-
   {
     id: "LT-2024-003",
     prod: "POL-002",
@@ -160,7 +170,6 @@ const initialLotes = [
     ubic: "B2-03",
     estado: "Reservado",
   },
-
   {
     id: "LT-2024-004",
     prod: "POL-003",
@@ -171,7 +180,6 @@ const initialLotes = [
     ubic: "A2-01",
     estado: "Disponible",
   },
-
   {
     id: "LT-2024-005",
     prod: "POL-004",
@@ -182,7 +190,6 @@ const initialLotes = [
     ubic: "C3-02",
     estado: "Disponible",
   },
-
   {
     id: "LT-2024-006",
     prod: "POL-005",
@@ -207,7 +214,6 @@ const cotizaciones = [
     observacion: "Entrega estimada en dos despachos según disponibilidad de bodega.",
     estado: "Vigente",
   },
-
   {
     id: "COT-2024-040",
     cliente: "Constructora Vial Sur Ltda.",
@@ -219,7 +225,6 @@ const cotizaciones = [
     observacion: "Precios sujetos a confirmación de volumen.",
     estado: "Convertida",
   },
-
   {
     id: "COT-2024-039",
     cliente: "Portuaria del Pacífico",
@@ -231,7 +236,6 @@ const cotizaciones = [
     observacion: "Considerar coordinación previa con el área de operaciones.",
     estado: "Vencida",
   },
-
   {
     id: "COT-2024-038",
     cliente: "Agrícola Atacama SpA",
@@ -257,7 +261,6 @@ const facturas = [
     total: 4250000,
     estado: "Pendiente",
   },
-
   {
     id: "FAC-2024-121",
     oc: "OC-2024-040",
@@ -269,7 +272,6 @@ const facturas = [
     total: 1840000,
     estado: "Pagada",
   },
-
   {
     id: "FAC-2024-120",
     oc: "OC-2024-039",
@@ -293,7 +295,6 @@ const ordenes = [
     estado: "Aprobada",
     factura: "FAC-2024-121",
   },
-
   {
     id: "OC-2024-040",
     cot: "COT-2024-038",
@@ -303,7 +304,6 @@ const ordenes = [
     estado: "Pendiente facturar",
     factura: null,
   },
-
   {
     id: "OC-2024-039",
     cot: "COT-2024-039",
@@ -315,6 +315,7 @@ const ordenes = [
   },
 ]
 
+// ---------- App ----------
 export default function App() {
   const [screen, setScreen] = useState<Screen>("clientes")
   const [productos, setProductos] = useState(initialProductos)
@@ -325,7 +326,10 @@ export default function App() {
   const [clientesError, setClientesError] = useState("")
   const [usuarios, setUsuarios] = useState<User[]>([])
   const [usuariosError, setUsuariosError] = useState("")
+  const [proveedores, setProveedores] = useState<Proveedor[]>([])
+  const [proveedoresError, setProveedoresError] = useState("")
 
+  // ---------- Cargas iniciales ----------
   useEffect(() => {
     fetch("/api/clientes/")
       .then((response) => {
@@ -369,6 +373,27 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    fetch("/api/proveedores/")
+      .then((response) => {
+        if (!response.ok) throw new Error("No se pudo cargar proveedores")
+        return response.json()
+      })
+      .then((data) => {
+        if (!Array.isArray(data)) throw new Error("La API devolvió un formato inválido")
+        setProveedores(data.map(mapProveedorFromApi))
+        setProveedoresError("")
+      })
+      .catch((error) => {
+        setProveedores([])
+        setProveedoresError(
+          error instanceof Error
+            ? `${error.message}. Verifica que Django esté conectado a Supabase.`
+            : "No se pudieron cargar los proveedores.",
+        )
+      })
+  }, [])
+
+  useEffect(() => {
     fetch("/api/productos/")
       .then((response) => {
         if (!response.ok) throw new Error("No se pudo cargar productos")
@@ -392,6 +417,7 @@ export default function App() {
       .catch(() => setLotes(initialLotes))
   }, [])
 
+  // ---------- Handlers Usuarios ----------
   const createUser = async (input: UserInput) => {
     const response = await fetch("/api/usuarios/", {
       method: "POST",
@@ -417,6 +443,101 @@ export default function App() {
     return created
   }
 
+  const updateUser = async (user: User, input: UserInput) => {
+    const response = await fetch(`/api/usuarios/${user.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: input.nombre,
+        email: input.email,
+        rol: input.rol,
+        estado: input.estado,
+        permisos: input.permisos ?? {},
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el usuario",
+      )
+    }
+
+    const updated = mapUserFromApi(await response.json())
+    setUsuarios((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    return updated
+  }
+
+  const deleteUser = async (user: User) => {
+    const response = await fetch(`/api/usuarios/${user.id}/`, { method: "DELETE" })
+    if (!response.ok) throw new Error("No se pudo eliminar el usuario")
+    setUsuarios((current) => current.filter((item) => item.id !== user.id))
+  }
+
+  // ---------- Handlers Proveedores ----------
+  const proveedorPayload = (input: ProveedorInput) => ({
+    nombre_empresa: input.empresa,
+    pais: input.pais,
+    contacto: input.contacto,
+    telefono: input.tel,
+    email: input.email,
+    direccion: input.direccion,
+    estado: input.estado,
+  })
+
+  const createProveedor = async (input: ProveedorInput) => {
+    const response = await fetch("/api/proveedores/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(proveedorPayload(input)),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo guardar el proveedor",
+      )
+    }
+
+    const created = mapProveedorFromApi(await response.json())
+    setProveedores((current) => [...current, created])
+    return created
+  }
+
+  const updateProveedor = async (proveedor: Proveedor, input: ProveedorInput) => {
+    const response = await fetch(`/api/proveedores/${proveedor.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(proveedorPayload(input)),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo actualizar el proveedor",
+      )
+    }
+
+    const updated = mapProveedorFromApi(await response.json())
+    setProveedores((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    )
+    return updated
+  }
+
+  const deleteProveedor = async (proveedor: Proveedor) => {
+    const response = await fetch(`/api/proveedores/${proveedor.id}/`, {
+      method: "DELETE",
+    })
+    if (!response.ok) throw new Error("No se pudo eliminar el proveedor")
+    setProveedores((current) => current.filter((item) => item.id !== proveedor.id))
+  }
+
+  // ---------- Handlers Clientes ----------
   const createClient = async (input: NewClientInput) => {
     const response = await fetch("/api/clientes/", {
       method: "POST",
@@ -445,103 +566,6 @@ export default function App() {
     return created
   }
 
-  const productPayload = (input: ProductInput) => ({
-    codigo: input.codigo,
-    nombre: input.nombre,
-    descripcion: input.descripcion,
-    tipo: input.tipo,
-    unidad: input.unidad,
-    stock_minimo: input.stockMinimo,
-  })
-
-  const createProduct = async (input: ProductInput) => {
-    const response = await fetch("/api/productos/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(productPayload(input)),
-    })
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData ? Object.values(errorData).flat().join(" ") : "No se pudo crear el producto")
-    }
-    const created = mapProductFromApi(await response.json())
-    setProductos((current) => [...current, created])
-    return created
-  }
-
-  const updateProduct = async (product: React.ComponentProps<typeof Productos>["productos"][number], input: ProductInput) => {
-    const response = await fetch(`/api/productos/${product.id}/`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(productPayload(input)),
-    })
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el producto")
-    }
-    const updated = mapProductFromApi(await response.json())
-    setProductos((current) => current.map((item) => (item.id === updated.id ? updated : item)))
-    return updated
-  }
-
-  const deleteProduct = async (product: React.ComponentProps<typeof Productos>["productos"][number]) => {
-    const response = await fetch(`/api/productos/${product.id}/`, { method: "DELETE" })
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(errorData ? Object.values(errorData).flat().join(" ") : "No se pudo eliminar el producto")
-    }
-    setProductos((current) => current.filter((item) => item.id !== product.id))
-  }
-
-  const deleteUser = async (user: User) => {
-    const response = await fetch(`/api/usuarios/${user.id}/`, {
-      method: "DELETE",
-    })
-
-    if (!response.ok) {
-      throw new Error("No se pudo eliminar el usuario")
-    }
-
-    setUsuarios((current) => current.filter((item) => item.id !== user.id))
-  }
-
-  const updateUser = async (user: User, input: UserInput) => {
-    const response = await fetch(`/api/usuarios/${user.id}/`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        nombre: input.nombre,
-        email: input.email,
-        rol: input.rol,
-        estado: input.estado,
-        permisos: input.permisos ?? {},
-      }),
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null)
-      throw new Error(
-        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el usuario",
-      )
-    }
-
-    const updated = mapUserFromApi(await response.json())
-    setUsuarios((current) => current.map((item) => (item.id === updated.id ? updated : item)))
-    return updated
-  }
-
-  const deleteClient = async (client: React.ComponentProps<typeof Clientes>["clientes"][number]) => {
-    const response = await fetch(`/api/clientes/${client.id}/`, {
-      method: "DELETE",
-    })
-
-    if (!response.ok) {
-      throw new Error("No se pudo eliminar el cliente")
-    }
-
-    setClientes((current) => current.filter((item) => item.id !== client.id))
-  }
-
   const updateClient = async (client: Client, input: NewClientInput) => {
     const response = await fetch(`/api/clientes/${client.id}/`, {
       method: "PATCH",
@@ -568,6 +592,14 @@ export default function App() {
     const updated = mapClientFromApi(await response.json())
     setClientes((current) => current.map((item) => (item.id === updated.id ? updated : item)))
     return updated
+  }
+
+  const deleteClient = async (
+    client: React.ComponentProps<typeof Clientes>["clientes"][number],
+  ) => {
+    const response = await fetch(`/api/clientes/${client.id}/`, { method: "DELETE" })
+    if (!response.ok) throw new Error("No se pudo eliminar el cliente")
+    setClientes((current) => current.filter((item) => item.id !== client.id))
   }
 
   const createAddress = async (client: Client, input: AddressInput) => {
@@ -635,6 +667,67 @@ export default function App() {
     )
   }
 
+  // ---------- Handlers Productos ----------
+  const productPayload = (input: ProductInput) => ({
+    codigo: input.codigo,
+    nombre: input.nombre,
+    descripcion: input.descripcion,
+    tipo: input.tipo,
+    unidad: input.unidad,
+    stock_minimo: input.stockMinimo,
+  })
+
+  const createProduct = async (input: ProductInput) => {
+    const response = await fetch("/api/productos/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(productPayload(input)),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo crear el producto",
+      )
+    }
+    const created = mapProductFromApi(await response.json())
+    setProductos((current) => [...current, created])
+    return created
+  }
+
+  const updateProduct = async (
+    product: React.ComponentProps<typeof Productos>["productos"][number],
+    input: ProductInput,
+  ) => {
+    const response = await fetch(`/api/productos/${product.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(productPayload(input)),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el producto",
+      )
+    }
+    const updated = mapProductFromApi(await response.json())
+    setProductos((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    return updated
+  }
+
+  const deleteProduct = async (
+    product: React.ComponentProps<typeof Productos>["productos"][number],
+  ) => {
+    const response = await fetch(`/api/productos/${product.id}/`, { method: "DELETE" })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo eliminar el producto",
+      )
+    }
+    setProductos((current) => current.filter((item) => item.id !== product.id))
+  }
+
+  // ---------- Vistas ----------
   const views: Record<Screen, React.ReactNode> = {
     dashboard: <Dashboard productos={productos} onNav={setScreen} />,
     clientes: (
@@ -649,7 +742,15 @@ export default function App() {
         onDeleteAddress={deleteAddress}
       />
     ),
-    proveedores: <Proveedores />,
+    proveedores: (
+      <Proveedores
+        proveedores={proveedores}
+        loadError={proveedoresError}
+        onCreate={createProveedor}
+        onUpdate={updateProveedor}
+        onDelete={deleteProveedor}
+      />
+    ),
     productos: (
       <Productos
         productos={productos}
@@ -673,7 +774,6 @@ export default function App() {
     facturacion: <Facturacion facturas={facturas} />,
     nc: <NotasCredito facturas={facturas} />,
     ia: <IaPanel productos={productos} />,
-
     usuarios: (
       <Usuarios
         usuarios={usuarios}
