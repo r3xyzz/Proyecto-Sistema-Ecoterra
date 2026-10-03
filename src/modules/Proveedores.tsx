@@ -1,94 +1,143 @@
 import React, { useState } from "react"
 import { Badge, I, Ico, PageTitle } from "../shared"
 
-type Provider = {
+// ---------- Tipos exportables ----------
+export type Proveedor = {
   id: number
-  nombre: string
+  empresa: string
   pais: string
   contacto: string
-  email: string
   tel: string
+  email: string
   direccion: string
-  estado: string
+  estado: "Activo" | "Inactivo"
 }
 
-const PROVEEDORES: Provider[] = [
-  {
-    id: 1,
-    nombre: "Polymer Solutions Inc.",
-    pais: "EE.UU.",
-    contacto: "John Williams",
-    email: "jwilliams@polysol.com",
-    tel: "+1 713 445 8821",
-    direccion: "Houston, Texas, EE.UU.",
-    estado: "Activo",
-  },
+export type ProveedorInput = {
+  empresa: string
+  pais: string
+  contacto: string
+  tel: string
+  email: string
+  direccion: string
+  estado: "Activo" | "Inactivo"
+}
 
-  {
-    id: 2,
-    nombre: "ChemTrade Global LLC",
-    pais: "EE.UU.",
-    contacto: "Sarah Connor",
-    email: "sconnor@chemtrade.com",
-    tel: "+1 832 221 9043",
-    direccion: "Houston, Texas, EE.UU.",
-    estado: "Activo",
-  },
+// ---------- Props ----------
+type Props = {
+  proveedores: Proveedor[]
+  loadError?: string
+  onCreate: (input: ProveedorInput) => Promise<Proveedor>
+  onUpdate: (proveedor: Proveedor, input: ProveedorInput) => Promise<Proveedor>
+  onDelete: (proveedor: Proveedor) => Promise<void>
+}
 
-  {
-    id: 3,
-    nombre: "Pacific Polymers Corp.",
-    pais: "EE.UU.",
-    contacto: "David Park",
-    email: "dpark@pacpoly.com",
-    tel: "+1 206 882 7711",
-    direccion: "Seattle, Washington, EE.UU.",
-    estado: "Activo",
-  },
+const EMPTY_FORM: ProveedorInput = {
+  empresa: "",
+  pais: "",
+  contacto: "",
+  tel: "",
+  email: "",
+  direccion: "",
+  estado: "Activo",
+}
 
-  {
-    id: 4,
-    nombre: "EcoQuímicos Brasil",
-    pais: "Brasil",
-    contacto: "Felipe Alves",
-    email: "falves@ecobr.com",
-    tel: "+55 11 3344 8899",
-    direccion: "Sao Paulo, Brasil",
-    estado: "Inactivo",
-  },
-]
-
-export default function Proveedores() {
+export default function Proveedores({
+  proveedores,
+  loadError,
+  onCreate,
+  onUpdate,
+  onDelete,
+}: Props) {
   const [search, setSearch] = useState("")
   const [showModal, setShowModal] = useState(false)
-  const [editingProvider, setEditingProvider] = useState<Provider | null>(null)
+  const [editingProvider, setEditingProvider] = useState<Proveedor | null>(null)
+  const [form, setForm] = useState<ProveedorInput>(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState("")
+  const [deletingId, setDeletingId] = useState<number | null>(null)
 
   const closeModal = () => {
     setShowModal(false)
     setEditingProvider(null)
+    setForm(EMPTY_FORM)
+    setFormError("")
   }
 
-  const providerFields = [
-    { l: "Nombre Empresa", s: 2, value: editingProvider?.nombre ?? "" },
-    { l: "País", s: 1, value: editingProvider?.pais ?? "" },
-    { l: "Contacto", s: 1, value: editingProvider?.contacto ?? "" },
-    { l: "Teléfono", s: 1, value: editingProvider?.tel ?? "" },
-    { l: "Email", s: 2, value: editingProvider?.email ?? "" },
-    {
-      l: "Dirección proveedor",
-      s: 2,
-      value: editingProvider?.direccion ?? "",
-    },
-  ]
+  const openNew = () => {
+    setEditingProvider(null)
+    setForm(EMPTY_FORM)
+    setFormError("")
+    setShowModal(true)
+  }
 
-  const filtered = PROVEEDORES.filter((provider) => {
+  const openEdit = (provider: Proveedor) => {
+    setEditingProvider(provider)
+    setForm({
+      empresa: provider.empresa,
+      pais: provider.pais,
+      contacto: provider.contacto,
+      tel: provider.tel,
+      email: provider.email,
+      direccion: provider.direccion,
+      estado: provider.estado,
+    })
+    setFormError("")
+    setShowModal(true)
+  }
+
+  const handleSave = async () => {
+    // Validación mínima
+    if (!form.empresa.trim() || !form.email.trim()) {
+      setFormError("Nombre de empresa y email son obligatorios.")
+      return
+    }
+
+    setSaving(true)
+    setFormError("")
+    try {
+      if (editingProvider) {
+        await onUpdate(editingProvider, form)
+      } else {
+        await onCreate(form)
+      }
+      closeModal()
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "No se pudo guardar el proveedor",
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (provider: Proveedor) => {
+    if (!confirm(`¿Eliminar a ${provider.empresa}?`)) return
+    setDeletingId(provider.id)
+    try {
+      await onDelete(provider)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "No se pudo eliminar el proveedor")
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  // ---------- Filtro de búsqueda ----------
+  const filtered = proveedores.filter((provider) => {
     const query = search.toLowerCase()
     return (
-      provider.nombre.toLowerCase().includes(query) ||
+      provider.empresa.toLowerCase().includes(query) ||
       provider.pais.toLowerCase().includes(query) ||
       provider.contacto.toLowerCase().includes(query)
     )
   })
+
+  // ---------- Campos del formulario ----------
+  const updateField = <K extends keyof ProveedorInput>(
+    key: K,
+    value: ProveedorInput[K],
+  ) => setForm((current) => ({ ...current, [key]: value }))
 
   return (
     <div>
@@ -96,16 +145,17 @@ export default function Proveedores() {
         title="Proveedores"
         sub="Directorio de proveedores de materias primas"
       >
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setEditingProvider(null)
-            setShowModal(true)
-          }}
-        >
+        <button className="btn btn-primary" onClick={openNew}>
           <Ico p={I.plus} size={14} /> Nuevo proveedor
         </button>
       </PageTitle>
+
+      {loadError && (
+        <div className="panel" style={{ marginBottom: 12, color: "#b91c1c" }}>
+          {loadError}
+        </div>
+      )}
+
       <div className="panel">
         <div className="panel-header">
           <div className="proveedores-search-wrap">
@@ -135,7 +185,7 @@ export default function Proveedores() {
           <tbody>
             {filtered.map((provider) => (
               <tr key={provider.id}>
-                <td className="proveedores-name">{provider.nombre}</td>
+                <td className="proveedores-name">{provider.empresa}</td>
                 <td>
                   <Badge t="info">{provider.pais}</Badge>
                 </td>
@@ -155,10 +205,7 @@ export default function Proveedores() {
                       className="btn btn-ghost btn-sm"
                       title="Editar proveedor"
                       aria-label="Editar proveedor"
-                      onClick={() => {
-                        setEditingProvider(provider)
-                        setShowModal(true)
-                      }}
+                      onClick={() => openEdit(provider)}
                     >
                       <Ico p={I.edit} size={13} />
                     </button>
@@ -166,6 +213,8 @@ export default function Proveedores() {
                       className="btn btn-ghost btn-sm"
                       title="Eliminar proveedor"
                       aria-label="Eliminar proveedor"
+                      onClick={() => handleDelete(provider)}
+                      disabled={deletingId === provider.id}
                     >
                       <Ico p={I.trash} size={13} />
                     </button>
@@ -173,9 +222,17 @@ export default function Proveedores() {
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center", padding: 24 }}>
+                  No hay proveedores que coincidan con la búsqueda.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
+
       {showModal && (
         <div className="modal-backdrop" onClick={closeModal}>
           <div
@@ -191,38 +248,103 @@ export default function Proveedores() {
                 <Ico p={I.x} size={18} />
               </button>
             </div>
+
+            {formError && (
+              <div style={{ color: "#b91c1c", padding: "0 24px", marginBottom: 8 }}>
+                {formError}
+              </div>
+            )}
+
             <div className="proveedores-form-grid">
-              {providerFields.map((field) => (
-                <div key={field.l} className={`field ${field.s === 2 ? "proveedores-field-span-2" : "proveedores-field-span-1"}`}>
-                  <label className="label">{field.l}</label>
-                  <input
-                    className="input"
-                    placeholder={field.l}
-                    defaultValue={field.value}
-                  />
-                </div>
-              ))}
+              <div className="field proveedores-field-span-2">
+                <label className="label">Nombre Empresa</label>
+                <input
+                  className="input"
+                  placeholder="Nombre Empresa"
+                  value={form.empresa}
+                  onChange={(e) => updateField("empresa", e.target.value)}
+                />
+              </div>
+
+              <div className="field proveedores-field-span-1">
+                <label className="label">País</label>
+                <input
+                  className="input"
+                  placeholder="País"
+                  value={form.pais}
+                  onChange={(e) => updateField("pais", e.target.value)}
+                />
+              </div>
+
+              <div className="field proveedores-field-span-1">
+                <label className="label">Contacto</label>
+                <input
+                  className="input"
+                  placeholder="Contacto"
+                  value={form.contacto}
+                  onChange={(e) => updateField("contacto", e.target.value)}
+                />
+              </div>
+
+              <div className="field proveedores-field-span-1">
+                <label className="label">Teléfono</label>
+                <input
+                  className="input"
+                  placeholder="Teléfono"
+                  value={form.tel}
+                  onChange={(e) => updateField("tel", e.target.value)}
+                />
+              </div>
+
+              <div className="field proveedores-field-span-2">
+                <label className="label">Email</label>
+                <input
+                  className="input"
+                  placeholder="Email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => updateField("email", e.target.value)}
+                />
+              </div>
+
+              <div className="field proveedores-field-span-2">
+                <label className="label">Dirección proveedor</label>
+                <input
+                  className="input"
+                  placeholder="Dirección proveedor"
+                  value={form.direccion}
+                  onChange={(e) => updateField("direccion", e.target.value)}
+                />
+              </div>
+
               <div className="field proveedores-field-span-1">
                 <label className="label">Estado</label>
                 <select
                   className="input"
-                  defaultValue={editingProvider?.estado ?? "Activo"}
+                  value={form.estado}
+                  onChange={(e) =>
+                    updateField("estado", e.target.value as "Activo" | "Inactivo")
+                  }
                 >
                   <option value="Activo">Activo</option>
                   <option value="Inactivo">Inactivo</option>
                 </select>
               </div>
             </div>
+
             <div className="proveedores-form-actions">
               <button
                 className="btn btn-primary proveedores-save"
-                onClick={closeModal}
+                onClick={handleSave}
+                disabled={saving}
               >
-                <Ico p={I.check} size={14} /> Guardar
+                <Ico p={I.check} size={14} />{" "}
+                {saving ? "Guardando…" : "Guardar"}
               </button>
               <button
                 className="btn btn-ghost"
                 onClick={closeModal}
+                disabled={saving}
               >
                 Cancelar
               </button>
