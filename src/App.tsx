@@ -63,125 +63,7 @@ const mapUserFromApi = (item: any): User => ({
       : undefined,
 })
 
-const initialUsers: User[] = [
-  {
-    id: 1,
-    nombre: "Juan Rojas",
-    email: "juan.rojas@ecoterra.cl",
-    rol: "Superusuario / Admin",
-    estado: "Activo",
-    permisos: {
-      "clientes:Crear": true,
-      "clientes:Consultar": true,
-      "clientes:Editar": true,
-      "clientes:Eliminar": true,
-      "direcciones:Crear": true,
-      "direcciones:Consultar": true,
-      "direcciones:Editar": true,
-      "direcciones:Eliminar": true,
-      "proveedores:Crear": true,
-      "proveedores:Consultar": true,
-      "proveedores:Editar": true,
-      "proveedores:Eliminar": true,
-      "productos:Crear": true,
-      "productos:Consultar": true,
-      "productos:Editar": true,
-      "productos:Eliminar": true,
-      "lotes:Crear": true,
-      "lotes:Consultar": true,
-      "lotes:Editar": true,
-      "lotes:Eliminar": true,
-      "movimientos:Crear": true,
-      "movimientos:Consultar": true,
-      "movimientos:Editar": true,
-      "movimientos:Eliminar": true,
-      "cotizaciones:Crear": true,
-      "cotizaciones:Consultar": true,
-      "cotizaciones:Editar": true,
-      "cotizaciones:Eliminar": true,
-      "cotizaciones:Descargar PDF": true,
-      "cotizaciones:Enviar por correo": true,
-      "cotizaciones:Asociar a Orden de Compra": true,
-      "ordenes_compra:Crear / Subir PDF": true,
-      "ordenes_compra:Consultar": true,
-      "ordenes_compra:Editar": true,
-      "ordenes_compra:Eliminar": true,
-      "ordenes_compra:Descargar PDF": true,
-      "ordenes_compra:Generar factura": true,
-      "facturacion:Crear": true,
-      "facturacion:Consultar": true,
-      "facturacion:Editar": true,
-      "facturacion:Eliminar": true,
-      "facturacion:Descargar PDF": true,
-      "facturacion:Enviar por correo": true,
-      "notas_credito:Crear": true,
-      "notas_credito:Consultar": true,
-      "notas_credito:Editar": true,
-      "notas_credito:Eliminar": true,
-      "notas_credito:Descargar PDF": true,
-      "notas_credito:Enviar por correo": true,
-      "ia:Predicción de tiempo de llegada": true,
-      "ia:Predicción de precio": true,
-      "ia:Predicción de reposición de stock": true,
-      "usuarios_roles:Crear usuarios": true,
-      "usuarios_roles:Consultar usuarios": true,
-      "usuarios_roles:Editar usuarios": true,
-      "usuarios_roles:Eliminar usuarios": true,
-      "usuarios_roles:Administrar roles y permisos": true,
-    },
-  },
-  {
-    id: 2,
-    nombre: "María López",
-    email: "maria.lopez@ecoterra.cl",
-    rol: "Usuario con privilegios",
-    estado: "Activo",
-    permisos: {
-      "clientes:Crear": true,
-      "clientes:Consultar": true,
-      "clientes:Editar": true,
-      "direcciones:Crear": true,
-      "direcciones:Consultar": true,
-      "direcciones:Editar": true,
-      "proveedores:Consultar": true,
-      "productos:Crear": true,
-      "productos:Consultar": true,
-      "productos:Editar": true,
-      "lotes:Consultar": true,
-      "lotes:Editar": true,
-      "movimientos:Consultar": true,
-      "cotizaciones:Crear": true,
-      "cotizaciones:Consultar": true,
-      "cotizaciones:Editar": true,
-      "ordenes_compra:Consultar": true,
-      "facturacion:Consultar": true,
-      "notas_credito:Consultar": true,
-      "ia:Predicción de tiempo de llegada": true,
-      "ia:Predicción de precio": true,
-      "ia:Predicción de reposición de stock": true,
-    },
-  },
-  {
-    id: 3,
-    nombre: "Pedro García",
-    email: "pedro.garcia@ecoterra.cl",
-    rol: "Usuario base",
-    estado: "Activo",
-    permisos: {
-      "clientes:Consultar": true,
-      "direcciones:Consultar": true,
-      "proveedores:Consultar": true,
-      "productos:Consultar": true,
-      "lotes:Consultar": true,
-      "movimientos:Consultar": true,
-      "cotizaciones:Consultar": true,
-      "ordenes_compra:Consultar": true,
-      "facturacion:Consultar": true,
-      "notas_credito:Consultar": true,
-      "ia:Predicción de tiempo de llegada": true,
-    },
-  },
-]
+const initialUsers: User[] = []
 
 const initialProductos = [
   {
@@ -441,7 +323,7 @@ export default function App() {
     React.ComponentProps<typeof Clientes>["clientes"]
   >([])
   const [clientesError, setClientesError] = useState("")
-  const [usuarios, setUsuarios] = useState<User[]>(initialUsers)
+  const [usuarios, setUsuarios] = useState<User[]>([])
   const [usuariosError, setUsuariosError] = useState("")
 
   useEffect(() => {
@@ -477,10 +359,10 @@ export default function App() {
         setUsuariosError("")
       })
       .catch((error) => {
-        setUsuarios(initialUsers)
+        setUsuarios([])
         setUsuariosError(
           error instanceof Error
-            ? `${error.message}. Usando datos locales hasta que la API esté disponible.`
+            ? `${error.message}. Verifica que Django esté conectado a Supabase.`
             : "No se pudieron cargar los usuarios.",
         )
       })
