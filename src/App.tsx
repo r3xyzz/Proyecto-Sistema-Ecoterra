@@ -11,7 +11,7 @@ import OrdenesCompra from "./modules/OrdenesCompra"
 import Facturacion from "./modules/Facturacion"
 import NotasCredito from "./modules/NotasCredito"
 import IaPanel from "./modules/IaPanel"
-import Login from "./modules/Login"
+import Login, { AuthUser } from "./modules/Login"
 import Usuarios, { User, UserInput } from "./modules/Usuarios"
 import { Screen } from "./shared"
 
@@ -317,7 +317,17 @@ const ordenes = [
 
 // ---------- App ----------
 export default function App() {
-  const [screen, setScreen] = useState<Screen>("clientes")
+  // Sesión persistida en localStorage
+  const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
+    try {
+      const raw = localStorage.getItem("ecoterra_user")
+      return raw ? (JSON.parse(raw) as AuthUser) : null
+    } catch {
+      return null
+    }
+  })
+
+  const [screen, setScreen] = useState<Screen>(authUser ? "clientes" : "login")
   const [productos, setProductos] = useState(initialProductos)
   const [lotes, setLotes] = useState(initialLotes)
   const [clientes, setClientes] = useState<
@@ -329,8 +339,23 @@ export default function App() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [proveedoresError, setProveedoresError] = useState("")
 
-  // ---------- Cargas iniciales ----------
+  // ---------- Auth ----------
+  const handleLogin = (user: AuthUser) => {
+    setAuthUser(user)
+    localStorage.setItem("ecoterra_user", JSON.stringify(user))
+    setScreen("clientes")
+  }
+
+  const handleLogout = () => {
+    setAuthUser(null)
+    localStorage.removeItem("ecoterra_user")
+    setScreen("login")
+  }
+
+  // ---------- Cargas iniciales (solo si hay sesión) ----------
   useEffect(() => {
+    if (!authUser) return
+
     fetch("/api/clientes/")
       .then((response) => {
         if (!response.ok) throw new Error("No se pudo cargar clientes")
@@ -349,9 +374,11 @@ export default function App() {
             : "No se pudieron cargar los clientes desde Supabase.",
         )
       })
-  }, [])
+  }, [authUser])
 
   useEffect(() => {
+    if (!authUser) return
+
     fetch("/api/usuarios/")
       .then((response) => {
         if (!response.ok) throw new Error("No se pudo cargar usuarios")
@@ -370,9 +397,11 @@ export default function App() {
             : "No se pudieron cargar los usuarios.",
         )
       })
-  }, [])
+  }, [authUser])
 
   useEffect(() => {
+    if (!authUser) return
+
     fetch("/api/proveedores/")
       .then((response) => {
         if (!response.ok) throw new Error("No se pudo cargar proveedores")
@@ -391,9 +420,11 @@ export default function App() {
             : "No se pudieron cargar los proveedores.",
         )
       })
-  }, [])
+  }, [authUser])
 
   useEffect(() => {
+    if (!authUser) return
+
     fetch("/api/productos/")
       .then((response) => {
         if (!response.ok) throw new Error("No se pudo cargar productos")
@@ -415,7 +446,7 @@ export default function App() {
         setLotes(data.map(mapInventoryFromApi))
       })
       .catch(() => setLotes(initialLotes))
-  }, [])
+  }, [authUser])
 
   // ---------- Handlers Usuarios ----------
   const createUser = async (input: UserInput) => {
@@ -783,11 +814,12 @@ export default function App() {
         onUpdate={updateUser}
       />
     ),
-    login: <Login onEnter={() => setScreen("clientes")} />,
+    login: <Login onEnter={handleLogin} />,
   }
 
-  if (screen === "login")
-    return <Login onEnter={() => setScreen("clientes")} />
+  if (!authUser) {
+    return <Login onEnter={handleLogin} />
+  }
 
   return (
     <AppLayout screen={screen} onNav={setScreen}>
