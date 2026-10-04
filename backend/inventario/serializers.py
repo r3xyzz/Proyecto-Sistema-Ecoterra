@@ -1,6 +1,7 @@
 import random
 import string
 
+from django.db.models import Sum  
 from rest_framework import serializers
 
 from .models import Inventario, Movimiento, Producto
@@ -43,8 +44,10 @@ class MovimientoSerializer(serializers.ModelSerializer):
         ]
 
 
-# 👇 NUEVO: ProductoSerializer
+# NUEVO ProductoSerializer
 class ProductoSerializer(serializers.ModelSerializer):
+    stock = serializers.SerializerMethodField()
+
     class Meta:
         model = Producto
         fields = [
@@ -55,5 +58,14 @@ class ProductoSerializer(serializers.ModelSerializer):
             "tipo",
             "unidad",
             "stock_minimo",
+            "stock",
             "estado",
         ]
+
+    def get_stock(self, obj):
+        total = (
+            Inventario.objects.filter(id_producto=obj.id).aggregate(
+                total=Sum("cantidad")
+            )["total"]
+        )
+        return float(total or 0)
