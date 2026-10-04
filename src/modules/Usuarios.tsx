@@ -257,7 +257,7 @@ export default function Usuarios({
         email: selectedUser.email,
         rol: selectedRole,
         estado: selectedUser.estado,
-        permisos,
+        permisos: permissions,
       })
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "No se pudo guardar el usuario")
