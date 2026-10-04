@@ -1,58 +1,54 @@
 import React, { useState } from "react"
 import { Badge, fmt, I, Ico, PageTitle, Product } from "../shared"
+import { Lote } from "./Lotes"
 
-type Lot = { id: string; prod: string; ubic: string; qty: number }
-
-type Movement = {
-  id: string
+export type Movimiento = {
+  id: number
   ts: string
   tipo: string
   prod: string
   qty: number
-  batch: string
+  lote: string
   ref: string
   observacion: string
   user: string
 }
 
+export type MovimientoInput = {
+  tipo: string
+  id_inventario: number
+  cantidad_movimiento: number
+  referencia?: string
+  observacion?: string
+  id_usuario: number
+}
+
+type Props = {
+  productos: Product[]
+  lotes: Lote[]
+  movimientos: Movimiento[]
+  usuarioId: number
+  loadError?: string
+  onCreate: (input: MovimientoInput) => Promise<Movimiento>
+}
+
 export default function Movimientos({
   productos,
   lotes,
-}: {
-  productos: Product[]
-  lotes: Lot[]
-}) {
+  movimientos,
+  usuarioId,
+  loadError,
+  onCreate,
+}: Props) {
   const [type, setType] = useState<"Entrada" | "Salida" | "Ajuste">("Entrada")
   const [prod, setProd] = useState("")
+  const [loteId, setLoteId] = useState("")
   const [qty, setQty] = useState("")
   const [reference, setReference] = useState("")
   const [observation, setObservation] = useState("")
   const [done, setDone] = useState(false)
-
-  const [history, setHistory] = useState<Movement[]>([
-    {
-      id: "MOV-00314",
-      ts: "2024-06-13 09:22",
-      tipo: "Entrada",
-      prod: "POL-001",
-      qty: 1200,
-      batch: "LT-2024-002",
-      ref: "EMB-2024-010",
-      observacion: "Recepción conforme de embarque.",
-      user: "Juan Rojas",
-    },
-    {
-      id: "MOV-00313",
-      ts: "2024-06-12 14:35",
-      tipo: "Salida",
-      prod: "POL-002",
-      qty: -320,
-      batch: "LT-2024-003",
-      ref: "OC-2024-040",
-      observacion: "Despacho parcial solicitado por operaciones.",
-      user: "María López",
-    },
-  ])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState("")
 
   const colors: Record<string, string> = {
     Entrada: "#00995A",
@@ -60,32 +56,40 @@ export default function Movimientos({
     Ajuste: "#D97706",
   }
 
-  const registerMovement = () => {
-    const now = new Date()
-    const pad = (value: number) => String(value).padStart(2, "0")
-    const timestamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
-    const nextId =
-      Math.max(
-        ...history.map((movement) => Number(movement.id.replace("MOV-", ""))),
-        0,
-      ) + 1
-    const signedQuantity = Number(qty) * (type === "Salida" ? -1 : 1)
+  const lotesDelProducto = lotes.filter((l) => l.prod === prod)
 
-    setHistory((current) => [
-      {
-        id: `MOV-${String(nextId).padStart(5, "0")}`,
-        ts: timestamp,
+  const registerMovement = async () => {
+    if (!prod || !loteId || !qty) {
+      setError("Producto, lote y cantidad son obligatorios.")
+      return
+    }
+    setSaving(true)
+    setError("")
+    try {
+      await onCreate({
         tipo: type,
-        prod,
-        qty: signedQuantity,
-        batch: "—",
-        ref: reference || "—",
-        observacion: observation,
-        user: "Usuario actual",
-      },
-      ...current,
-    ])
-    setDone(true)
+        id_inventario: Number(loteId),
+        cantidad_movimiento: Number(qty),
+        referencia: reference || undefined,
+        observacion: observation || undefined,
+        id_usuario: usuarioId,
+      })
+      setDone(true)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error al registrar movimiento")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const resetForm = () => {
+    setDone(false)
+    setProd("")
+    setLoteId("")
+    setQty("")
+    setReference("")
+    setObservation("")
+    setError("")
   }
 
   return (
@@ -94,26 +98,24 @@ export default function Movimientos({
         title="Movimientos de Stock"
         sub="Registro de entradas, salidas y ajustes"
       />
+
+      {loadError && (
+        <div className="panel" style={{ marginBottom: 12, color: "#b91c1c" }}>
+          {loadError}
+        </div>
+      )}
+
       <div className="mov-grid">
         <div className="panel mov-card">
-          <div className="mov-title">
-            Registrar Movimiento
-          </div>
+          <div className="mov-title">Registrar Movimiento</div>
+
           {done ? (
             <div className="mov-success-wrap">
               <Ico p={I.check} size={30} />
-              <p className="mov-success-text">
-                Movimiento registrado
-              </p>
+              <p className="mov-success-text">Movimiento registrado</p>
               <button
                 className="btn btn-primary mov-success-button"
-                onClick={() => {
-                  setDone(false)
-                  setProd("")
-                  setQty("")
-                  setReference("")
-                  setObservation("")
-                }}
+                onClick={resetForm}
               >
                 Nuevo registro
               </button>
@@ -125,40 +127,58 @@ export default function Movimientos({
                   <button
                     key={value}
                     className={`mov-toggle-btn ${type === value ? "active" : ""}`}
-                    style={{ background: type === value ? colors[value] : "transparent", color: type === value ? "white" : "#94A3B8" }}
+                    style={{
+                      background: type === value ? colors[value] : "transparent",
+                      color: type === value ? "white" : "#94A3B8",
+                    }}
                     onClick={() => setType(value)}
                   >
                     {value}
                   </button>
                 ))}
               </div>
+
+              {error && (
+                <div style={{ color: "#b91c1c", margin: "8px 0" }}>{error}</div>
+              )}
+
               <div className="mov-form-stack">
                 <div className="field">
                   <label className="label">Producto *</label>
                   <select
                     className="select"
                     value={prod}
-                    onChange={(event) => setProd(event.target.value)}
+                    onChange={(e) => {
+                      setProd(e.target.value)
+                      setLoteId("")
+                    }}
                   >
                     <option value="">Seleccionar…</option>
-                    {productos.map((product) => (
-                      <option key={product.id}>{product.codigo}</option>
+                    {productos.map((p) => (
+                      <option key={p.id} value={p.codigo}>
+                        {p.codigo} — {p.nombre}
+                      </option>
                     ))}
                   </select>
                 </div>
+
                 <div className="field">
                   <label className="label">Lote</label>
-                  <select className="select" disabled={!prod}>
-                    <option>Seleccionar lote…</option>
-                    {lotes
-                      .filter((lot) => lot.prod === prod)
-                      .map((lot) => (
-                        <option key={lot.id}>
-                          {lot.id} · {lot.ubic} · {fmt(lot.qty)} L
-                        </option>
-                      ))}
+                  <select
+                    className="select"
+                    value={loteId}
+                    disabled={!prod}
+                    onChange={(e) => setLoteId(e.target.value)}
+                  >
+                    <option value="">Seleccionar lote…</option>
+                    {lotesDelProducto.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.id} · {l.ubic} · {fmt(l.qty)} L
+                      </option>
+                    ))}
                   </select>
                 </div>
+
                 <div className="field">
                   <label className="label">Cantidad (litros) *</label>
                   <input
@@ -166,18 +186,20 @@ export default function Movimientos({
                     type="number"
                     min={1}
                     value={qty}
-                    onChange={(event) => setQty(event.target.value)}
+                    onChange={(e) => setQty(e.target.value)}
                   />
                 </div>
+
                 <div className="field">
                   <label className="label">Referencia</label>
                   <input
                     className="input"
                     placeholder="Ej. OC-2024-040"
                     value={reference}
-                    onChange={(event) => setReference(event.target.value)}
+                    onChange={(e) => setReference(e.target.value)}
                   />
                 </div>
+
                 <div className="field">
                   <label className="label">Observación</label>
                   <textarea
@@ -185,20 +207,23 @@ export default function Movimientos({
                     placeholder="Detalle adicional del movimiento"
                     rows={3}
                     value={observation}
-                    onChange={(event) => setObservation(event.target.value)}
+                    onChange={(e) => setObservation(e.target.value)}
                   />
                 </div>
+
                 <button
                   className="btn btn-primary"
-                  disabled={!prod || !qty}
+                  disabled={saving || !prod || !loteId || !qty}
                   onClick={registerMovement}
                 >
-                  <Ico p={I.check} size={14} /> Confirmar {type}
+                  <Ico p={I.check} size={14} />{" "}
+                  {saving ? "Registrando…" : `Confirmar ${type}`}
                 </button>
               </div>
             </>
           )}
         </div>
+
         <div className="panel">
           <div className="panel-header">Historial de Movimientos</div>
           <table className="dt w-full">
@@ -216,7 +241,7 @@ export default function Movimientos({
               </tr>
             </thead>
             <tbody>
-              {history.map((movement) => (
+              {movimientos.map((movement) => (
                 <tr key={movement.id}>
                   <td>{movement.id}</td>
                   <td>{movement.ts}</td>
@@ -244,7 +269,7 @@ export default function Movimientos({
                     {movement.qty > 0 ? "+" : ""}
                     {fmt(movement.qty)} L
                   </td>
-                  <td>{movement.batch}</td>
+                  <td>{movement.lote}</td>
                   <td>{movement.ref}</td>
                   <td>{movement.observacion || "—"}</td>
                   <td>{movement.user}</td>

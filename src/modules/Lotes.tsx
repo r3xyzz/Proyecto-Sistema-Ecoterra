@@ -1,8 +1,8 @@
 import React, { useState } from "react"
-import { Badge, fmt, I, Ico, PageTitle } from "../shared"
+import { Badge, fmt, I, Ico, PageTitle, Product } from "../shared"
 
-type Lot = {
-  id: string
+export type Lote = {
+  id: number
   prod: string
   qty: number
   envase: string
@@ -12,20 +12,47 @@ type Lot = {
   estado: string
 }
 
-export default function Lotes({ lotes }: { lotes: Lot[] }) {
+export type LoteInput = {
+  prod: string
+  qty: number
+  envase: string
+  fabr: string
+  venc: string
+  ubic: string
+  estado: string
+}
+
+type Props = {
+  lotes: Lote[]
+  productos: Product[]
+  loadError?: string
+  onCreate: (input: LoteInput) => Promise<Lote>
+  onDelete: (lote: Lote) => Promise<void>
+}
+
+const EMPTY_FORM: LoteInput = {
+  prod: "",
+  qty: 0,
+  envase: "",
+  fabr: "",
+  venc: "",
+  ubic: "",
+  estado: "Disponible",
+}
+
+export default function Lotes({
+  lotes,
+  productos,
+  loadError,
+  onCreate,
+  onDelete,
+}: Props) {
   const [envase, setEnvase] = useState("")
   const [estado, setEstado] = useState("")
   const [showModal, setShowModal] = useState(false)
-
-  const lotFields = [
-    { label: "ID Lote", type: "text", span: 1 },
-    { label: "Producto", type: "text", span: 1 },
-    { label: "Cantidad", type: "number", span: 1 },
-    { label: "Envase", type: "text", span: 1 },
-    { label: "Fabricación", type: "date", span: 1 },
-    { label: "Vencimiento", type: "date", span: 1 },
-    { label: "Ubicación", type: "text", span: 2 },
-  ]
+  const [form, setForm] = useState<LoteInput>(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState("")
 
   const filtered = lotes.filter(
     (lot) =>
@@ -39,16 +66,49 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
     return ms > 0 && ms < 1000 * 60 * 60 * 24 * 180
   }
 
+  const openNew = () => {
+    setForm(EMPTY_FORM)
+    setFormError("")
+    setShowModal(true)
+  }
+
+  const handleSave = async () => {
+    if (!form.prod || !form.qty || !form.fabr || !form.venc) {
+      setFormError("Producto, cantidad, fabricación y vencimiento son obligatorios.")
+      return
+    }
+    setSaving(true)
+    setFormError("")
+    try {
+      await onCreate(form)
+      setShowModal(false)
+      setForm(EMPTY_FORM)
+    } catch (error) {
+      setFormError(
+        error instanceof Error ? error.message : "No se pudo guardar el lote",
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div>
       <PageTitle
         title="Control de Lotes"
         sub="Trazabilidad de inventario físico por lote"
       >
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+        <button className="btn btn-primary" onClick={openNew}>
           <Ico p={I.plus} size={14} /> Registrar lote
         </button>
       </PageTitle>
+
+      {loadError && (
+        <div className="panel" style={{ marginBottom: 12, color: "#b91c1c" }}>
+          {loadError}
+        </div>
+      )}
+
       <div className="lotes-kpi-grid">
         <div className="kpi">
           <div className="kpi-label">Lotes activos</div>
@@ -75,22 +135,23 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
           </div>
         </div>
       </div>
+
       <div className="panel">
         <div className="panel-header">
           <div className="lotes-filter-row">
             <select
               className="select lotes-filter-a"
               value={envase}
-              onChange={(event) => setEnvase(event.target.value)}
+              onChange={(e) => setEnvase(e.target.value)}
             >
               <option value="">Todos los envases</option>
-              <option>Tambo 200 L</option>
+              <option>Tambor 200 L</option>
               <option>IBC 1000 L</option>
             </select>
             <select
               className="select lotes-filter-b"
               value={estado}
-              onChange={(event) => setEstado(event.target.value)}
+              onChange={(e) => setEstado(e.target.value)}
             >
               <option value="">Todos los estados</option>
               <option>Disponible</option>
@@ -110,6 +171,7 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
               <th>Vencimiento</th>
               <th>Ubicación</th>
               <th>Estado</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -117,7 +179,9 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
               <tr key={lot.id}>
                 <td className="lotes-id">{lot.id}</td>
                 <td className="lotes-prod">{lot.prod}</td>
-                <td className={`lotes-qty ${lot.qty === 0 ? "lotes-qty-danger" : "lotes-qty-normal"}`}>
+                <td
+                  className={`lotes-qty ${lot.qty === 0 ? "lotes-qty-danger" : "lotes-qty-normal"}`}
+                >
                   <div className="lotes-qty-stack">
                     <span>{fmt(lot.qty)} L</span>
                     <div className="progress lotes-progress">
@@ -135,7 +199,9 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
                   <Badge t="neutral">{lot.envase}</Badge>
                 </td>
                 <td>{lot.fabr}</td>
-                <td className={expiringSoon(lot.venc) ? "lotes-venc-warn" : "lotes-venc"}>
+                <td
+                  className={expiringSoon(lot.venc) ? "lotes-venc-warn" : "lotes-venc"}
+                >
                   {expiringSoon(lot.venc) && "⚠ "}
                   {lot.venc}
                 </td>
@@ -147,49 +213,123 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
                     {lot.estado}
                   </Badge>
                 </td>
+                <td>
+                  <button
+                    className="btn btn-ghost btn-sm"
+                    onClick={async () => {
+                      if (!confirm(`¿Eliminar lote ${lot.id}?`)) return
+                      try {
+                        await onDelete(lot)
+                      } catch (e) {
+                        alert(e instanceof Error ? e.message : "Error al eliminar")
+                      }
+                    }}
+                  >
+                    <Ico p={I.trash} size={13} />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
       {showModal && (
-        <div
-          className="modal-backdrop"
-          onClick={() => setShowModal(false)}
-        >
+        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
           <div
             className="modal lotes-modal"
-            onClick={(event) => event.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="lotes-modal-header">
-              <h2 className="lotes-modal-title">
-                Registrar lote
-              </h2>
+              <h2 className="lotes-modal-title">Registrar lote</h2>
               <button
                 onClick={() => setShowModal(false)}
-                aria-label="Cerrar formulario"
+                aria-label="Cerrar"
                 className="lotes-modal-close"
               >
                 <Ico p={I.x} size={18} />
               </button>
             </div>
+
+            {formError && (
+              <div style={{ color: "#b91c1c", padding: "0 24px", marginBottom: 8 }}>
+                {formError}
+              </div>
+            )}
+
             <div className="lotes-form-grid">
-              {lotFields.map((field) => (
-                <div
-                  className={`field ${field.span === 2 ? "lotes-span-2" : "lotes-span-1"}`}
-                  key={field.label}
+              <div className="field lotes-span-1">
+                <label className="label">Producto *</label>
+                <select
+                  className="input"
+                  value={form.prod}
+                  onChange={(e) => setForm({ ...form, prod: e.target.value })}
                 >
-                  <label className="label">{field.label}</label>
-                  <input
-                    className="input"
-                    placeholder={field.label}
-                    type={field.type}
-                  />
-                </div>
-              ))}
+                  <option value="">Seleccionar…</option>
+                  {productos.map((p) => (
+                    <option key={p.id} value={p.codigo}>
+                      {p.codigo} — {p.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field lotes-span-1">
+                <label className="label">Cantidad *</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  value={form.qty || ""}
+                  onChange={(e) =>
+                    setForm({ ...form, qty: Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div className="field lotes-span-1">
+                <label className="label">Envase</label>
+                <select
+                  className="input"
+                  value={form.envase}
+                  onChange={(e) => setForm({ ...form, envase: e.target.value })}
+                >
+                  <option value="">Seleccionar…</option>
+                  <option>Tambor 200 L</option>
+                  <option>IBC 1000 L</option>
+                </select>
+              </div>
+              <div className="field lotes-span-1">
+                <label className="label">Fabricación *</label>
+                <input
+                  className="input"
+                  type="date"
+                  value={form.fabr}
+                  onChange={(e) => setForm({ ...form, fabr: e.target.value })}
+                />
+              </div>
+              <div className="field lotes-span-1">
+                <label className="label">Vencimiento *</label>
+                <input
+                  className="input"
+                  type="date"
+                  value={form.venc}
+                  onChange={(e) => setForm({ ...form, venc: e.target.value })}
+                />
+              </div>
+              <div className="field lotes-span-1">
+                <label className="label">Ubicación</label>
+                <input
+                  className="input"
+                  value={form.ubic}
+                  onChange={(e) => setForm({ ...form, ubic: e.target.value })}
+                />
+              </div>
               <div className="field lotes-span-1">
                 <label className="label">Estado</label>
-                <select className="input" defaultValue="Disponible">
+                <select
+                  className="input"
+                  value={form.estado}
+                  onChange={(e) => setForm({ ...form, estado: e.target.value })}
+                >
                   <option value="Disponible">Disponible</option>
                   <option value="Reservado">Reservado</option>
                 </select>
@@ -198,13 +338,15 @@ export default function Lotes({ lotes }: { lotes: Lot[] }) {
             <div className="lotes-form-actions">
               <button
                 className="btn btn-primary lotes-save"
-                onClick={() => setShowModal(false)}
+                onClick={handleSave}
+                disabled={saving}
               >
-                <Ico p={I.check} size={14} /> Guardar
+                <Ico p={I.check} size={14} /> {saving ? "Guardando…" : "Guardar"}
               </button>
               <button
                 className="btn btn-ghost"
                 onClick={() => setShowModal(false)}
+                disabled={saving}
               >
                 Cancelar
               </button>
