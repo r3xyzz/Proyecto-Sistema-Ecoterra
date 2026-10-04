@@ -80,34 +80,34 @@ class MovimientoListView(ListCreateAPIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # --- Aplicar signo según tipo ---
-        if tipo == "Entrada":
-            signed = cantidad
-        elif tipo == "Salida":
-            if lote.cantidad < cantidad:
-                return Response(
-                    {
-                        "detail": f"Stock insuficiente. Disponible: {lote.cantidad} L."
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            signed = -cantidad
-        else:  # Ajuste
-            signed = cantidad  # el front puede mandar signo si quiere
+        # --- Validar stock suficiente en Salida ---
+        if tipo == "Salida" and lote.cantidad < cantidad:
+            return Response(
+                {
+                    "detail": f"Stock insuficiente. Disponible: {lote.cantidad} L."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        # --- Crear movimiento ---
+        # --- Crear movimiento (SIEMPRE cantidad positiva) ---
         movimiento = Movimiento.objects.create(
             id_inventario=lote.id,
             id_usuario=id_usuario,
             tipo_movimiento=tipo,
-            cantidad_movimiento=signed,
+            cantidad_movimiento=cantidad,  # ✅ positivo (la BD lo exige)
             fecha_movimiento=timezone.now(),
             referencia=request.data.get("referencia") or None,
             observacion=request.data.get("observacion") or None,
         )
 
-        # --- Actualizar el lote ---
-        lote.cantidad = lote.cantidad + signed
+        # --- Actualizar lote según tipo ---
+        if tipo == "Entrada":
+            lote.cantidad = lote.cantidad + cantidad
+        elif tipo == "Salida":
+            lote.cantidad = lote.cantidad - cantidad
+        else:  # Ajuste
+            lote.cantidad = lote.cantidad + cantidad
+
         if lote.cantidad < 0:
             lote.cantidad = Decimal("0")
         lote.save(update_fields=["cantidad"])
