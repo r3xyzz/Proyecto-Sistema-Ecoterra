@@ -1,8 +1,17 @@
+// AppLayout.tsx
 import React, { ReactNode, useState } from "react"
 
 import logoEcoterra from "@/imports/logo_ecoterra.png"
 
 import { I, Ico, Screen } from "../shared"
+
+type AuthUser = {
+  id: number
+  nombre: string
+  email: string
+  rol: string
+  estado: string
+}
 
 type NavGroup = {
   label: string
@@ -14,7 +23,6 @@ const NAV: NavGroup[] = [
     label: "",
     items: [{ id: "dashboard", label: "Dashboard", icon: I.dashboard }],
   },
-
   {
     label: "Gestión Operativa",
     items: [
@@ -23,7 +31,6 @@ const NAV: NavGroup[] = [
       { id: "productos", label: "Productos", icon: I.products },
     ],
   },
-
   {
     label: "Inventario",
     items: [
@@ -31,7 +38,6 @@ const NAV: NavGroup[] = [
       { id: "movimientos", label: "Movimientos de Stock", icon: I.lots },
     ],
   },
-
   {
     label: "Ventas",
     items: [
@@ -41,28 +47,38 @@ const NAV: NavGroup[] = [
       { id: "nc", label: "Notas de Crédito", icon: I.invoice },
     ],
   },
-
   {
     label: "Inteligencia Artificial",
     items: [{ id: "ia", label: "Panel Predictivo IA", icon: I.sparkle }],
   },
-
   {
     label: "Administración",
     items: [{ id: "usuarios", label: "Gestión de Usuarios", icon: I.clients }],
   },
 ]
 
+const getInitials = (nombre: string) =>
+  nombre
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "?"
+
 function Sidebar({
   cur,
   onNav,
   collapsed,
   toggle,
+  user,
+  onLogout,
 }: {
   cur: Screen
   onNav: (screen: Screen) => void
   collapsed: boolean
   toggle: () => void
+  user: AuthUser | null
+  onLogout: () => void
 }) {
   return (
     <aside
@@ -178,7 +194,7 @@ function Sidebar({
           </div>
         ))}
       </nav>
-      {!collapsed && (
+      {!collapsed && user && (
         <div
           style={{
             borderTop: "1px solid #1E293B",
@@ -204,25 +220,74 @@ function Sidebar({
               flexShrink: 0,
             }}
           >
-            JR
+            {getInitials(user.nombre)}
           </div>
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div
-              style={{ color: "#E2E8F0", fontSize: "0.75rem", fontWeight: 600 }}
+              style={{
+                color: "#E2E8F0",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              title={user.nombre}
             >
-              Juan Rojas
+              {user.nombre}
             </div>
-            <div style={{ color: "#475569", fontSize: "0.6875rem" }}>
-              Administrador
+            <div
+              style={{
+                color: "#475569",
+                fontSize: "0.6875rem",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              title={user.rol}
+            >
+              {user.rol}
             </div>
           </div>
+          <button
+            onClick={onLogout}
+            title="Cerrar sesión"
+            style={{
+              background: "none",
+              border: "none",
+              color: "#94A3B8",
+              cursor: "pointer",
+              padding: 4,
+              display: "flex",
+              alignItems: "center",
+              borderRadius: 6,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = "#DC2626"
+              e.currentTarget.style.background = "#1E293B"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = "#94A3B8"
+              e.currentTarget.style.background = "none"
+            }}
+          >
+            <Ico p={I.x} size={14} />
+          </button>
         </div>
       )}
     </aside>
   )
 }
 
-function Topbar({ screen }: { screen: Screen }) {
+function Topbar({
+  screen,
+  user,
+  onLogout,
+}: {
+  screen: Screen
+  user: AuthUser | null
+  onLogout: () => void
+}) {
   const label =
     NAV.flatMap((group) => group.items).find((item) => item.id === screen)
       ?.label ?? ""
@@ -247,10 +312,7 @@ function Topbar({ screen }: { screen: Screen }) {
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{ position: "relative" }}
-        >
+        <button className="btn btn-ghost btn-sm" style={{ position: "relative" }}>
           <Ico p={I.alert} size={14} />
           <span
             className="badge badge-danger"
@@ -265,22 +327,71 @@ function Topbar({ screen }: { screen: Screen }) {
             3
           </span>
         </button>
-        <div
-          style={{
-            width: 28,
-            height: 28,
-            borderRadius: "50%",
-            background: "#0052CC",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "white",
-            fontSize: "0.6875rem",
-            fontWeight: 700,
-          }}
-        >
-          JR
-        </div>
+
+        {user && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              paddingLeft: 12,
+              borderLeft: "1px solid #E2E8F0",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                lineHeight: 1.1,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                  color: "#0F172A",
+                }}
+              >
+                {user.nombre}
+              </span>
+              <span style={{ fontSize: "0.625rem", color: "#64748B" }}>
+                {user.rol}
+              </span>
+            </div>
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "#0052CC",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: "0.6875rem",
+                fontWeight: 700,
+              }}
+              title={user.nombre}
+            >
+              {getInitials(user.nombre)}
+            </div>
+            <button
+              onClick={onLogout}
+              className="btn btn-ghost btn-sm"
+              title="Cerrar sesión"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                color: "#64748B",
+              }}
+            >
+              <Ico p={I.lock} size={14} />
+              <span style={{ fontSize: "0.75rem" }}>Salir</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -289,10 +400,14 @@ function Topbar({ screen }: { screen: Screen }) {
 export default function AppLayout({
   screen,
   onNav,
+  user,
+  onLogout,
   children,
 }: {
   screen: Screen
   onNav: (screen: Screen) => void
+  user: AuthUser | null
+  onLogout: () => void
   children: ReactNode
 }) {
   const [collapsed, setCollapsed] = useState(false)
@@ -311,6 +426,8 @@ export default function AppLayout({
         onNav={onNav}
         collapsed={collapsed}
         toggle={() => setCollapsed(!collapsed)}
+        user={user}
+        onLogout={onLogout}
       />
       <div
         style={{
@@ -320,7 +437,7 @@ export default function AppLayout({
           overflow: "hidden",
         }}
       >
-        <Topbar screen={screen} />
+        <Topbar screen={screen} user={user} onLogout={onLogout} />
         <main style={{ flex: 1, overflowY: "auto", padding: "20px 24px" }}>
           {children}
         </main>
