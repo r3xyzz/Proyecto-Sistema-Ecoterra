@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useEffect, useState } from "react"
 import AppLayout from "./layout/AppLayout"
 import Dashboard from "./modules/Dashboard"
@@ -280,16 +281,10 @@ const ordenes = [
 // ---------- App ----------
 export default function App() {
   // Sesión persistida en localStorage
-  const [authUser, setAuthUser] = useState<AuthUser | null>(() => {
-    try {
-      const raw = localStorage.getItem("ecoterra_user")
-      return raw ? (JSON.parse(raw) as AuthUser) : null
-    } catch {
-      return null
-    }
-  })
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
 
-  const [screen, setScreen] = useState<Screen>(authUser ? "clientes" : "login")
+
+  const [screen, setScreen] = useState<Screen>("login")
   const [productos, setProductos] = useState(initialProductos)
   const [clientes, setClientes] = useState<
     React.ComponentProps<typeof Clientes>["clientes"]
@@ -305,15 +300,13 @@ export default function App() {
   const [movimientosError, setMovimientosError] = useState("")
 
   // ---------- Auth ----------
-  const handleLogin = (user: AuthUser) => {
+    const handleLogin = (user: AuthUser) => {
     setAuthUser(user)
-    localStorage.setItem("ecoterra_user", JSON.stringify(user))
-    setScreen("clientes")
+    setScreen("dashboard")
   }
 
   const handleLogout = () => {
     setAuthUser(null)
-    localStorage.removeItem("ecoterra_user")
     setScreen("login")
   }
 
@@ -925,8 +918,13 @@ export default function App() {
   }
 
   return (
-    <AppLayout screen={screen} onNav={setScreen}>
-      {views[screen]}
-    </AppLayout>
-  )
+  <AppLayout
+    screen={screen}
+    onNav={setScreen}
+    user={authUser}
+    onLogout={handleLogout}
+  >
+    {views[screen]}
+  </AppLayout>
+)
 }
