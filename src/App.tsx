@@ -4,8 +4,8 @@ import Dashboard from "./modules/Dashboard"
 import Clientes, { Address, AddressInput, Client, NewClientInput } from "./modules/Clientes"
 import Proveedores, { Proveedor, ProveedorInput } from "./modules/Proveedores"
 import Productos, { ProductInput } from "./modules/Productos"
-import Lotes from "./modules/Lotes"
-import Movimientos from "./modules/Movimientos"
+import Lotes, { Lote, LoteInput } from "./modules/Lotes"
+import Movimientos, { Movimiento, MovimientoInput } from "./modules/Movimientos"
 import Cotizaciones from "./modules/Cotizaciones"
 import OrdenesCompra from "./modules/OrdenesCompra"
 import Facturacion from "./modules/Facturacion"
@@ -41,17 +41,6 @@ const mapProductFromApi = (item: any) => ({
   estado: item.estado ? "Activo" : "Inactivo",
 })
 
-const mapInventoryFromApi = (item: any) => ({
-  id: item.lote,
-  prod: item.producto_codigo,
-  qty: Number(item.cantidad),
-  envase: item.envase,
-  fabr: item.fecha_fabricacion,
-  venc: item.fecha_vencimiento,
-  ubic: item.ubicacion,
-  estado: item.estado,
-})
-
 const mapUserFromApi = (item: any): User => ({
   id: item.id,
   nombre: item.nombre,
@@ -78,9 +67,45 @@ const mapProveedorFromApi = (item: any): Proveedor => ({
       : "Activo",
 })
 
-// ---------- Datos iniciales (fallback) ----------
-const initialUsers: User[] = []
+const mapLoteFromApi = (item: any, productos: any[]): Lote => {
+  const producto = productos.find((p) => Number(p.id) === Number(item.id_producto))
+  return {
+    id: item.id,
+    prod: producto?.codigo || String(item.id_producto),
+    qty: Number(item.cantidad),
+    envase: item.tipo_envase || "-",
+    fabr: item.fecha_fabricacion || "",
+    venc: item.fecha_vencimiento || "",
+    ubic: item.ubicacion || "-",
+    estado: item.estado || "Disponible",
+  }
+}
 
+const mapMovimientoFromApi = (
+  item: any,
+  lotes: any[],
+  usuarios: any[],
+): Movimiento => {
+  const lote = lotes.find((l) => Number(l.id) === Number(item.id_inventario))
+  const usuario = usuarios.find((u) => Number(u.id) === Number(item.id_usuario))
+  const fecha = item.fecha_movimiento
+    ? new Date(item.fecha_movimiento).toISOString().slice(0, 16).replace("T", " ")
+    : ""
+  return {
+    id: item.id,
+    ts: fecha,
+    tipo: item.tipo_movimiento,
+    prod: lote?.prod || "—",
+    qty: Number(item.cantidad_movimiento),
+    lote: lote?.id ? String(lote.id) : "—",
+    ref: item.referencia || "—",
+    observacion: item.observacion || "",
+    user: usuario?.nombre || "—",
+  }
+}
+
+
+// ---------- Datos iniciales (fallback) ----------
 const initialProductos = [
   {
     id: 1,
@@ -136,69 +161,6 @@ const initialProductos = [
     stockMin: 800,
     stock: 200,
     estado: "Activo",
-  },
-]
-
-const initialLotes = [
-  {
-    id: "LT-2024-001",
-    prod: "POL-001",
-    qty: 1200,
-    envase: "IBC 1000 L",
-    fabr: "2024-01-15",
-    venc: "2026-01-14",
-    ubic: "A1-01",
-    estado: "Disponible",
-  },
-  {
-    id: "LT-2024-002",
-    prod: "POL-001",
-    qty: 1760,
-    envase: "Tambor 200 L",
-    fabr: "2024-03-20",
-    venc: "2026-03-19",
-    ubic: "A1-02",
-    estado: "Disponible",
-  },
-  {
-    id: "LT-2024-003",
-    prod: "POL-002",
-    qty: 300,
-    envase: "Tambor 200 L",
-    fabr: "2024-02-10",
-    venc: "2025-08-09",
-    ubic: "B2-03",
-    estado: "Reservado",
-  },
-  {
-    id: "LT-2024-004",
-    prod: "POL-003",
-    qty: 0,
-    envase: "IBC 1000 L",
-    fabr: "2024-04-01",
-    venc: "2026-03-31",
-    ubic: "A2-01",
-    estado: "Disponible",
-  },
-  {
-    id: "LT-2024-005",
-    prod: "POL-004",
-    qty: 1340,
-    envase: "Tambor 200 L",
-    fabr: "2024-05-12",
-    venc: "2026-05-11",
-    ubic: "C3-02",
-    estado: "Disponible",
-  },
-  {
-    id: "LT-2024-006",
-    prod: "POL-005",
-    qty: 200,
-    envase: "Tambor 200 L",
-    fabr: "2024-06-03",
-    venc: "2025-06-02",
-    ubic: "B3-04",
-    estado: "Disponible",
   },
 ]
 
@@ -329,7 +291,6 @@ export default function App() {
 
   const [screen, setScreen] = useState<Screen>(authUser ? "clientes" : "login")
   const [productos, setProductos] = useState(initialProductos)
-  const [lotes, setLotes] = useState(initialLotes)
   const [clientes, setClientes] = useState<
     React.ComponentProps<typeof Clientes>["clientes"]
   >([])
@@ -338,6 +299,10 @@ export default function App() {
   const [usuariosError, setUsuariosError] = useState("")
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [proveedoresError, setProveedoresError] = useState("")
+  const [lotes, setLotes] = useState<Lote[]>([])
+  const [lotesError, setLotesError] = useState("")
+  const [movimientos, setMovimientos] = useState<Movimiento[]>([])
+  const [movimientosError, setMovimientosError] = useState("")
 
   // ---------- Auth ----------
   const handleLogin = (user: AuthUser) => {
@@ -355,14 +320,13 @@ export default function App() {
   // ---------- Cargas iniciales (solo si hay sesión) ----------
   useEffect(() => {
     if (!authUser) return
-
     fetch("/api/clientes/")
-      .then((response) => {
-        if (!response.ok) throw new Error("No se pudo cargar clientes")
-        return response.json()
+      .then((r) => {
+        if (!r.ok) throw new Error("No se pudo cargar clientes")
+        return r.json()
       })
       .then((data) => {
-        if (!Array.isArray(data)) throw new Error("La API devolvió un formato inválido")
+        if (!Array.isArray(data)) throw new Error("Formato inválido")
         setClientes(data.map(mapClientFromApi))
         setClientesError("")
       })
@@ -371,21 +335,20 @@ export default function App() {
         setClientesError(
           error instanceof Error
             ? `${error.message}. Verifica que Django esté conectado a Supabase.`
-            : "No se pudieron cargar los clientes desde Supabase.",
+            : "No se pudieron cargar los clientes.",
         )
       })
   }, [authUser])
 
   useEffect(() => {
     if (!authUser) return
-
     fetch("/api/usuarios/")
-      .then((response) => {
-        if (!response.ok) throw new Error("No se pudo cargar usuarios")
-        return response.json()
+      .then((r) => {
+        if (!r.ok) throw new Error("No se pudo cargar usuarios")
+        return r.json()
       })
       .then((data) => {
-        if (!Array.isArray(data)) throw new Error("La API devolvió un formato inválido")
+        if (!Array.isArray(data)) throw new Error("Formato inválido")
         setUsuarios(data.map(mapUserFromApi))
         setUsuariosError("")
       })
@@ -401,14 +364,13 @@ export default function App() {
 
   useEffect(() => {
     if (!authUser) return
-
     fetch("/api/proveedores/")
-      .then((response) => {
-        if (!response.ok) throw new Error("No se pudo cargar proveedores")
-        return response.json()
+      .then((r) => {
+        if (!r.ok) throw new Error("No se pudo cargar proveedores")
+        return r.json()
       })
       .then((data) => {
-        if (!Array.isArray(data)) throw new Error("La API devolvió un formato inválido")
+        if (!Array.isArray(data)) throw new Error("Formato inválido")
         setProveedores(data.map(mapProveedorFromApi))
         setProveedoresError("")
       })
@@ -422,31 +384,67 @@ export default function App() {
       })
   }, [authUser])
 
+  // Cargar productos + lotes (en cadena porque lotes dependen de productos)
   useEffect(() => {
     if (!authUser) return
 
     fetch("/api/productos/")
-      .then((response) => {
-        if (!response.ok) throw new Error("No se pudo cargar productos")
-        return response.json()
+      .then((r) => {
+        if (!r.ok) throw new Error("No se pudo cargar productos")
+        return r.json()
       })
-      .then((data) => {
-        if (!Array.isArray(data)) throw new Error("Catálogo inválido")
-        setProductos(data.map(mapProductFromApi))
-      })
-      .catch(() => setProductos(initialProductos))
+      .then((productosData) => {
+        const mappedProductos = Array.isArray(productosData)
+          ? productosData.map(mapProductFromApi)
+          : initialProductos
+        setProductos(mappedProductos)
 
-    fetch("/api/inventario/")
-      .then((response) => {
-        if (!response.ok) throw new Error("No se pudo cargar inventario")
-        return response.json()
+        // Cargar lotes en cadena
+        return fetch("/api/inventario/")
+          .then((r) => {
+            if (!r.ok) throw new Error("No se pudo cargar inventario")
+            return r.json()
+          })
+          .then((lotesData) => {
+            if (!Array.isArray(lotesData)) throw new Error("Formato inválido")
+            setLotes(lotesData.map((l: any) => mapLoteFromApi(l, mappedProductos)))
+            setLotesError("")
+          })
+      })
+      .catch((error) => {
+        setProductos(initialProductos)
+        setLotes([])
+        setLotesError(
+          error instanceof Error
+            ? `${error.message}. Verifica que Django esté conectado a Supabase.`
+            : "No se pudieron cargar los lotes.",
+        )
+      })
+  }, [authUser])
+
+  // Cargar movimientos (depende de lotes y usuarios para enriquecer)
+  useEffect(() => {
+    if (!authUser) return
+
+    fetch("/api/movimientos/")
+      .then((r) => {
+        if (!r.ok) throw new Error("No se pudo cargar movimientos")
+        return r.json()
       })
       .then((data) => {
-        if (!Array.isArray(data)) throw new Error("Inventario inválido")
-        setLotes(data.map(mapInventoryFromApi))
+        if (!Array.isArray(data)) throw new Error("Formato inválido")
+        setMovimientos(data.map((m: any) => mapMovimientoFromApi(m, lotes, usuarios)))
+        setMovimientosError("")
       })
-      .catch(() => setLotes(initialLotes))
-  }, [authUser])
+      .catch((error) => {
+        setMovimientos([])
+        setMovimientosError(
+          error instanceof Error
+            ? `${error.message}. Verifica que Django esté conectado a Supabase.`
+            : "No se pudieron cargar los movimientos.",
+        )
+      })
+  }, [authUser, lotes, usuarios])
 
   // ---------- Handlers Usuarios ----------
   const createUser = async (input: UserInput) => {
@@ -461,14 +459,14 @@ export default function App() {
         permisos: input.permisos ?? {},
       }),
     })
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
-        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo guardar el usuario",
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo guardar el usuario",
       )
     }
-
     const created = mapUserFromApi(await response.json())
     setUsuarios((current) => [...current, created])
     return created
@@ -486,16 +484,18 @@ export default function App() {
         permisos: input.permisos ?? {},
       }),
     })
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
-        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el usuario",
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo actualizar el usuario",
       )
     }
-
     const updated = mapUserFromApi(await response.json())
-    setUsuarios((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    setUsuarios((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    )
     return updated
   }
 
@@ -522,7 +522,6 @@ export default function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(proveedorPayload(input)),
     })
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
@@ -531,7 +530,6 @@ export default function App() {
           : "No se pudo guardar el proveedor",
       )
     }
-
     const created = mapProveedorFromApi(await response.json())
     setProveedores((current) => [...current, created])
     return created
@@ -543,7 +541,6 @@ export default function App() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(proveedorPayload(input)),
     })
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
@@ -552,7 +549,6 @@ export default function App() {
           : "No se pudo actualizar el proveedor",
       )
     }
-
     const updated = mapProveedorFromApi(await response.json())
     setProveedores((current) =>
       current.map((item) => (item.id === updated.id ? updated : item)),
@@ -584,14 +580,14 @@ export default function App() {
         estado: input.estado,
       }),
     })
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
-        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo guardar el cliente",
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo guardar el cliente",
       )
     }
-
     const created = mapClientFromApi(await response.json())
     setClientes((current) => [...current, created])
     return created
@@ -612,16 +608,18 @@ export default function App() {
         estado: input.estado,
       }),
     })
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
-        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el cliente",
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo actualizar el cliente",
       )
     }
-
     const updated = mapClientFromApi(await response.json())
-    setClientes((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    setClientes((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    )
     return updated
   }
 
@@ -642,7 +640,9 @@ export default function App() {
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
-        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo crear la dirección",
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo crear la dirección",
       )
     }
     const created = (await response.json()) as Address
@@ -655,11 +655,14 @@ export default function App() {
   }
 
   const updateAddress = async (client: Client, address: Address, input: AddressInput) => {
-    const response = await fetch(`/api/clientes/${client.id}/direcciones/${address.id}/`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    })
+    const response = await fetch(
+      `/api/clientes/${client.id}/direcciones/${address.id}/`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      },
+    )
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
@@ -674,9 +677,7 @@ export default function App() {
         item.id === client.id
           ? {
               ...item,
-              dirs: item.dirs.map((currentAddress) =>
-                currentAddress.id === updated.id ? updated : currentAddress,
-              ),
+              dirs: item.dirs.map((a) => (a.id === updated.id ? updated : a)),
             }
           : item,
       ),
@@ -685,14 +686,15 @@ export default function App() {
   }
 
   const deleteAddress = async (client: Client, address: Address) => {
-    const response = await fetch(`/api/clientes/${client.id}/direcciones/${address.id}/`, {
-      method: "DELETE",
-    })
+    const response = await fetch(
+      `/api/clientes/${client.id}/direcciones/${address.id}/`,
+      { method: "DELETE" },
+    )
     if (!response.ok) throw new Error("No se pudo eliminar la dirección")
     setClientes((current) =>
       current.map((item) =>
         item.id === client.id
-          ? { ...item, dirs: item.dirs.filter((currentAddress) => currentAddress.id !== address.id) }
+          ? { ...item, dirs: item.dirs.filter((a) => a.id !== address.id) }
           : item,
       ),
     )
@@ -717,7 +719,9 @@ export default function App() {
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
-        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo crear el producto",
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo crear el producto",
       )
     }
     const created = mapProductFromApi(await response.json())
@@ -737,11 +741,15 @@ export default function App() {
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
-        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el producto",
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo actualizar el producto",
       )
     }
     const updated = mapProductFromApi(await response.json())
-    setProductos((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    setProductos((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
+    )
     return updated
   }
 
@@ -752,10 +760,88 @@ export default function App() {
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
-        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo eliminar el producto",
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo eliminar el producto",
       )
     }
     setProductos((current) => current.filter((item) => item.id !== product.id))
+  }
+
+  // ---------- Handlers Lotes ----------
+  const createLote = async (input: LoteInput) => {
+    // Buscar id_producto real a partir del código
+    const producto = productos.find((p: any) => p.codigo === input.prod)
+    if (!producto) throw new Error("Producto no encontrado")
+
+    const response = await fetch("/api/inventario/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id_producto: producto.id,
+        cantidad: input.qty,
+        tipo_envase: input.envase || "Tambor 200 L",
+        fecha_fabricacion: input.fabr,
+        fecha_vencimiento: input.venc,
+        ubicacion: input.ubic || "",
+        estado: input.estado || "Disponible",
+      }),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData
+          ? Object.values(errorData).flat().join(" ")
+          : "No se pudo crear el lote",
+      )
+    }
+    const created = mapLoteFromApi(await response.json(), productos)
+    setLotes((current) => [...current, created])
+    return created
+  }
+
+  const deleteLote = async (lote: Lote) => {
+    const response = await fetch(`/api/inventario/${lote.id}/`, { method: "DELETE" })
+    if (!response.ok) throw new Error("No se pudo eliminar el lote")
+    setLotes((current) => current.filter((item) => item.id !== lote.id))
+  }
+
+  // ---------- Handlers Movimientos ----------
+  const createMovimiento = async (input: MovimientoInput) => {
+    const response = await fetch("/api/movimientos/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id_inventario: input.id_inventario,
+        id_usuario: input.id_usuario,
+        tipo_movimiento: input.tipo,
+        cantidad_movimiento: input.cantidad_movimiento,
+        referencia: input.referencia || null,
+        observacion: input.observacion || null,
+      }),
+    })
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData?.detail ||
+          (errorData ? Object.values(errorData).flat().join(" ") : "No se pudo registrar el movimiento"),
+      )
+    }
+    const raw = await response.json()
+    const created = mapMovimientoFromApi(raw, lotes, usuarios)
+    setMovimientos((current) => [created, ...current])
+
+    // Refrescar lotes para reflejar cambio de cantidad
+    fetch("/api/inventario/")
+      .then((r) => r.json())
+      .then((lotesData) => {
+        if (Array.isArray(lotesData)) {
+          setLotes(lotesData.map((l: any) => mapLoteFromApi(l, productos)))
+        }
+      })
+      .catch(() => {})
+
+    return created
   }
 
   // ---------- Vistas ----------
@@ -790,8 +876,25 @@ export default function App() {
         onDelete={deleteProduct}
       />
     ),
-    lotes: <Lotes lotes={lotes} />,
-    movimientos: <Movimientos productos={productos} lotes={lotes} />,
+    lotes: (
+      <Lotes
+        lotes={lotes}
+        productos={productos}
+        loadError={lotesError}
+        onCreate={createLote}
+        onDelete={deleteLote}
+      />
+    ),
+    movimientos: (
+      <Movimientos
+        productos={productos}
+        lotes={lotes}
+        movimientos={movimientos}
+        usuarioId={authUser?.id ?? 0}
+        loadError={movimientosError}
+        onCreate={createMovimiento}
+      />
+    ),
     cotizaciones: (
       <Cotizaciones
         cotizaciones={cotizaciones}
