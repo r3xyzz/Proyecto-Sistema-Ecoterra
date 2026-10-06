@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - .env.local
+    environment:
+      - DATABASE_URL=postgresql://usuario:contrasena@host:5432/postgres
+      - SECRET_KEY=tu_secret_key_ficticia
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    depends_on:
+      - backend

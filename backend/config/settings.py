@@ -10,7 +10,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR.parent / ".env.local")
 SECRET_KEY = "django-insecure-development-key"
 DEBUG = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "testserver"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "testserver", "backend", "*"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",

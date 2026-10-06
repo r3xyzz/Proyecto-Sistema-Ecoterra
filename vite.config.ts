@@ -31,9 +31,19 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',
-      port: parseInt(process.env.PORT || '8443'),
-      strictPort: true,
-      watch: { ignored: ['**/.figma/**'] },
+      port: parseInt(process.env.PORT || '5173'),
+      strictPort: false,
+      proxy: {
+        '/api': {
+          target: 'http://backend:8444',
+          changeOrigin: true,
+          secure: false,
+        },
+      },
+      watch: { 
+        usePolling: true, // Permite a Vite detectar cambios dentro de carpetas compartidas en Docker
+        ignored: ['**/.figma/**'] 
+      },
     },
     preview: {
       host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',
