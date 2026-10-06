@@ -1,7 +1,7 @@
 import React, { useRef, useState } from "react"
-import { fmtCLP, I, Ico, PageTitle } from "../shared"
+import { Badge, fmtCLP, I, Ico, PageTitle } from "../shared"
 
-type PurchaseOrder = {
+export type PurchaseOrder = {
   id: string
   cot: string
   cliente: string
@@ -10,7 +10,7 @@ type PurchaseOrder = {
   factura: string | null
 }
 
-type Invoice = {
+export type Invoice = {
   id: string
   oc: string
   cliente: string
@@ -34,6 +34,8 @@ export default function OrdenesCompra({
   const [showInvoiceModal, setShowInvoiceModal] = useState(false)
   const [selectedOrderId, setSelectedOrderId] = useState("")
   const [showUploadModal, setShowUploadModal] = useState(false)
+  const [previewOrder, setPreviewOrder] = useState<PurchaseOrder | null>(null)
+
   const pdfInputRef = useRef<HTMLInputElement>(null)
   const [uploadedPdf, setUploadedPdf] = useState<File | null>(null)
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState("")
@@ -55,7 +57,6 @@ export default function OrdenesCompra({
   const handlePdfUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
-
     setUploadedPdf(file)
     setPdfPreviewUrl(URL.createObjectURL(file))
     setDetectedOrder({
@@ -79,7 +80,6 @@ export default function OrdenesCompra({
 
   const saveUploadedOrder = () => {
     if (!uploadedPdf || !detectedOrder.id || !detectedOrder.cliente) return
-
     setOrders((current) => [
       {
         id: detectedOrder.id,
@@ -143,7 +143,6 @@ export default function OrdenesCompra({
           <Ico p={I.upload} size={14} /> Subir OC en PDF
         </button>
         <input
-          id="purchase-order-pdf"
           ref={pdfInputRef}
           type="file"
           accept="application/pdf,.pdf"
@@ -157,6 +156,7 @@ export default function OrdenesCompra({
           <Ico p={I.invoice} size={14} /> Generar factura
         </button>
       </PageTitle>
+
       <div className="panel">
         <table className="dt w-full">
           <thead>
@@ -170,25 +170,37 @@ export default function OrdenesCompra({
             </tr>
           </thead>
           <tbody>
-            {orders.map((order) => (
-              <tr key={order.id}>
-                <td className="oc-id">{order.id}</td>
-                <td>{order.cot}</td>
-                <td>{order.cliente}</td>
-                <td>{order.fecha}</td>
-                <td>
-                  {getInvoice(order)?.id ?? order.factura ?? "—"}
-                </td>
-                <td>
-                  <button className="btn btn-ghost btn-sm">
-                    <Ico p={I.pdf} size={13} /> Vista previa
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {orders.map((order) => {
+              const invoice = getInvoice(order)
+              return (
+                <tr key={order.id}>
+                  <td className="oc-id">{order.id}</td>
+                  <td>{order.cot}</td>
+                  <td>{order.cliente}</td>
+                  <td>{order.fecha}</td>
+                  <td>
+                    {invoice ? (
+                      <Badge t="ok">{invoice.id}</Badge>
+                    ) : (
+                      <span style={{ color: "#94A3B8" }}>Sin factura</span>
+                    )}
+                  </td>
+                  <td>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => setPreviewOrder(order)}
+                    >
+                      <Ico p={I.pdf} size={13} /> Vista previa
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
+
+      {/* MODAL: Generar factura */}
       {showInvoiceModal && (
         <div
           className="modal-backdrop"
@@ -200,9 +212,7 @@ export default function OrdenesCompra({
           >
             <div className="oc-modal-header">
               <div>
-                <h2 className="oc-modal-title">
-                  Generar factura
-                </h2>
+                <h2 className="oc-modal-title">Generar factura</h2>
                 <p className="oc-modal-subtitle">
                   Selecciona una orden de compra sin factura.
                 </p>
@@ -223,14 +233,29 @@ export default function OrdenesCompra({
                 onChange={(event) => setSelectedOrderId(event.target.value)}
               >
                 <option value="">Seleccionar OC…</option>
-                {orders
-                  .filter((order) => !getInvoice(order))
-                  .map((order) => (
-                    <option key={order.id} value={order.id}>
+                {orders.map((order) => {
+                  const invoice = getInvoice(order)
+                  return (
+                    <option
+                      key={order.id}
+                      value={order.id}
+                      disabled={Boolean(invoice)}
+                    >
                       {order.id} · {order.cliente} · {fmtCLP(order.total)}
+                      {invoice ? ` · (Ya facturada: ${invoice.id})` : ""}
                     </option>
-                  ))}
+                  )
+                })}
               </select>
+              <p
+                style={{
+                  fontSize: "0.75rem",
+                  color: "#64748B",
+                  marginTop: 6,
+                }}
+              >
+                Las OC con factura aparecen deshabilitadas.
+              </p>
             </div>
             <div className="oc-form-actions">
               <button
@@ -250,6 +275,125 @@ export default function OrdenesCompra({
           </div>
         </div>
       )}
+
+      {/* MODAL: Vista previa de OC */}
+      {previewOrder && (
+        <div
+          className="modal-backdrop"
+          onClick={() => setPreviewOrder(null)}
+        >
+          <div
+            className="modal oc-modal-wide"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="oc-modal-header">
+              <div>
+                <h2 className="oc-modal-title">
+                  Orden de Compra {previewOrder.id}
+                </h2>
+                <p className="oc-modal-subtitle">
+                  Detalle de la OC recibida del cliente
+                </p>
+              </div>
+              <button
+                onClick={() => setPreviewOrder(null)}
+                aria-label="Cerrar vista previa"
+                className="oc-modal-close"
+              >
+                <Ico p={I.x} size={18} />
+              </button>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 16,
+                padding: "0 4px",
+              }}
+            >
+              <div className="field">
+                <label className="label">N° OC</label>
+                <div className="input" style={{ background: "#F8FAFC" }}>
+                  {previewOrder.id}
+                </div>
+              </div>
+              <div className="field">
+                <label className="label">Cotización asociada</label>
+                <div className="input" style={{ background: "#F8FAFC" }}>
+                  {previewOrder.cot || "—"}
+                </div>
+              </div>
+              <div className="field">
+                <label className="label">Cliente</label>
+                <div className="input" style={{ background: "#F8FAFC" }}>
+                  {previewOrder.cliente}
+                </div>
+              </div>
+              <div className="field">
+                <label className="label">Fecha</label>
+                <div className="input" style={{ background: "#F8FAFC" }}>
+                  {previewOrder.fecha}
+                </div>
+              </div>
+              <div className="field">
+                <label className="label">Total</label>
+                <div
+                  className="input"
+                  style={{ background: "#F8FAFC", fontWeight: 700 }}
+                >
+                  {fmtCLP(previewOrder.total)}
+                </div>
+              </div>
+              <div className="field">
+                <label className="label">Factura asociada</label>
+                <div className="input" style={{ background: "#F8FAFC" }}>
+                  {getInvoice(previewOrder)?.id ?? "Sin factura"}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 20 }}>
+              <h3
+                style={{
+                  fontSize: "0.8125rem",
+                  fontWeight: 700,
+                  color: "#0F172A",
+                  marginBottom: 10,
+                }}
+              >
+                Detalle de productos
+              </h3>
+              <div
+                style={{
+                  padding: 16,
+                  background: "#F8FAFC",
+                  border: "1px dashed #CBD5E1",
+                  borderRadius: 8,
+                  fontSize: "0.8125rem",
+                  color: "#64748B",
+                  textAlign: "center",
+                }}
+              >
+                Aún no hay detalle de líneas en esta OC.
+                <br />
+                (Se conectará al endpoint de detalle de orden de compra.)
+              </div>
+            </div>
+
+            <div className="oc-form-actions">
+              <button
+                className="btn btn-ghost"
+                onClick={() => setPreviewOrder(null)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Subir PDF */}
       {showUploadModal && (
         <div className="modal-backdrop" onClick={closeUploadModal}>
           <div
@@ -260,64 +404,137 @@ export default function OrdenesCompra({
               <div>
                 <h2 className="oc-modal-title">Importar Orden de Compra</h2>
                 <p className="oc-modal-subtitle">
-                  Datos detectados automáticamente. Revisa y edita antes de guardar.
+                  Datos detectados automáticamente. Revisa y edita antes de
+                  guardar.
                 </p>
               </div>
-              <button onClick={closeUploadModal} aria-label="Cerrar importación" className="oc-modal-close">
+              <button
+                onClick={closeUploadModal}
+                aria-label="Cerrar importación"
+                className="oc-modal-close"
+              >
                 <Ico p={I.x} size={18} />
               </button>
             </div>
             <div className="oc-upload-grid">
               <div className="oc-preview-box">
-                <div className="oc-preview-header">
-                  Vista previa del PDF
-                </div>
+                <div className="oc-preview-header">Vista previa del PDF</div>
                 {pdfPreviewUrl ? (
-                  <iframe title="Vista previa de la orden de compra" src={pdfPreviewUrl} className="oc-preview-frame" />
+                  <iframe
+                    title="Vista previa de la orden de compra"
+                    src={pdfPreviewUrl}
+                    className="oc-preview-frame"
+                  />
                 ) : (
-                  <div className="oc-preview-empty">Sin archivo seleccionado</div>
+                  <div className="oc-preview-empty">
+                    Sin archivo seleccionado
+                  </div>
                 )}
-                <div className="oc-preview-note">
-                  {uploadedPdf?.name}
-                </div>
+                <div className="oc-preview-note">{uploadedPdf?.name}</div>
               </div>
               <div>
                 <div className="oc-edit-form">
                   <div className="field">
                     <label className="label">N° Orden de Compra *</label>
-                    <input className="input" value={detectedOrder.id} onChange={(event) => setDetectedOrder({ ...detectedOrder, id: event.target.value })} />
+                    <input
+                      className="input"
+                      value={detectedOrder.id}
+                      onChange={(event) =>
+                        setDetectedOrder({
+                          ...detectedOrder,
+                          id: event.target.value,
+                        })
+                      }
+                    />
                   </div>
                   <div className="field">
                     <label className="label">Cotización</label>
-                    <input className="input" value={detectedOrder.cot} onChange={(event) => setDetectedOrder({ ...detectedOrder, cot: event.target.value })} />
+                    <input
+                      className="input"
+                      value={detectedOrder.cot}
+                      onChange={(event) =>
+                        setDetectedOrder({
+                          ...detectedOrder,
+                          cot: event.target.value,
+                        })
+                      }
+                    />
                   </div>
                   <div className="field">
                     <label className="label">Cliente *</label>
-                    <input className="input" value={detectedOrder.cliente} onChange={(event) => setDetectedOrder({ ...detectedOrder, cliente: event.target.value })} />
+                    <input
+                      className="input"
+                      value={detectedOrder.cliente}
+                      onChange={(event) =>
+                        setDetectedOrder({
+                          ...detectedOrder,
+                          cliente: event.target.value,
+                        })
+                      }
+                    />
                   </div>
                   <div className="field">
                     <label className="label">Fecha</label>
-                    <input className="input" type="date" value={detectedOrder.fecha} onChange={(event) => setDetectedOrder({ ...detectedOrder, fecha: event.target.value })} />
+                    <input
+                      className="input"
+                      type="date"
+                      value={detectedOrder.fecha}
+                      onChange={(event) =>
+                        setDetectedOrder({
+                          ...detectedOrder,
+                          fecha: event.target.value,
+                        })
+                      }
+                    />
                   </div>
                   <div className="field">
                     <label className="label">Total detectado (CLP)</label>
-                    <input className="input" type="number" min={0} value={detectedOrder.total} onChange={(event) => setDetectedOrder({ ...detectedOrder, total: event.target.value })} />
+                    <input
+                      className="input"
+                      type="number"
+                      min={0}
+                      value={detectedOrder.total}
+                      onChange={(event) =>
+                        setDetectedOrder({
+                          ...detectedOrder,
+                          total: event.target.value,
+                        })
+                      }
+                    />
                   </div>
                   <div className="field">
                     <label className="label">Factura asociada</label>
-                    <select className="select" value={detectedOrder.factura} onChange={(event) => setDetectedOrder({ ...detectedOrder, factura: event.target.value })}>
+                    <select
+                      className="select"
+                      value={detectedOrder.factura}
+                      onChange={(event) =>
+                        setDetectedOrder({
+                          ...detectedOrder,
+                          factura: event.target.value,
+                        })
+                      }
+                    >
                       <option value="">Sin factura asociada</option>
                       {allInvoices.map((invoice) => (
-                        <option key={invoice.id} value={invoice.id}>{invoice.id} · {invoice.cliente} · {fmtCLP(invoice.total)}</option>
+                        <option key={invoice.id} value={invoice.id}>
+                          {invoice.id} · {invoice.cliente} ·{" "}
+                          {fmtCLP(invoice.total)}
+                        </option>
                       ))}
                     </select>
                   </div>
                 </div>
                 <div className="oc-edit-actions">
-                  <button className="btn btn-primary" disabled={!detectedOrder.id || !detectedOrder.cliente} onClick={saveUploadedOrder}>
+                  <button
+                    className="btn btn-primary"
+                    disabled={!detectedOrder.id || !detectedOrder.cliente}
+                    onClick={saveUploadedOrder}
+                  >
                     <Ico p={I.check} size={14} /> Guardar orden
                   </button>
-                  <button className="btn btn-ghost" onClick={closeUploadModal}>Cancelar</button>
+                  <button className="btn btn-ghost" onClick={closeUploadModal}>
+                    Cancelar
+                  </button>
                 </div>
               </div>
             </div>
