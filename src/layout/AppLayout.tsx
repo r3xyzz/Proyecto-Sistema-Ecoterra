@@ -3,19 +3,18 @@ import React, { ReactNode, useState } from "react"
 
 import logoEcoterra from "@/imports/logo_ecoterra.png"
 
-import { I, Ico, Screen } from "../shared"
+import { AuthUser, canAccessModule, I, Ico, Screen } from "../shared"
 
-type AuthUser = {
-  id: number
-  nombre: string
-  email: string
-  rol: string
-  estado: string
+type NavItem = {
+  id: Screen
+  label: string
+  icon: string
+  moduleId?: string
 }
 
 type NavGroup = {
   label: string
-  items: { id: Screen label: string icon: string }[]
+  items: NavItem[]
 }
 
 const NAV: NavGroup[] = [
@@ -26,34 +25,36 @@ const NAV: NavGroup[] = [
   {
     label: "Gestión Operativa",
     items: [
-      { id: "clientes", label: "Clientes", icon: I.clients },
-      { id: "proveedores", label: "Proveedores", icon: I.products },
-      { id: "productos", label: "Productos", icon: I.products },
+      { id: "clientes", label: "Clientes", icon: I.clients, moduleId: "clientes" },
+      { id: "proveedores", label: "Proveedores", icon: I.products, moduleId: "proveedores" },
+      { id: "productos", label: "Productos", icon: I.products, moduleId: "productos" },
     ],
   },
   {
     label: "Inventario",
     items: [
-      { id: "lotes", label: "Control de Lotes", icon: I.lots },
-      { id: "movimientos", label: "Movimientos de Stock", icon: I.lots },
+      { id: "lotes", label: "Control de Lotes", icon: I.lots, moduleId: "lotes" },
+      { id: "movimientos", label: "Movimientos de Stock", icon: I.lots, moduleId: "movimientos" },
     ],
   },
   {
     label: "Ventas",
     items: [
-      { id: "cotizaciones", label: "Cotizaciones", icon: I.quotes },
-      { id: "oc", label: "Órdenes de Compra", icon: I.quotes },
-      { id: "facturacion", label: "Facturación", icon: I.invoice },
-      { id: "nc", label: "Notas de Crédito", icon: I.invoice },
+      { id: "cotizaciones", label: "Cotizaciones", icon: I.quotes, moduleId: "cotizaciones" },
+      { id: "oc", label: "Órdenes de Compra", icon: I.quotes, moduleId: "ordenes_compra" },
+      { id: "facturacion", label: "Facturación", icon: I.invoice, moduleId: "facturacion" },
+      { id: "nc", label: "Notas de Crédito", icon: I.invoice, moduleId: "notas_credito" },
     ],
   },
   {
     label: "Inteligencia Artificial",
-    items: [{ id: "ia", label: "Panel Predictivo IA", icon: I.ai }],
+    items: [{ id: "ia", label: "Panel Predictivo IA", icon: I.sparkle, moduleId: "ia" }],
   },
   {
     label: "Administración",
-    items: [{ id: "usuarios", label: "Gestión de Usuarios", icon: I.clients }],
+    items: [
+      { id: "usuarios", label: "Gestión de Usuarios", icon: I.clients, moduleId: "usuarios_roles" },
+    ],
   },
 ]
 
@@ -171,29 +172,41 @@ function Sidebar({
           <Ico p={I.menu} size={15} />
         </button>
       </div>
+
       <nav style={{ flex: 1, overflowY: "auto", padding: "8px 8px 16px" }}>
-        {NAV.map((group, groupIndex) => (
-          <div key={groupIndex}>
-            {!collapsed && group.label && (
-              <div className="nav-section">{group.label}</div>
-            )}
-            {collapsed && group.label && <div style={{ height: 10 }} />}
-            {group.items.map((item) => (
-              <div
-                key={item.id}
-                className={`nav-item ${cur === item.id ? "active" : ""}`}
-                onClick={() => onNav(item.id)}
-                title={collapsed ? item.label : undefined}
-              >
-                <span className="nav-icon">
-                  <Ico p={item.icon} size={15} />
-                </span>
-                {!collapsed && item.label}
-              </div>
-            ))}
-          </div>
-        ))}
+        {NAV.map((group, groupIndex) => {
+          // Filtrar items por permisos
+          const visibleItems = group.items.filter((item) =>
+            canAccessModule(user, item.moduleId),
+          )
+
+          // Si el grupo no tiene items visibles, no lo renderices
+          if (visibleItems.length === 0) return null
+
+          return (
+            <div key={groupIndex}>
+              {!collapsed && group.label && (
+                <div className="nav-section">{group.label}</div>
+              )}
+              {collapsed && group.label && <div style={{ height: 10 }} />}
+              {visibleItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={`nav-item ${cur === item.id ? "active" : ""}`}
+                  onClick={() => onNav(item.id)}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <span className="nav-icon">
+                    <Ico p={item.icon} size={15} />
+                  </span>
+                  {!collapsed && item.label}
+                </div>
+              ))}
+            </div>
+          )
+        })}
       </nav>
+
       {!collapsed && user && (
         <div
           style={{
