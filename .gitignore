@@ -28,3 +28,7 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
+
+# Docker Compose (contiene credenciales de Supabase)
+docker-compose.yml
+docker-compose.override.yml

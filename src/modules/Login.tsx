@@ -1,13 +1,5 @@
 import React, { useState } from "react"
-import { I, Ico } from "../shared"
-
-export type AuthUser = {
-  id: number
-  nombre: string
-  email: string
-  rol: string
-  estado: string
-}
+import { AuthUser, I, Ico } from "../shared"
 
 type Props = {
   onEnter: (user: AuthUser) => void

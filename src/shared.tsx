@@ -1,4 +1,4 @@
-
+// shared.tsx
 import React, { ReactNode } from "react"
 
 export function Ico({
@@ -146,4 +146,69 @@ export function PageTitle({
       {children && <div style={{ display: "flex", gap: 8 }}>{children}</div>}
     </div>
   )
+}
+
+export type PermissionMap = Record<string, boolean>
+
+export type AuthUser = {
+  id: number
+  nombre: string
+  email: string
+  rol: string
+  id_rol: number
+  estado: string
+  permisos: PermissionMap
+}
+
+/**
+ * Verifica si el usuario tiene un permiso específico.
+ * Los administradores (id_rol === 1) siempre tienen acceso total.
+ */
+export function can(
+  user: AuthUser | null,
+  modulo: string,
+  accion: string,
+): boolean {
+  if (!user) return false
+  if (user.id_rol === 1) return true
+  return Boolean(user.permisos?.[`${modulo}:${accion}`])
+}
+
+/**
+ * Verifica si el usuario puede ver el módulo completo.
+ * Es true si tiene AL MENOS UN permiso del módulo.
+ */
+export function canAccessModule(
+  user: AuthUser | null,
+  moduleId?: string,
+): boolean {
+  if (!moduleId) return true
+  if (!user) return false
+  if (user.id_rol === 1) return true
+  const prefix = `${moduleId}:`
+  return Object.keys(user.permisos ?? {}).some((key) => key.startsWith(prefix))
+}
+
+// ---------- Mapeo screen → módulo de permisos ----------
+export const SCREEN_TO_MODULE: Record<Screen, string | undefined> = {
+  login: undefined,
+  dashboard: undefined,
+  clientes: "clientes",
+  proveedores: "proveedores",
+  productos: "productos",
+  lotes: "lotes",
+  movimientos: "movimientos",
+  cotizaciones: "cotizaciones",
+  oc: "ordenes_compra",
+  facturacion: "facturacion",
+  nc: "notas_credito",
+  ia: "ia",
+  usuarios: "usuarios_roles",
+}
+
+export function authHeaders(user: AuthUser | null): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    "X-User-Role": String(user?.id_rol ?? 0),
+  }
 }
