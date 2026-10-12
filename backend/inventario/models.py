@@ -1,3 +1,4 @@
+# inventario/models.py
 import sys
 
 from django.db import models
@@ -46,6 +47,30 @@ class Movimiento(models.Model):
     observacion = models.TextField(
         db_column="observacion_movimiento", null=True, blank=True
     )
+    stock_anterior = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        db_column="stock_anterior_movimiento",
+        null=True,
+        blank=True,
+    )
+    stock_posterior = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        db_column="stock_posterior_movimiento",
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = "movimiento"
+        managed = "test" in sys.argv
+        ordering = ["-fecha_movimiento", "-id"]
+        verbose_name = "movimiento"
+        verbose_name_plural = "movimientos"
+
+    def __str__(self):
+        return f"{self.tipo_movimiento} {self.cantidad_movimiento} L"
 
     class Meta:
         db_table = "movimiento"

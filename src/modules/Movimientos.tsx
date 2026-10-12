@@ -8,6 +8,8 @@ export type Movimiento = {
   tipo: string
   prod: string
   qty: number
+  stockAnterior?: number | null
+  stockPosterior?: number | null
   lote: string
   ref: string
   observacion: string
@@ -57,9 +59,10 @@ export default function Movimientos({
   }
 
   const lotesDelProducto = lotes.filter((l) => l.prod === prod)
+  const selectedLote = lotes.find((l) => String(l.id) === String(loteId))
 
   const registerMovement = async () => {
-    if (!prod || !loteId || !qty) {
+    if (!prod || !loteId || qty === "") {
       setError("Producto, lote y cantidad son obligatorios.")
       return
     }
@@ -131,7 +134,11 @@ export default function Movimientos({
                       background: type === value ? colors[value] : "transparent",
                       color: type === value ? "white" : "#94A3B8",
                     }}
-                    onClick={() => setType(value)}
+                    onClick={() => {
+                      setType(value)
+                      setQty("")   // Limpiar cantidad al cambiar tipo
+                      setError("")
+                    }}
                   >
                     {value}
                   </button>
@@ -179,15 +186,51 @@ export default function Movimientos({
                   </select>
                 </div>
 
+                {/* Input de cantidad con label dinámico */}
                 <div className="field">
-                  <label className="label">Cantidad (litros) *</label>
+                  <label className="label">
+                    {type === "Ajuste"
+                      ? "Stock final verificado (litros) *"
+                      : "Cantidad (litros) *"}
+                  </label>
                   <input
                     className="input"
                     type="number"
-                    min={1}
+                    min={type === "Ajuste" ? 0 : 1}
                     value={qty}
                     onChange={(e) => setQty(e.target.value)}
                   />
+                  {type === "Ajuste" && selectedLote && (
+                    <p
+                      style={{
+                        fontSize: "0.75rem",
+                        color: "#64748B",
+                        marginTop: 4,
+                      }}
+                    >
+                      Stock actual en el lote:{" "}
+                      <strong style={{ color: "#0F172A" }}>
+                        {fmt(selectedLote.qty)} L
+                      </strong>
+                      {qty !== "" && (
+                        <span
+                          style={{
+                            marginLeft: 8,
+                            color:
+                              Number(qty) - selectedLote.qty === 0
+                                ? "#64748B"
+                                : Number(qty) > selectedLote.qty
+                                  ? "#00995A"
+                                  : "#DC2626",
+                            fontWeight: 600,
+                          }}
+                        >
+                          ({Number(qty) > selectedLote.qty ? "+" : ""}
+                          {fmt(Number(qty) - selectedLote.qty)} L)
+                        </span>
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 <div className="field">
@@ -204,7 +247,11 @@ export default function Movimientos({
                   <label className="label">Observación</label>
                   <textarea
                     className="input mov-observation"
-                    placeholder="Detalle adicional del movimiento"
+                    placeholder={
+                      type === "Ajuste"
+                        ? "Motivo del ajuste (inventario físico, pérdida, daño...)"
+                        : "Detalle adicional del movimiento"
+                    }
                     rows={3}
                     value={observation}
                     onChange={(e) => setObservation(e.target.value)}
@@ -213,7 +260,7 @@ export default function Movimientos({
 
                 <button
                   className="btn btn-primary"
-                  disabled={saving || !prod || !loteId || !qty}
+                  disabled={saving || !prod || !loteId || qty === ""}
                   onClick={registerMovement}
                 >
                   <Ico p={I.check} size={14} />{" "}
@@ -224,6 +271,7 @@ export default function Movimientos({
           )}
         </div>
 
+        {/* Historial */}
         <div className="panel">
           <div className="panel-header">Historial de Movimientos</div>
           <table className="dt w-full">
@@ -234,6 +282,7 @@ export default function Movimientos({
                 <th>Tipo</th>
                 <th>Producto</th>
                 <th>Cantidad</th>
+                <th>Stock</th>
                 <th>Lote</th>
                 <th>Referencia</th>
                 <th>Observación</th>
@@ -241,40 +290,73 @@ export default function Movimientos({
               </tr>
             </thead>
             <tbody>
-              {movimientos.map((movement) => (
-                <tr key={movement.id}>
-                  <td>{movement.id}</td>
-                  <td>{movement.ts}</td>
-                  <td>
-                    <Badge
-                      t={
-                        movement.tipo === "Entrada"
-                          ? "ok"
-                          : movement.tipo === "Salida"
-                            ? "danger"
-                            : "warn"
+              {movimientos.map((movement) => {
+                const isAjuste = movement.tipo === "Ajuste"
+                return (
+                  <tr key={movement.id}>
+                    <td>{movement.id}</td>
+                    <td>{movement.ts}</td>
+                    <td>
+                      <Badge
+                        t={
+                          movement.tipo === "Entrada"
+                            ? "ok"
+                            : movement.tipo === "Salida"
+                              ? "danger"
+                              : "warn"
+                        }
+                      >
+                        {movement.tipo}
+                      </Badge>
+                    </td>
+                    <td>{movement.prod}</td>
+                    <td
+                      className={
+                        movement.qty < 0
+                          ? "mov-history-qty-negative"
+                          : "mov-history-qty-positive"
                       }
                     >
-                      {movement.tipo}
-                    </Badge>
-                  </td>
-                  <td>{movement.prod}</td>
-                  <td
-                    className={
-                      movement.qty < 0
-                        ? "mov-history-qty-negative"
-                        : "mov-history-qty-positive"
-                    }
-                  >
-                    {movement.qty > 0 ? "+" : ""}
-                    {fmt(movement.qty)} L
-                  </td>
-                  <td>{movement.lote}</td>
-                  <td>{movement.ref}</td>
-                  <td>{movement.observacion || "—"}</td>
-                  <td>{movement.user}</td>
-                </tr>
-              ))}
+                      {movement.qty > 0 ? "+" : ""}
+                      {fmt(movement.qty)} L
+                    </td>
+                    <td style={{ fontSize: "0.75rem" }}>
+                      {isAjuste &&
+                      movement.stockAnterior != null &&
+                      movement.stockPosterior != null ? (
+                        <span>
+                          <span style={{ color: "#64748B" }}>
+                            {fmt(movement.stockAnterior)}
+                          </span>
+                          {" → "}
+                          <strong
+                            style={{
+                              color:
+                                movement.stockPosterior >
+                                movement.stockAnterior
+                                  ? "#00995A"
+                                  : movement.stockPosterior <
+                                      movement.stockAnterior
+                                    ? "#DC2626"
+                                    : "#64748B",
+                            }}
+                          >
+                            {fmt(movement.stockPosterior)} L
+                          </strong>
+                        </span>
+                      ) : (
+                        <span style={{ color: "#94A3B8" }}>—</span>
+                      )}
+                    </td>
+                    <td>{movement.lote}</td>
+                    <td>{movement.ref}</td>
+                    <td style={{ maxWidth: 200, fontSize: "0.75rem" }}>
+                      {movement.observacion || "—"}
+                    </td>
+                    <td>{movement.user}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

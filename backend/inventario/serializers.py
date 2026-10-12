@@ -1,3 +1,4 @@
+# inventario/serializers.py
 import random
 import string
 
@@ -41,6 +42,8 @@ class MovimientoSerializer(serializers.ModelSerializer):
             "fecha_movimiento",
             "referencia",
             "observacion",
+            "stock_anterior",
+            "stock_posterior",
         ]
 
 
