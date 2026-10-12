@@ -105,6 +105,10 @@ const mapMovimientoFromApi = (
     tipo: item.tipo_movimiento,
     prod: lote?.prod || "—",
     qty: Number(item.cantidad_movimiento),
+    stockAnterior:
+      item.stock_anterior != null ? Number(item.stock_anterior) : null,
+    stockPosterior:
+      item.stock_posterior != null ? Number(item.stock_posterior) : null,
     lote: lote?.id ? String(lote.id) : "—",
     ref: item.referencia || "—",
     observacion: item.observacion || "",

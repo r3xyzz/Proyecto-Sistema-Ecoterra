@@ -1,3 +1,6 @@
+# invetario/views.py
+from django.db import transaction
+
 from decimal import Decimal
 
 from django.utils import timezone
@@ -46,13 +49,14 @@ class MovimientoListView(ListCreateAPIView):
         id_inventario = request.data.get("id_inventario")
         id_usuario = request.data.get("id_usuario")
 
-        # --- Validaciones básicas ---
+        # ---------- Validaciones básicas ----------
         if tipo not in ("Entrada", "Salida", "Ajuste"):
             return Response(
                 {"detail": "Tipo de movimiento inválido."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not cantidad_raw:
+
+        if cantidad_raw is None or cantidad_raw == "":
             return Response(
                 {"detail": "La cantidad es obligatoria."},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -66,51 +70,77 @@ class MovimientoListView(ListCreateAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if cantidad <= 0:
-            return Response(
-                {"detail": "La cantidad debe ser mayor a 0."},
-                status=status.HTTP_400_BAD_REQUEST,
+        # Ajuste permite 0 (vaciar lote); Entrada/Salida exigen > 0
+        if tipo == "Ajuste":
+            if cantidad < 0:
+                return Response(
+                    {"detail": "El stock final no puede ser negativo."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            if cantidad <= 0:
+                return Response(
+                    {"detail": "La cantidad debe ser mayor a 0."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # ---------- Transacción atómica con lock del lote ----------
+        with transaction.atomic():
+            try:
+                lote = Inventario.objects.select_for_update().get(pk=id_inventario)
+            except Inventario.DoesNotExist:
+                return Response(
+                    {"detail": "Lote no encontrado."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            stock_anterior = lote.cantidad
+
+            # ---------- Aplicar regla según tipo ----------
+            if tipo == "Entrada":
+                lote.cantidad = lote.cantidad + cantidad
+            elif tipo == "Salida":
+                if lote.cantidad < cantidad:
+                    return Response(
+                        {
+                            "detail": f"Stock insuficiente. Disponible: {lote.cantidad} L."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                lote.cantidad = lote.cantidad - cantidad
+            else:  # Ajuste → ESTABLECE la cantidad final
+                lote.cantidad = cantidad
+
+            stock_posterior = lote.cantidad
+            lote.save(update_fields=["cantidad"])
+
+            # ---------- Enriquecer observación en Ajuste ----------
+            observacion_base = request.data.get("observacion") or ""
+            if tipo == "Ajuste":
+                snapshot = (
+                    f"Ajuste de inventario: stock anterior {stock_anterior} L "
+                    f"→ stock final {stock_posterior} L."
+                )
+                observacion_final = (
+                    f"{observacion_base}\n{snapshot}".strip()
+                    if observacion_base
+                    else snapshot
+                )
+            else:
+                observacion_final = observacion_base or None
+
+            # ---------- Crear el movimiento ----------
+            movimiento = Movimiento.objects.create(
+                id_inventario=lote.id,
+                id_usuario=id_usuario,
+                tipo_movimiento=tipo,
+                cantidad_movimiento=cantidad,
+                stock_anterior=stock_anterior,       #  NUEVO
+                stock_posterior=stock_posterior,     #  NUEVO
+                fecha_movimiento=timezone.now(),
+                referencia=request.data.get("referencia") or None,
+                observacion=observacion_final or None,
             )
-
-        try:
-            lote = Inventario.objects.get(pk=id_inventario)
-        except Inventario.DoesNotExist:
-            return Response(
-                {"detail": "Lote no encontrado."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        # --- Validar stock suficiente en Salida ---
-        if tipo == "Salida" and lote.cantidad < cantidad:
-            return Response(
-                {
-                    "detail": f"Stock insuficiente. Disponible: {lote.cantidad} L."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # --- Crear movimiento (SIEMPRE cantidad positiva) ---
-        movimiento = Movimiento.objects.create(
-            id_inventario=lote.id,
-            id_usuario=id_usuario,
-            tipo_movimiento=tipo,
-            cantidad_movimiento=cantidad,  # ✅ positivo (la BD lo exige)
-            fecha_movimiento=timezone.now(),
-            referencia=request.data.get("referencia") or None,
-            observacion=request.data.get("observacion") or None,
-        )
-
-        # --- Actualizar lote según tipo ---
-        if tipo == "Entrada":
-            lote.cantidad = lote.cantidad + cantidad
-        elif tipo == "Salida":
-            lote.cantidad = lote.cantidad - cantidad
-        else:  # Ajuste
-            lote.cantidad = lote.cantidad + cantidad
-
-        if lote.cantidad < 0:
-            lote.cantidad = Decimal("0")
-        lote.save(update_fields=["cantidad"])
 
         serializer = self.get_serializer(movimiento)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
