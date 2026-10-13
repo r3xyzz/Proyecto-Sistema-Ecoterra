@@ -397,7 +397,7 @@ export default function Usuarios({
       {/* MODAL: Nuevo usuario (solo Admin)              */}
       {/* ============================================== */}
       {isAdmin && showNew && (
-        <div className="modal-backdrop" onClick={() => setShowNew(false)}>
+        <div className="modal-backdrop">
           <div
             className="modal usuarios-modal"
             onClick={(event) => event.stopPropagation()}

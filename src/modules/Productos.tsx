@@ -1,12 +1,43 @@
+// client/src/modules/Productos.tsx
+
 import React, { useState } from "react"
 import { Badge, fmt, I, Ico, PageTitle, Product } from "../shared"
 
-export default function Productos({ productos }: { productos: Product[] }) {
+export type ProductInput = {
+  codigo: string
+  nombre: string
+  descripcion: string
+  tipo: string
+  unidad: string
+  stockMinimo: number
+  estado: string   // 👈 NUEVO
+}
+
+type ProductProps = {
+  productos: Product[]
+  onCreate: (input: ProductInput) => Promise<Product>
+  onUpdate: (product: Product, input: ProductInput) => Promise<Product>
+  onDelete: (product: Product) => Promise<void>
+}
+
+const emptyProduct: ProductInput = {
+  codigo: "",
+  nombre: "",
+  descripcion: "",
+  tipo: "",
+  unidad: "Litros",
+  stockMinimo: 0,
+  estado: "Activo",   // 👈 NUEVO
+}
+
+export default function Productos({ productos, onCreate, onUpdate, onDelete }: ProductProps) {
   const [tipo, setTipo] = useState("")
   const [estado, setEstado] = useState("")
   const [showModal, setShowModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
+  const [form, setForm] = useState<ProductInput>(emptyProduct)
+  const [error, setError] = useState("")
 
   const tipos = [...new Set(productos.map((product) => product.tipo))]
   const estados = [...new Set(productos.map((product) => product.estado))]
@@ -19,20 +50,28 @@ export default function Productos({ productos }: { productos: Product[] }) {
   const closeModal = () => {
     setShowModal(false)
     setEditingProduct(null)
+    setError("")
   }
 
-  const productFields = [
-    { label: "Código", value: editingProduct?.codigo ?? "", span: 1 },
-    { label: "Nombre", value: editingProduct?.nombre ?? "", span: 1 },
-    { label: "Descripción", value: editingProduct?.desc ?? "", span: 2 },
-    { label: "Tipo", value: editingProduct?.tipo ?? "", span: 1 },
-    { label: "Unidad", value: editingProduct?.unidad ?? "", span: 1 },
-    {
-      label: "Stock Mínimo",
-      value: editingProduct?.stockMin ?? "",
-      span: 1,
-    },
-  ]
+  const saveProduct = async () => {
+    // Validaciones
+    if (!form.codigo.trim() || !form.nombre.trim()) {
+      setError("Código y nombre son obligatorios.")
+      return
+    }
+    if (form.stockMinimo < 0) {
+      setError("El stock mínimo no puede ser negativo.")
+      return
+    }
+
+    try {
+      if (editingProduct) await onUpdate(editingProduct, form)
+      else await onCreate(form)
+      closeModal()
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "No se pudo guardar el producto")
+    }
+  }
 
   return (
     <div>
@@ -44,6 +83,7 @@ export default function Productos({ productos }: { productos: Product[] }) {
           className="btn btn-primary"
           onClick={() => {
             setEditingProduct(null)
+            setForm(emptyProduct)
             setShowModal(true)
           }}
         >
@@ -93,59 +133,62 @@ export default function Productos({ productos }: { productos: Product[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((product) => {
-              return (
-                <tr key={product.id}>
-                  <td className="productos-code">{product.codigo}</td>
-                  <td>
-                    <div className="productos-name">{product.nombre}</div>
-                    <div className="productos-desc">{product.desc}</div>
-                  </td>
-                  <td>
-                    <Badge t="info">{product.tipo}</Badge>
-                  </td>
-                  <td className="productos-unit">{product.unidad}</td>
-                  <td className="productos-meta">
-                    {fmt(product.stockMin)} L
-                  </td>
-                  <td>
-                    <Badge
-                      t={product.estado === "Activo" ? "ok" : "neutral"}
+            {filtered.map((product) => (
+              <tr key={product.id}>
+                <td className="productos-code">{product.codigo}</td>
+                <td>
+                  <div className="productos-name">{product.nombre}</div>
+                  <div className="productos-desc">{product.desc}</div>
+                </td>
+                <td>
+                  <Badge t="info">{product.tipo}</Badge>
+                </td>
+                <td className="productos-unit">{product.unidad}</td>
+                <td className="productos-meta">{fmt(product.stockMin)} L</td>
+                <td>
+                  <Badge t={product.estado === "Activo" ? "ok" : "neutral"}>
+                    {product.estado}
+                  </Badge>
+                </td>
+                <td>
+                  <div className="productos-actions">
+                    <button
+                      className="btn btn-ghost btn-sm productos-edit-btn"
+                      title="Editar producto"
+                      aria-label="Editar producto"
+                      onClick={() => {
+                        setEditingProduct(product)
+                        setForm({
+                          codigo: product.codigo,
+                          nombre: product.nombre,
+                          descripcion: product.desc,
+                          tipo: product.tipo,
+                          unidad: product.unidad,
+                          stockMinimo: product.stockMin,
+                          estado: product.estado,   // 👈 NUEVO
+                        })
+                        setShowModal(true)
+                      }}
                     >
-                      {product.estado}
-                    </Badge>
-                  </td>
-                  <td>
-                    <div className="productos-actions">
-                      <button
-                        className="btn btn-ghost btn-sm productos-edit-btn"
-                        title="Editar producto"
-                        aria-label="Editar producto"
-                        onClick={() => {
-                          setEditingProduct(product)
-                          setShowModal(true)
-                        }}
-                      >
-                        <Ico p={I.edit} size={13} />
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-sm productos-delete-btn"
-                        title="Eliminar producto"
-                        aria-label="Eliminar producto"
-                        onClick={() => setDeletingProduct(product)}
-                      >
-                        <Ico p={I.trash} size={13} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
+                      <Ico p={I.edit} size={13} />
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm productos-delete-btn"
+                      title="Eliminar producto"
+                      aria-label="Eliminar producto"
+                      onClick={() => setDeletingProduct(product)}
+                    >
+                      <Ico p={I.trash} size={13} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
       {showModal && (
-        <div className="modal-backdrop" onClick={closeModal}>
+        <div className="modal-backdrop">
           <div
             className="modal productos-modal"
             onClick={(event) => event.stopPropagation()}
@@ -164,37 +207,106 @@ export default function Productos({ productos }: { productos: Product[] }) {
               </button>
             </div>
             <div className="productos-form-grid">
-              {productFields.map((field) => (
-                <div
-                  key={field.label}
-                  className={`field ${field.span === 2 ? "productos-span-2" : "productos-span-1"}`}
-                >
-                  <label className="label">{field.label}</label>
-                  <input
-                    className="input"
-                    placeholder={field.label}
-                    defaultValue={field.value}
-                    type={
-                      field.label === "Stock Mínimo" ? "number" : "text"
-                    }
-                  />
-                </div>
-              ))}
+              {/* Código */}
+              <div className="field productos-span-1">
+                <label className="label">Código</label>
+                <input
+                  className="input"
+                  placeholder="Código"
+                  value={form.codigo}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, codigo: e.target.value }))
+                  }
+                />
+              </div>
+
+              {/* Nombre */}
+              <div className="field productos-span-1">
+                <label className="label">Nombre</label>
+                <input
+                  className="input"
+                  placeholder="Nombre"
+                  value={form.nombre}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, nombre: e.target.value }))
+                  }
+                />
+              </div>
+
+              {/* Descripción */}
+              <div className="field productos-span-2">
+                <label className="label">Descripción</label>
+                <input
+                  className="input"
+                  placeholder="Descripción"
+                  value={form.descripcion}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, descripcion: e.target.value }))
+                  }
+                />
+              </div>
+
+              {/* Tipo */}
+              <div className="field productos-span-1">
+                <label className="label">Tipo</label>
+                <input
+                  className="input"
+                  placeholder="Tipo"
+                  value={form.tipo}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, tipo: e.target.value }))
+                  }
+                />
+              </div>
+
+              {/* Unidad (readonly) */}
+              <div className="field productos-span-1">
+                <label className="label">Unidad</label>
+                <input
+                  className="input"
+                  value="Litros"
+                  readOnly
+                  disabled
+                  style={{ background: "#F1F5F9", cursor: "not-allowed" }}
+                />
+              </div>
+
+              {/* Stock Mínimo (min=0) */}
+              <div className="field productos-span-1">
+                <label className="label">Stock Mínimo</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  value={form.stockMinimo}
+                  onChange={(e) => {
+                    const val = Number(e.target.value)
+                    if (val < 0) return
+                    setForm((current) => ({ ...current, stockMinimo: val }))
+                  }}
+                />
+              </div>
+
+              {/* Estado */}
               <div className="field productos-span-1">
                 <label className="label">Estado</label>
                 <select
                   className="input"
-                  defaultValue={editingProduct?.estado ?? "Activo"}
+                  value={form.estado}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, estado: e.target.value }))
+                  }
                 >
                   <option value="Activo">Activo</option>
                   <option value="Inactivo">Inactivo</option>
                 </select>
               </div>
             </div>
+            {error && <div className="form-error">{error}</div>}
             <div className="productos-form-actions">
               <button
                 className="btn btn-primary productos-save"
-                onClick={closeModal}
+                onClick={saveProduct}
               >
                 <Ico p={I.check} size={14} /> Guardar
               </button>
@@ -205,19 +317,15 @@ export default function Productos({ productos }: { productos: Product[] }) {
           </div>
         </div>
       )}
+
       {deletingProduct && (
-        <div
-          className="modal-backdrop"
-          onClick={() => setDeletingProduct(null)}
-        >
+        <div className="modal-backdrop">
           <div
             className="modal productos-delete-modal"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="productos-delete-header">
-              <h2 className="productos-delete-title">
-                Eliminar producto
-              </h2>
+              <h2 className="productos-delete-title">Eliminar producto</h2>
             </div>
             <p className="productos-delete-text">
               ¿Deseas eliminar {deletingProduct.nombre} del catálogo?
@@ -225,7 +333,14 @@ export default function Productos({ productos }: { productos: Product[] }) {
             <div className="productos-delete-actions">
               <button
                 className="btn btn-danger productos-delete-confirm"
-                onClick={() => setDeletingProduct(null)}
+                onClick={async () => {
+                  try {
+                    await onDelete(deletingProduct)
+                    setDeletingProduct(null)
+                  } catch (deleteError) {
+                    setError(deleteError instanceof Error ? deleteError.message : "No se pudo eliminar el producto")
+                  }
+                }}
               >
                 Eliminar
               </button>

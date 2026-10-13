@@ -1,3 +1,5 @@
+// client/src/modules/Proveedores.tsx
+
 import React, { useState } from "react"
 import { Badge, I, Ico, PageTitle } from "../shared"
 
@@ -86,10 +88,18 @@ export default function Proveedores({
     setShowModal(true)
   }
 
+  const PHONE_REGEX = /^[\d\s+\-().]*$/
+
   const handleSave = async () => {
     // Validación mínima
     if (!form.empresa.trim() || !form.email.trim()) {
       setFormError("Nombre de empresa y email son obligatorios.")
+      return
+    }
+
+    // 👇 Validar teléfono
+    if (form.tel && !PHONE_REGEX.test(form.tel)) {
+      setFormError("El teléfono solo puede contener números y los símbolos + - ( )")
       return
     }
 
@@ -234,7 +244,7 @@ export default function Proveedores({
       </div>
 
       {showModal && (
-        <div className="modal-backdrop" onClick={closeModal}>
+        <div className="modal-backdrop">
           <div
             className="modal proveedores-modal"
             onClick={(event) => event.stopPropagation()}
