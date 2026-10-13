@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 
 from .models import Usuario
@@ -42,6 +43,11 @@ class EstadoUsuarioField(serializers.Field):
 class UsuarioSerializer(serializers.ModelSerializer):
     rol = RolUsuarioField(source="id_rol")
     estado = EstadoUsuarioField(source="activo")
+    contrasena = serializers.CharField(
+        write_only=True,
+        required=False,
+        allow_blank=True,
+    )
     permisos = serializers.JSONField(required=False, write_only=True)
 
     def validate_permisos(self, value):
@@ -53,11 +59,17 @@ class UsuarioSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data.pop("permisos", None)
-        validated_data.setdefault("contrasena", "temporal")
+        # 👇 Hashear la contraseña o usar "temporal" por defecto
+        raw_password = validated_data.pop("contrasena", "") or "temporal"
+        validated_data["contrasena"] = make_password(raw_password)
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
         validated_data.pop("permisos", None)
+        # 👇 Si envían contraseña, hashearla; si no, no la tocan
+        raw_password = validated_data.pop("contrasena", None)
+        if raw_password:
+            validated_data["contrasena"] = make_password(raw_password)
         return super().update(instance, validated_data)
 
     class Meta:
@@ -68,5 +80,6 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "email",
             "rol",
             "estado",
+            "contrasena",
             "permisos",
         ]
