@@ -1,3 +1,4 @@
+from django.contrib.auth.hashers import check_password
 from django.db import connection
 
 from rest_framework import status
@@ -44,7 +45,8 @@ def login_view(request):
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
-    if usuario.contrasena != password:
+    #  CAMBIO: verificar con check_password (soporta hash)
+    if not check_password(password, usuario.contrasena):
         return Response(
             {"detail": "Credenciales inválidas."},
             status=status.HTTP_401_UNAUTHORIZED,
@@ -64,9 +66,9 @@ def login_view(request):
             "nombre": usuario.nombre,
             "email": usuario.email,
             "rol": ROLE_ID_TO_LABEL.get(usuario.id_rol, "Usuario base"),
-            "id_rol": usuario.id_rol,          # 👈 NUEVO
+            "id_rol": usuario.id_rol,
             "estado": "Activo" if usuario.activo else "Inactivo",
-            "permisos": permisos,               # 👈 NUEVO
+            "permisos": permisos,
         },
         status=status.HTTP_200_OK,
     )
