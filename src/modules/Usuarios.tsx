@@ -1,6 +1,6 @@
 // usuarios.tsx
-import React, { useEffect, useMemo, useRef, useState } from "react"
-import { Badge, I, Ico, PageTitle } from "../shared"
+import React, { useEffect, useMemo, useState } from "react"
+import { Badge, AuthUser, I, Ico, PageTitle, authHeaders } from "../shared"
 
 export type User = {
   id: number
@@ -20,7 +20,6 @@ export type UserInput = {
   permisos?: Record<string, boolean>
 }
 
-type Rol = { id_rol: number; nombre_rol: string }
 type PermisoCatalogo = {
   id: number
   nombre: string
@@ -40,22 +39,39 @@ const ROLE_ID_BY_NAME: Record<string, number> = {
   "Usuario base": 3,
 }
 
+const NOMBRES_MODULO: Record<string, string> = {
+  clientes: "Clientes",
+  direcciones: "Direcciones",
+  proveedores: "Proveedores",
+  productos: "Productos",
+  lotes: "Inventario / Lotes",
+  movimientos: "Movimientos de stock",
+  cotizaciones: "Cotizaciones",
+  ordenes_compra: "Órdenes de compra",
+  facturacion: "Facturación",
+  notas_credito: "Notas de crédito",
+  ia: "Inteligencia Artificial",
+  usuarios_roles: "Usuarios y roles",
+}
+
 export default function Usuarios({
   usuarios,
   loadError,
   onCreate,
   onDelete,
   onUpdate,
+  authUser,
 }: {
   usuarios: User[]
   loadError: string
   onCreate: (input: UserInput) => Promise<User>
   onDelete: (user: User) => Promise<void>
   onUpdate: (user: User, input: UserInput) => Promise<User>
+  authUser: AuthUser | null
 }) {
-  const permissionsSectionRef = useRef<HTMLDivElement | null>(null)
+  const isAdmin = authUser?.id_rol === 1
+
   const [showNew, setShowNew] = useState(false)
-  const [selectedUserId, setSelectedUserId] = useState<number>(usuarios[0]?.id ?? 1)
   const [selectedRoleId, setSelectedRoleId] = useState<number>(1)
 
   const [saving, setSaving] = useState(false)
@@ -65,83 +81,50 @@ export default function Usuarios({
   const [newUser, setNewUser] = useState<UserInput>({
     nombre: "",
     email: "",
-    rol: "Superusuario / Admin",
+    rol: "Usuario base",
     estado: "Activo",
   })
 
-  // Catálogo de permisos cargado desde el backend
   const [catalogo, setCatalogo] = useState<PermisoCatalogo[]>([])
-  // IDs de permisos del rol seleccionado (para los checkboxes)
   const [rolPermisoIds, setRolPermisoIds] = useState<Set<number>>(new Set())
+  const [permisoIdsOriginales, setPermisoIdsOriginales] = useState<Set<number>>(new Set())
 
-  const selectedUser = useMemo(
-    () => usuarios.find((user) => user.id === selectedUserId) ?? usuarios[0],
-    [selectedUserId, usuarios],
-  )
-
-  // Cargar catálogo de permisos al montar
+  // -------------------- CARGA DE DATOS --------------------
+  // Cargar catálogo de permisos al montar (solo Admin)
   useEffect(() => {
+    if (!isAdmin) return
     fetch("/api/permisos/")
       .then((r) => r.json())
       .then((data) => setCatalogo(Array.isArray(data) ? data : []))
       .catch(() => setCatalogo([]))
-  }, [])
+  }, [isAdmin])
 
-  // Cargar permisos del rol seleccionado
+  // Cargar permisos del rol seleccionado (solo Admin)
   useEffect(() => {
-    if (!selectedRoleId) return
+    if (!isAdmin || !selectedRoleId) return
     fetch(`/api/roles/${selectedRoleId}/permisos/`)
       .then((r) => r.json())
       .then((data) => {
-        const ids = new Set<number>(
-          (data.permisos ?? []).map((p: any) => p.id),
-        )
-        setRolPermisoIds(ids)
+        const ids = new Set<number>((data.permisos ?? []).map((p: any) => p.id))
+        setRolPermisoIds(new Set(ids))
+        setPermisoIdsOriginales(new Set(ids))
       })
-      .catch(() => setRolPermisoIds(new Set()))
-  }, [selectedRoleId])
-
-  // Guardar automáticamente con debounce
-  useEffect(() => {
-    if (!selectedRoleId) return
-    setSaveStatus("saving")
-    const handle = setTimeout(() => {
-      fetch(`/api/roles/${selectedRoleId}/permisos/`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ permisos: Array.from(rolPermisoIds) }),
+      .catch(() => {
+        setRolPermisoIds(new Set())
+        setPermisoIdsOriginales(new Set())
       })
-        .then((r) => {
-          if (!r.ok) throw new Error("Error al guardar")
-          setSaveStatus("saved")
-          setTimeout(() => setSaveStatus("idle"), 2000)
-        })
-        .catch(() => {
-          setSaveStatus("error")
-          setTimeout(() => setSaveStatus("idle"), 3000)
-        })
-    }, 600)
-    return () => clearTimeout(handle)
-  }, [rolPermisoIds, selectedRoleId])
+  }, [isAdmin, selectedRoleId])
 
-  // Cuando cambia el usuario seleccionado, actualizar el rol
-  useEffect(() => {
-    if (!selectedUser) return
-    const idRol = ROLE_ID_BY_NAME[selectedUser.rol] ?? 3
-    setSelectedRoleId(idRol)
-    setSaveError("")
-    setTimeout(() => {
-      permissionsSectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      })
-    }, 50)
-  }, [selectedUser?.id])
+  // -------------------- DETECTAR CAMBIOS --------------------
+  const hasChanges = useMemo(() => {
+    if (rolPermisoIds.size !== permisoIdsOriginales.size) return true
+    for (const id of rolPermisoIds) {
+      if (!permisoIdsOriginales.has(id)) return true
+    }
+    return false
+  }, [rolPermisoIds, permisoIdsOriginales])
 
-  const handleEditUser = (user: User) => {
-    setSelectedUserId(user.id)
-  }
-
+  // -------------------- HANDLERS --------------------
   const handleRoleChange = (roleId: number) => {
     setSelectedRoleId(roleId)
   }
@@ -155,18 +138,40 @@ export default function Usuarios({
     })
   }
 
+  const guardarPermisos = async () => {
+    if (!authUser || !isAdmin) return
+    setSaving(true)
+    setSaveError("")
+    setSaveStatus("saving")
+    try {
+      const res = await fetch(`/api/roles/${selectedRoleId}/permisos/`, {
+        method: "PUT",
+        headers: authHeaders(authUser),
+        body: JSON.stringify({ permisos: Array.from(rolPermisoIds) }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.detail || "No se pudieron guardar los permisos")
+      }
+      setPermisoIdsOriginales(new Set(rolPermisoIds))
+      setSaveStatus("saved")
+      setTimeout(() => setSaveStatus("idle"), 2000)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Error al guardar")
+      setSaveStatus("error")
+      setTimeout(() => setSaveStatus("idle"), 3000)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const saveNewUser = async () => {
     setSaving(true)
     setSaveError("")
     try {
       await onCreate(newUser)
       setShowNew(false)
-      setNewUser({
-        nombre: "",
-        email: "",
-        rol: "Superusuario / Admin",
-        estado: "Activo",
-      })
+      setNewUser({ nombre: "", email: "", rol: "Usuario base", estado: "Activo" })
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "No se pudo crear el usuario")
     } finally {
@@ -174,7 +179,7 @@ export default function Usuarios({
     }
   }
 
-  // Agrupar catálogo por módulo
+  // -------------------- AGRUPAR CATÁLOGO POR MÓDULO --------------------
   const grupos = useMemo(() => {
     const map = new Map<string, PermisoCatalogo[]>()
     catalogo.forEach((p) => {
@@ -184,30 +189,18 @@ export default function Usuarios({
     return Array.from(map.entries())
   }, [catalogo])
 
-  const nombresModulo: Record<string, string> = {
-    clientes: "Clientes",
-    direcciones: "Direcciones",
-    proveedores: "Proveedores",
-    productos: "Productos",
-    lotes: "Inventario / Lotes",
-    movimientos: "Movimientos de stock",
-    cotizaciones: "Cotizaciones",
-    ordenes_compra: "Órdenes de compra",
-    facturacion: "Facturación",
-    notas_credito: "Notas de crédito",
-    ia: "Inteligencia Artificial",
-    usuarios_roles: "Usuarios y roles",
-  }
-
+  // -------------------- RENDER --------------------
   return (
     <div>
       <PageTitle
         title="Gestión de Usuarios"
         sub="Usuarios, roles y permisos del sistema"
       >
-        <button className="btn btn-primary" onClick={() => setShowNew(true)}>
-          <Ico p={I.plus} size={14} /> Nuevo usuario
-        </button>
+        {isAdmin && (
+          <button className="btn btn-primary" onClick={() => setShowNew(true)}>
+            <Ico p={I.plus} size={14} /> Nuevo usuario
+          </button>
+        )}
       </PageTitle>
 
       {loadError && (
@@ -216,6 +209,9 @@ export default function Usuarios({
         </div>
       )}
 
+      {/* ============================================== */}
+      {/* TABLA DE USUARIOS (visible para Admin y Vendedor) */}
+      {/* ============================================== */}
       <div className="panel">
         <table className="dt w-full">
           <thead>
@@ -224,7 +220,7 @@ export default function Usuarios({
               <th>Correo</th>
               <th>Rol</th>
               <th>Estado</th>
-              <th></th>
+              {isAdmin && <th></th>}
             </tr>
           </thead>
           <tbody>
@@ -248,110 +244,164 @@ export default function Usuarios({
                 <td>
                   <Badge t="ok">{user.estado}</Badge>
                 </td>
-                <td style={{ display: "flex", gap: 8 }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => handleEditUser(user)}>
-                    <Ico p={I.edit} size={13} /> Editar
-                  </button>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={async () => {
-                      if (!window.confirm(`¿Eliminar a ${user.nombre}?`)) return
-                      await onDelete(user)
-                    }}
-                  >
-                    <Ico p={I.trash} size={13} /> Eliminar
-                  </button>
-                </td>
+                {isAdmin && (
+                  <td style={{ display: "flex", gap: 8 }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => {
+                        // TODO: abrir modal de edición de usuario
+                        alert(`Editar usuario: ${user.nombre}`)
+                      }}
+                    >
+                      <Ico p={I.edit} size={13} /> Editar
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={async () => {
+                        if (!window.confirm(`¿Eliminar a ${user.nombre}?`)) return
+                        await onDelete(user)
+                      }}
+                    >
+                      <Ico p={I.trash} size={13} /> Eliminar
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      <div ref={permissionsSectionRef} className="panel usuarios-panel" style={{ marginTop: 18 }}>
-        <div className="panel-header">
-          <span className="usuarios-section-title">Roles y permisos</span>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            {saveStatus === "saving" && <Badge t="warn">Guardando…</Badge>}
-            {saveStatus === "saved" && <Badge t="ok">Guardado ✓</Badge>}
-            {saveStatus === "error" && <Badge t="danger">Error al guardar</Badge>}
-            <Badge t="neutral">
-              {selectedUser ? `Editando: ${selectedUser.nombre}` : "Prototipo"}
-            </Badge>
-          </div>
-        </div>
-
-        <div className="usuarios-roles-grid" style={{ marginTop: 12 }}>
-          {[1, 2, 3].map((roleId) => (
-            <button
-              key={roleId}
-              onClick={() => handleRoleChange(roleId)}
-              className={`usuarios-role-card ${selectedRoleId === roleId ? "active" : "inactive"}`}
-            >
-              <div className="usuarios-role-title">{ROLE_DISPLAY[roleId]}</div>
-              <div className="usuarios-role-desc">
-                {roleId === 1
-                  ? "Acceso total a todos los módulos."
-                  : roleId === 2
-                    ? "Permisos seleccionables por módulo."
-                    : "Solo lectura del sistema."}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="panel" style={{ marginTop: 18 }}>
-        <div className="panel-header" style={{ marginBottom: 18 }}>
-          <span className="usuarios-section-title">
-            Funcionalidades y permisos del rol seleccionado
-          </span>
-          <Badge t="info">{ROLE_DISPLAY[selectedRoleId]}</Badge>
-        </div>
-
-        <div style={{ display: "grid", gap: 18 }}>
-          {grupos.map(([modulo, permisos]) => (
-            <div
-              key={modulo}
-              style={{
-                border: "1px solid #E2E8F0",
-                borderRadius: 12,
-                padding: 16,
-                background: "#F8FAFC",
-              }}
-            >
-              <div style={{ fontWeight: 700, marginBottom: 12, color: "#0F172A" }}>
-                {nombresModulo[modulo] ?? modulo}
-              </div>
-              <div style={{ display: "grid", gap: 8 }}>
-                {permisos.map((permiso) => (
-                  <label
-                    key={permiso.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      color: "#334155",
-                      fontSize: 14,
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={rolPermisoIds.has(permiso.id)}
-                      onChange={() => togglePermission(permiso.id)}
-                    />
-                    <span>{permiso.nombre}</span>
-                  </label>
-                ))}
+      {/* ============================================== */}
+      {/* PANEL DE ROLES Y PERMISOS — SOLO ADMIN         */}
+      {/* ============================================== */}
+      {isAdmin && (
+        <>
+          {/* Selección de rol */}
+          <div className="panel usuarios-panel" style={{ marginTop: 18 }}>
+            <div className="panel-header">
+              <span className="usuarios-section-title">Roles y permisos</span>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                {saveStatus === "saving" && <Badge t="warn">Guardando…</Badge>}
+                {saveStatus === "saved" && <Badge t="ok">Guardado ✓</Badge>}
+                {saveStatus === "error" && <Badge t="danger">Error al guardar</Badge>}
+                {hasChanges && saveStatus === "idle" && (
+                  <Badge t="info">Cambios sin guardar</Badge>
+                )}
               </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {showNew && (
+            <div className="usuarios-roles-grid" style={{ marginTop: 12 }}>
+              {[1, 2, 3].map((roleId) => (
+                <button
+                  key={roleId}
+                  onClick={() => handleRoleChange(roleId)}
+                  className={`usuarios-role-card ${selectedRoleId === roleId ? "active" : "inactive"}`}
+                >
+                  <div className="usuarios-role-title">{ROLE_DISPLAY[roleId]}</div>
+                  <div className="usuarios-role-desc">
+                    {roleId === 1
+                      ? "Acceso total a todos los módulos."
+                      : roleId === 2
+                        ? "Permisos seleccionables por módulo."
+                        : "Solo lectura del sistema."}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Checkboxes de permisos */}
+          <div className="panel" style={{ marginTop: 18 }}>
+            <div className="panel-header" style={{ marginBottom: 18 }}>
+              <span className="usuarios-section-title">
+                Funcionalidades y permisos del rol seleccionado
+              </span>
+              <Badge t="info">{ROLE_DISPLAY[selectedRoleId]}</Badge>
+            </div>
+
+            <div style={{ display: "grid", gap: 18 }}>
+              {grupos.map(([modulo, permisos]) => (
+                <div
+                  key={modulo}
+                  style={{
+                    border: "1px solid #E2E8F0",
+                    borderRadius: 12,
+                    padding: 16,
+                    background: "#F8FAFC",
+                  }}
+                >
+                  <div style={{ fontWeight: 700, marginBottom: 12, color: "#0F172A" }}>
+                    {NOMBRES_MODULO[modulo] ?? modulo}
+                  </div>
+                  <div style={{ display: "grid", gap: 8 }}>
+                    {permisos.map((permiso) => (
+                      <label
+                        key={permiso.id}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          color: "#334155",
+                          fontSize: 14,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={rolPermisoIds.has(permiso.id)}
+                          onChange={() => togglePermission(permiso.id)}
+                        />
+                        <span>{permiso.nombre}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Botón de guardado manual */}
+            <div
+              style={{
+                display: "flex",
+                gap: 12,
+                marginTop: 24,
+                paddingTop: 18,
+                borderTop: "1px solid #E2E8F0",
+                alignItems: "center",
+              }}
+            >
+              <button
+                className="btn btn-primary"
+                onClick={guardarPermisos}
+                disabled={saving || !hasChanges}
+              >
+                <Ico p={I.check} size={14} />{" "}
+                {saving ? "Guardando…" : "Guardar cambios"}
+              </button>
+              {saveError && (
+                <span style={{ color: "#B91C1C", fontSize: "0.75rem" }}>
+                  {saveError}
+                </span>
+              )}
+              {!hasChanges && !saving && (
+                <span style={{ color: "#94A3B8", fontSize: "0.75rem" }}>
+                  Sin cambios pendientes.
+                </span>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ============================================== */}
+      {/* MODAL: Nuevo usuario (solo Admin)              */}
+      {/* ============================================== */}
+      {isAdmin && showNew && (
         <div className="modal-backdrop" onClick={() => setShowNew(false)}>
-          <div className="modal usuarios-modal" onClick={(event) => event.stopPropagation()}>
+          <div
+            className="modal usuarios-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
             <h2 className="usuarios-modal-title">Nuevo usuario</h2>
             <div className="usuarios-form">
               <div className="field">
@@ -360,7 +410,9 @@ export default function Usuarios({
                   className="input"
                   placeholder="Nombre del usuario"
                   value={newUser.nombre}
-                  onChange={(event) => setNewUser((current) => ({ ...current, nombre: event.target.value }))}
+                  onChange={(event) =>
+                    setNewUser((current) => ({ ...current, nombre: event.target.value }))
+                  }
                 />
               </div>
               <div className="field">
@@ -370,7 +422,9 @@ export default function Usuarios({
                   type="email"
                   placeholder="usuario@ecoterra.cl"
                   value={newUser.email}
-                  onChange={(event) => setNewUser((current) => ({ ...current, email: event.target.value }))}
+                  onChange={(event) =>
+                    setNewUser((current) => ({ ...current, email: event.target.value }))
+                  }
                 />
               </div>
               <div className="field">
