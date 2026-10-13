@@ -723,6 +723,7 @@ export default function App() {
     tipo: input.tipo,
     unidad: input.unidad,
     stock_minimo: input.stockMinimo,
+    estado: input.estado === "Activo",
   })
 
   const createProduct = async (input: ProductInput) => {
