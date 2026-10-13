@@ -1,3 +1,4 @@
+// client/src/modules/Lotes.tsx
 import React, { useState } from "react"
 import { Badge, fmt, I, Ico, PageTitle, Product } from "../shared"
 
@@ -235,7 +236,7 @@ export default function Lotes({
       </div>
 
       {showModal && (
-        <div className="modal-backdrop" onClick={() => setShowModal(false)}>
+        <div className="modal-backdrop">
           <div
             className="modal lotes-modal"
             onClick={(e) => e.stopPropagation()}

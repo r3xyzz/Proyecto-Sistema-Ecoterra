@@ -138,37 +138,63 @@ body,
 }
 
 /* ── Tables ──────────────────────────────── */
+.dt {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
 .dt thead th {
-  padding: 9px 14px;
+  padding: 12px 14px;
   font-size: 0.6875rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #64748b;
-  background: #f1f5f9; /* Gris suave para el encabezado */
+  background: #f1f5f9;
   border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
+  text-align: left;
+  vertical-align: middle;
 }
+
 .dt tbody td {
-  padding: 10px 14px;
+  padding: 14px;
   font-size: 0.8125rem;
   color: #1e293b;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
-  background: #ffffff; /* Blanco para las celdas */
+  background: #ffffff;
+  line-height: 1.4;
 }
+
 .dt tbody tr:last-child td {
   border-bottom: none;
 }
+
 .dt tbody tr {
   transition: background 0.1s;
 }
-/* Filas alternas en gris muy suave para facilitar la lectura */
+
 .dt tbody tr:nth-child(even) td {
-  background: #f8fafc; 
+  background: #f8fafc;
 }
+
 .dt tbody tr:hover td {
-  background: #f1f5f9; /* Un gris un poco más notorio al pasar el mouse */
+  background: #f1f5f9;
+}
+
+/* Primera columna con tipografía mono para IDs/RUTs */
+.dt tbody td:first-child {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Última columna (acciones): no se estira */
+.dt tbody td:last-child,
+.dt thead th:last-child {
+  width: 1%;
+  white-space: nowrap;
+  text-align: right;
 }
 
 /* ── Badges ──────────────────────────────── */
@@ -1678,7 +1704,23 @@ body,
   z-index: 50;
   display: flex;
   flex-direction: column;
+  max-height: 100vh;         /*  NUEVO: no puede superar la pantalla */
   animation: slideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* El header y el body del slide-over */
+.clientes-detail-header {
+  padding: 20px;
+  border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;             /*  no se achica */
+}
+
+.clientes-detail-body {
+  padding: 20px;
+  display: grid;
+  gap: 14px;
+  flex: 1;                    /*  ocupa el espacio restante */
+  overflow-y: auto;           /*  SCROLL INTERNO */
+  min-height: 0;              /*  importante para que flex + overflow funcione */
 }
 @keyframes slideIn {
   from {

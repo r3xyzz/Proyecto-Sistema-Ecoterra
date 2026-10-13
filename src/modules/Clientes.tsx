@@ -1,3 +1,4 @@
+// client/src/modules/Clientes.tsx
 import React, { useState } from "react"
 import { Badge, I, Ico, PageTitle } from "../shared"
 
@@ -37,6 +38,8 @@ export type NewClientInput = Omit<Client, "id" | "dirs"> & {
   telefono: string
   representante: string
 }
+
+const PHONE_REGEX = /^[\d\s+\-().]*$/
 
 const emptyNewClient: NewClientInput = {
   rut: "",
@@ -103,7 +106,6 @@ export default function Clientes({
   onDeleteAddress: (client: Client, address: Address) => Promise<void>
 }) {
   const [search, setSearch] = useState("")
-
   const [selected, setSelected] = useState<Client | null>(null)
 
   const [showNew, setShowNew] = useState(false)
@@ -131,6 +133,12 @@ export default function Clientes({
 
   const saveNewClient = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    if (newClient.telefono && !PHONE_REGEX.test(newClient.telefono)) {
+      setSaveError("El teléfono solo puede contener números y los símbolos + - ( )")
+      return
+    }
+
     setSaving(true)
     setSaveError("")
 
@@ -169,9 +177,15 @@ export default function Clientes({
     setEditClient((current) => ({ ...current, [field]: value }))
   }
 
+  // 👇 ÚNICA declaración de saveEditedClient
   const saveEditedClient = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!selected) return
+
+    if (editClient.telefono && !PHONE_REGEX.test(editClient.telefono)) {
+      setEditError("El teléfono solo puede contener números y los símbolos + - ( )")
+      return
+    }
 
     setSaving(true)
     setEditError("")
@@ -520,7 +534,7 @@ export default function Clientes({
         </div>
       )}
       {showNew && (
-        <div className="modal-backdrop" onClick={() => setShowNew(false)}>
+        <div className="modal-backdrop">
           <form
             className="modal"
             style={{ width: 540, padding: 24 }}
