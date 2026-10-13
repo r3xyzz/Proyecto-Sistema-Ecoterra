@@ -1,3 +1,4 @@
+# backend/usuarios/views.py
 from django.db import connection
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -129,12 +130,14 @@ def rol_permisos(request, id_rol):
         })
 
     # ---------- PUT ----------
-    ids_permisos = request.data.get("permisos", [])
-    if not isinstance(ids_permisos, list):
+    id_rol_solicitante = _id_rol_from_request(request)
+    if id_rol_solicitante != 1:
         return Response(
-            {"detail": "Formato inválido. Se espera { permisos: [1,2,3] }."},
-            status=400,
+            {"detail": "Solo el administrador puede modificar permisos."},
+            status=status.HTTP_403_FORBIDDEN,
         )
+
+    ids_permisos = request.data.get("permisos", [])
 
     # Normalizar: enteros, sin duplicados, sin ceros/nulos
     try:

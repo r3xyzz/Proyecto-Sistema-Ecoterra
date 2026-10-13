@@ -936,6 +936,7 @@ export default function App() {
         onCreate={createUser}
         onDelete={deleteUser}
         onUpdate={updateUser}
+        authUser={authUser} 
       />
     ),
     login: <Login onEnter={handleLogin} />,
