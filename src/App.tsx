@@ -346,6 +346,7 @@ export default function App() {
         setClientesError("")
       })
       .catch((error) => {
+        setProductos(initialProductos)
         setClientes([])
         setClientesError(
           error instanceof Error
