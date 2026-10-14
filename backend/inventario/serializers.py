@@ -2,7 +2,7 @@
 import random
 import string
 
-from django.db.models import Sum  
+from django.db.models import Sum
 from rest_framework import serializers
 
 from .models import Inventario, Movimiento, Producto
@@ -21,8 +21,6 @@ class InventarioSerializer(serializers.ModelSerializer):
             "fecha_vencimiento",
             "ubicacion",
             "estado",
-            "stock_disponible",
-            "stock_total",
         ]
 
     def create(self, validated_data):
@@ -49,7 +47,6 @@ class MovimientoSerializer(serializers.ModelSerializer):
         ]
 
 
-# ProductoSerializer
 class ProductoSerializer(serializers.ModelSerializer):
     stock_disponible = serializers.SerializerMethodField()
     stock_total = serializers.SerializerMethodField()
