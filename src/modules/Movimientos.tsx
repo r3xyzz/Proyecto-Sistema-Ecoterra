@@ -200,7 +200,7 @@ export default function Movimientos({
                     value={qty}
                     onChange={(e) => setQty(e.target.value)}
                   />
-                  {type === "Ajuste" && selectedLote && (
+                  {selectedLote && (
                     <p
                       style={{
                         fontSize: "0.75rem",
@@ -208,25 +208,57 @@ export default function Movimientos({
                         marginTop: 4,
                       }}
                     >
-                      Stock actual en el lote:{" "}
+                      {/* CAMBIO 1: Texto dinámico */}
+                      {type === "Ajuste" ? "Stock actual en el lote:" : "Stock final en el lote:"}{" "}
+                      
+                      {/* CAMBIO 2: Valor principal dinámico (el resultado esperado) */}
                       <strong style={{ color: "#0F172A" }}>
-                        {fmt(selectedLote.qty)} L
+                        {qty !== "" && type !== "Ajuste" 
+                          ? fmt(
+                              type === "Entrada" 
+                                ? selectedLote.qty + Number(qty) // Suma stock actual + cantidad
+                                : selectedLote.qty - Number(qty) // Resta stock actual - cantidad
+                            )
+                          : fmt(selectedLote.qty) // Si es Ajuste o está vacío, muestra el stock actual tal cual
+                        } L
                       </strong>
+
                       {qty !== "" && (
                         <span
                           style={{
                             marginLeft: 8,
                             color:
-                              Number(qty) - selectedLote.qty === 0
-                                ? "#64748B"
-                                : Number(qty) > selectedLote.qty
-                                  ? "#00995A"
-                                  : "#DC2626",
+                              // Lógica de colores según tipo y efecto
+                              type === "Ajuste"
+                                ? Number(qty) - selectedLote.qty === 0
+                                  ? "#64748B" // Gris si no cambia
+                                  : Number(qty) > selectedLote.qty
+                                    ? "#00995A" // Verde si aumenta
+                                    : "#DC2626" // Rojo si disminuye
+                                : type === "Entrada"
+                                  ? "#00995A" // Verde para entradas
+                                  : "#DC2626", // Rojo para salidas
                             fontWeight: 600,
                           }}
                         >
-                          ({Number(qty) > selectedLote.qty ? "+" : ""}
-                          {fmt(Number(qty) - selectedLote.qty)} L)
+                          {/* Lógica del valor entre paréntesis (la diferencia/cambio) */}
+                          {type === "Ajuste" ? (
+                            // CASO AJUSTE: Muestra la diferencia con el stock actual
+                            <>
+                              ({Number(qty) > selectedLote.qty ? "+" : ""}
+                              {fmt(Number(qty) - selectedLote.qty)} L)
+                            </>
+                          ) : type === "Entrada" ? (
+                            // CASO ENTRADA: Muestra cuánto se suma
+                            <>
+                              (+{fmt(Number(qty))} L)
+                            </>
+                          ) : (
+                            // CASO SALIDA: Muestra cuánto se resta
+                            <>
+                              (-{fmt(Number(qty))} L)
+                            </>
+                          )}
                         </span>
                       )}
                     </p>
