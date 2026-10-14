@@ -10,7 +10,7 @@ export type ProductInput = {
   tipo: string
   unidad: string
   stockMinimo: number
-  estado: string   // 👈 NUEVO
+  estado: string
 }
 
 type ProductProps = {
@@ -27,7 +27,7 @@ const emptyProduct: ProductInput = {
   tipo: "",
   unidad: "Litros",
   stockMinimo: 0,
-  estado: "Activo",   // 👈 NUEVO
+  estado: "Activo",
 }
 
 export default function Productos({ productos, onCreate, onUpdate, onDelete }: ProductProps) {
@@ -127,7 +127,9 @@ export default function Productos({ productos, onCreate, onUpdate, onDelete }: P
               <th>Nombre</th>
               <th>Tipo</th>
               <th>Unidad</th>
-              <th>Stock Mínimo</th>
+              <th>Stock mín.</th>
+              <th>Stock disp.</th>
+              <th>Stock total</th>
               <th>Estado</th>
               <th></th>
             </tr>
@@ -144,7 +146,34 @@ export default function Productos({ productos, onCreate, onUpdate, onDelete }: P
                   <Badge t="info">{product.tipo}</Badge>
                 </td>
                 <td className="productos-unit">{product.unidad}</td>
-                <td className="productos-meta">{fmt(product.stockMin)} L</td>
+
+                {/* Stock mínimo */}
+                <td className="productos-meta" style={{ color: "#64748b" }}>
+                  {fmt(product.stockMin)} L
+                </td>
+
+                {/* Stock disponible (con color según nivel) */}
+                <td className="productos-meta">
+                  <span
+                    style={{
+                      color:
+                        product.stock === 0
+                          ? "#DC2626"
+                          : product.stock < product.stockMin
+                            ? "#D97706"
+                            : "#00995A",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {fmt(product.stock)} L
+                  </span>
+                </td>
+
+                {/* Stock total */}
+                <td className="productos-meta" style={{ color: "#64748b" }}>
+                  {fmt(product.stockTotal)} L
+                </td>
+
                 <td>
                   <Badge t={product.estado === "Activo" ? "ok" : "neutral"}>
                     {product.estado}
@@ -165,7 +194,7 @@ export default function Productos({ productos, onCreate, onUpdate, onDelete }: P
                           tipo: product.tipo,
                           unidad: product.unidad,
                           stockMinimo: product.stockMin,
-                          estado: product.estado,   // 👈 NUEVO
+                          estado: product.estado,
                         })
                         setShowModal(true)
                       }}
@@ -338,7 +367,11 @@ export default function Productos({ productos, onCreate, onUpdate, onDelete }: P
                     await onDelete(deletingProduct)
                     setDeletingProduct(null)
                   } catch (deleteError) {
-                    setError(deleteError instanceof Error ? deleteError.message : "No se pudo eliminar el producto")
+                    setError(
+                      deleteError instanceof Error
+                        ? deleteError.message
+                        : "No se pudo eliminar el producto",
+                    )
                   }
                 }}
               >

@@ -1,3 +1,4 @@
+// client/src/modules/Dashboard.tsx
 import React from "react"
 import logoEcoterra from "@/imports/logo_ecoterra.png"
 import { Badge, fmt, I, Ico, Product, Screen } from "../shared"
@@ -25,19 +26,16 @@ export default function Dashboard({
       desc: "Cotización COT-2024-041 emitida — Minera Los Bronces S.A.",
       type: "quote",
     },
-
     {
       time: "07:30",
       desc: "Alerta IA: POL-002 cruzó umbral mínimo de stock. 300 L restantes.",
       type: "alert",
     },
-
     {
       time: "Ayer",
       desc: "Factura FAC-2024-122 emitida · $4.250.000 CLP · Vence 12 Jul.",
       type: "invoice",
     },
-
     {
       time: "Ayer",
       desc: "Lote LT-2024-005 registrado · 1.340 L POL-004 · Ubicación C3-02.",
@@ -84,13 +82,17 @@ export default function Dashboard({
           </div>
         </div>
       </div>
+
+      {/* ============ ALERTAS IA · STOCKOUT ============ */}
       <div className="panel">
         <div className="panel-header">
           <div className="dashboard-section-title-row">
             <span className="dashboard-alert-icon">
               <Ico p={I.alert} size={15} />
             </span>
-            <span className="dashboard-section-title">Alertas IA · Stockout</span>
+            <span className="dashboard-section-title">
+              Alertas IA · Stockout
+            </span>
             <Badge t="danger">{stockAlerts.length}</Badge>
           </div>
           <button className="btn btn-ghost btn-sm" onClick={() => onNav("ia")}>
@@ -116,10 +118,16 @@ export default function Dashboard({
                   />
                 </div>
                 <div className="dashboard-alert-stock">
-                  <span className="tabular" style={{ color: product.stock === 0 ? "#DC2626" : "#B45309", fontWeight: 700 }}>
+                  <span
+                    className="tabular"
+                    style={{
+                      color: product.stock === 0 ? "#DC2626" : "#B45309",
+                      fontWeight: 700,
+                    }}
+                  >
                     {fmt(product.stock)} L
                   </span>{" "}
-                  disponibles
+                  disponibles · {fmt(product.stockTotal)} L total
                 </div>
               </div>
               <div className="dashboard-alert-side">
@@ -139,9 +147,13 @@ export default function Dashboard({
           )
         })}
       </div>
+
+      {/* ============ STOCK ACTUAL POR PRODUCTO ============ */}
       <div className="panel">
         <div className="panel-header">
-          <span className="dashboard-section-title">Stock actual por producto</span>
+          <span className="dashboard-section-title">
+            Stock actual por producto
+          </span>
           <button
             className="btn btn-ghost btn-sm"
             onClick={() => onNav("productos")}
@@ -168,23 +180,39 @@ export default function Dashboard({
                 </div>
               </div>
               <div className="dashboard-stock-side">
-                <div className="tabular" style={{ fontSize: "0.8125rem", fontWeight: 700, color }}>
+                <div
+                  className="tabular"
+                  style={{
+                    fontSize: "0.8125rem",
+                    fontWeight: 700,
+                    color,
+                  }}
+                >
                   {fmt(product.stock)} L
                 </div>
                 <div className="dashboard-stock-meta">
-                  mín. {fmt(product.stockMin)} L
+                  mín. {fmt(product.stockMin)} L · {fmt(product.stockTotal)} L total
                 </div>
               </div>
             </div>
           )
         })}
       </div>
+
+      {/* ============ ACTIVIDAD RECIENTE ============ */}
       <div className="panel">
         <div className="panel-header">
           <span className="dashboard-activity-title">Actividad reciente</span>
         </div>
         {activity.map((item, index) => (
-          <div key={index} className="dashboard-activity-item" style={{ borderBottom: index < activity.length - 1 ? "1px solid #F1F5F9" : "none" }}>
+          <div
+            key={index}
+            className="dashboard-activity-item"
+            style={{
+              borderBottom:
+                index < activity.length - 1 ? "1px solid #F1F5F9" : "none",
+            }}
+          >
             <div
               className="dashboard-activity-icon"
               style={{
@@ -209,12 +237,8 @@ export default function Dashboard({
                 size={13}
               />
             </div>
-                  <p className="dashboard-activity-desc">
-              {item.desc}
-            </p>
-                  <span className="dashboard-activity-time">
-              {item.time}
-            </span>
+            <p className="dashboard-activity-desc">{item.desc}</p>
+            <span className="dashboard-activity-time">{item.time}</span>
           </div>
         ))}
       </div>

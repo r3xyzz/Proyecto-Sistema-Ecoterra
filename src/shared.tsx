@@ -79,7 +79,20 @@ export const I = {
   sparkle: "M12 3l1.88 5.28 5.62.42-4.38 3.66 1.5 5.5L12 15l-4.62 2.86 1.5-5.5L4.5 8.7l5.62-.42z",
 }
 
-export type Screen = "login" | "dashboard" | "clientes" | "proveedores" | "productos" | "lotes" | "movimientos" | "cotizaciones" | "oc" | "facturacion" | "nc" | "ia" | "usuarios"
+export type Screen =
+  | "login"
+  | "dashboard"
+  | "clientes"
+  | "proveedores"
+  | "productos"
+  | "lotes"
+  | "movimientos"
+  | "cotizaciones"
+  | "oc"
+  | "facturacion"
+  | "nc"
+  | "ia"
+  | "usuarios"
 
 export type Product = {
   id: number
@@ -89,7 +102,8 @@ export type Product = {
   tipo: string
   unidad: string
   stockMin: number
-  stock: number
+  stock: number          // Stock DISPONIBLE (RF-04)
+  stockTotal: number     // Stock FÍSICO TOTAL (todos los lotes)
   estado: string
 }
 
@@ -148,6 +162,7 @@ export function PageTitle({
   )
 }
 
+// ---------- Permisos ----------
 export type PermissionMap = Record<string, boolean>
 
 export type AuthUser = {
@@ -206,6 +221,10 @@ export const SCREEN_TO_MODULE: Record<Screen, string | undefined> = {
   usuarios: "usuarios_roles",
 }
 
+/**
+ * Headers estándar para peticiones autenticadas.
+ * Envía el id_rol del usuario en X-User-Role para validación en el backend.
+ */
 export function authHeaders(user: AuthUser | null): HeadersInit {
   return {
     "Content-Type": "application/json",
