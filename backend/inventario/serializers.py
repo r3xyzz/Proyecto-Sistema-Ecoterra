@@ -21,6 +21,8 @@ class InventarioSerializer(serializers.ModelSerializer):
             "fecha_vencimiento",
             "ubicacion",
             "estado",
+            "stock_disponible",
+            "stock_total",
         ]
 
     def create(self, validated_data):
@@ -47,9 +49,10 @@ class MovimientoSerializer(serializers.ModelSerializer):
         ]
 
 
-# NUEVO ProductoSerializer
+# ProductoSerializer
 class ProductoSerializer(serializers.ModelSerializer):
-    stock = serializers.SerializerMethodField()
+    stock_disponible = serializers.SerializerMethodField()
+    stock_total = serializers.SerializerMethodField()
 
     class Meta:
         model = Producto
@@ -61,11 +64,23 @@ class ProductoSerializer(serializers.ModelSerializer):
             "tipo",
             "unidad",
             "stock_minimo",
-            "stock",
+            "stock_disponible",
+            "stock_total",
             "estado",
         ]
 
-    def get_stock(self, obj):
+    def get_stock_disponible(self, obj):
+        """Suma solo los lotes con estado 'Disponible' (RF-04)."""
+        total = (
+            Inventario.objects.filter(
+                id_producto=obj.id,
+                estado="Disponible",
+            ).aggregate(total=Sum("cantidad"))["total"]
+        )
+        return float(total or 0)
+
+    def get_stock_total(self, obj):
+        """Suma TODOS los lotes, sin importar su estado."""
         total = (
             Inventario.objects.filter(id_producto=obj.id).aggregate(
                 total=Sum("cantidad")

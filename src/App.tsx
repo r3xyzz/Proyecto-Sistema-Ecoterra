@@ -44,7 +44,8 @@ const mapProductFromApi = (item: any) => ({
   tipo: item.tipo,
   unidad: item.unidad,
   stockMin: Number(item.stock_minimo),
-  stock: Number(item.stock),
+  stock: Number(item.stock_disponible),       //  disponible (RF-04)
+  stockTotal: Number(item.stock_total),       //  total (físico)
   estado: item.estado ? "Activo" : "Inactivo",
 })
 
@@ -127,6 +128,7 @@ const initialProductos = [
     unidad: "Litros",
     stockMin: 600,
     stock: 2960,
+    stockTotal: 2960,
     estado: "Activo",
   },
   {
@@ -138,6 +140,7 @@ const initialProductos = [
     unidad: "Litros",
     stockMin: 1000,
     stock: 300,
+    stockTotal: 300,
     estado: "Activo",
   },
   {
@@ -149,6 +152,7 @@ const initialProductos = [
     unidad: "Litros",
     stockMin: 2000,
     stock: 0,
+    stockTotal: 0,
     estado: "Inactivo",
   },
   {
@@ -160,6 +164,7 @@ const initialProductos = [
     unidad: "Litros",
     stockMin: 400,
     stock: 1340,
+    stockTotal: 1340,
     estado: "Activo",
   },
   {
@@ -171,6 +176,7 @@ const initialProductos = [
     unidad: "Litros",
     stockMin: 800,
     stock: 200,
+    stockTotal: 200, 
     estado: "Activo",
   },
 ]
