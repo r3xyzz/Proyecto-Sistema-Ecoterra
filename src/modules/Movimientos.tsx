@@ -312,16 +312,16 @@ export default function Movimientos({
                     <td>{movement.prod}</td>
                     <td
                       className={
-                        movement.qty < 0
+                        movement.tipo === "Salida"
                           ? "mov-history-qty-negative"
                           : "mov-history-qty-positive"
                       }
                     >
-                      {movement.qty > 0 ? "+" : ""}
+                      {movement.tipo === "Entrada" ? "+" : movement.tipo === "Salida" ? "-" : ""}
                       {fmt(movement.qty)} L
                     </td>
                     <td style={{ fontSize: "0.75rem" }}>
-                      {isAjuste &&
+                      {
                       movement.stockAnterior != null &&
                       movement.stockPosterior != null ? (
                         <span>
