@@ -8,22 +8,76 @@ from rest_framework import status
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
 
+from django.db.models import (
+    OuterRef,
+    Subquery,
+    Sum,
+    DecimalField,
+    Value,
+)
+from django.db.models.functions import Coalesce
+
 from .models import Inventario, Movimiento, Producto
 from .serializers import (
     InventarioSerializer,
     MovimientoSerializer,
     ProductoSerializer,
 )
+# ---------- CÁLCULOS DE STOCK - Productos ----------
+def productos_con_stock():
+    campo_decimal = DecimalField(
+        max_digits=12,
+        decimal_places=2,
+    )
 
+    stock_disponible = (
+        Inventario.objects
+        .filter(
+            id_producto=OuterRef("id"),
+            estado="Disponible",
+        )
+        .order_by()
+        .values("id_producto")
+        .annotate(total=Sum("cantidad"))
+        .values("total")[:1]
+    )
+
+    stock_total = (
+        Inventario.objects
+        .filter(id_producto=OuterRef("id"))
+        .order_by()
+        .values("id_producto")
+        .annotate(total=Sum("cantidad"))
+        .values("total")[:1]
+    )
+
+    return Producto.objects.annotate(
+        stock_disponible_calculado=Coalesce(
+            Subquery(
+                stock_disponible,
+                output_field=campo_decimal,
+            ),
+            Value(Decimal("0.00")),
+            output_field=campo_decimal,
+        ),
+        stock_total_calculado=Coalesce(
+            Subquery(
+                stock_total,
+                output_field=campo_decimal,
+            ),
+            Value(Decimal("0.00")),
+            output_field=campo_decimal,
+        ),
+    )
 
 # ---------- Productos ----------
 class ProductoListView(ListCreateAPIView):
-    queryset = Producto.objects.all()
+    queryset = productos_con_stock()
     serializer_class = ProductoSerializer
 
 
 class ProductoDetailView(RetrieveUpdateDestroyAPIView):
-    queryset = Producto.objects.all()
+    queryset = productos_con_stock()
     serializer_class = ProductoSerializer
 
 

@@ -2,7 +2,14 @@
 import random
 import string
 
-from django.db.models import Sum
+from django.db.models import (
+    Sum,
+    Case,
+    When,
+    Value,
+    DecimalField,
+)
+from django.db.models.functions import Coalesce
 from rest_framework import serializers
 
 from .models import Inventario, Movimiento, Producto
@@ -67,20 +74,7 @@ class ProductoSerializer(serializers.ModelSerializer):
         ]
 
     def get_stock_disponible(self, obj):
-        """Suma solo los lotes con estado 'Disponible' (RF-04)."""
-        total = (
-            Inventario.objects.filter(
-                id_producto=obj.id,
-                estado="Disponible",
-            ).aggregate(total=Sum("cantidad"))["total"]
-        )
-        return float(total or 0)
+        return float(obj.stock_disponible_calculado or 0)
 
     def get_stock_total(self, obj):
-        """Suma TODOS los lotes, sin importar su estado."""
-        total = (
-            Inventario.objects.filter(id_producto=obj.id).aggregate(
-                total=Sum("cantidad")
-            )["total"]
-        )
-        return float(total or 0)
+        return float(obj.stock_total_calculado or 0)
