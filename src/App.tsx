@@ -7,7 +7,7 @@ import Proveedores, { Proveedor, ProveedorInput } from "./modules/Proveedores"
 import Productos, { ProductInput } from "./modules/Productos"
 import Lotes, { Lote, LoteInput } from "./modules/Lotes"
 import Movimientos, { Movimiento, MovimientoInput } from "./modules/Movimientos"
-import Cotizaciones from "./modules/Cotizaciones"
+import Cotizaciones, { PurchaseOrder, Invoice } from "./modules/Cotizaciones"
 import OrdenesCompra from "./modules/OrdenesCompra"
 import Facturacion from "./modules/Facturacion"
 import NotasCredito from "./modules/NotasCredito"
@@ -44,8 +44,8 @@ const mapProductFromApi = (item: any) => ({
   tipo: item.tipo,
   unidad: item.unidad,
   stockMin: Number(item.stock_minimo),
-  stock: Number(item.stock_disponible),       //  disponible (RF-04)
-  stockTotal: Number(item.stock_total),       //  total (físico)
+  stock: Number(item.stock_disponible),
+  stockTotal: Number(item.stock_total),
   estado: item.estado ? "Activo" : "Inactivo",
 })
 
@@ -117,6 +117,28 @@ const mapMovimientoFromApi = (
   }
 }
 
+const mapFacturaFromApi = (item: any): Invoice => ({
+  id: item.numero_factura,
+  oc: item.oc_numero || "",
+  cliente: item.cliente_nombre || "",
+  fecha: item.fecha_factura,
+  venc: item.fecha_factura,
+  subtotal: Number(item.subtotal_factura),
+  iva: Number(item.iva_factura),
+  total: Number(item.total_factura),
+  estado: item.estado_factura,
+})
+
+const mapOrdenFromApi = (item: any): PurchaseOrder => ({
+  id: item.numero_oc,
+  cot: item.cotizacion_numero || "",
+  cliente: item.cliente_nombre || "",
+  fecha: item.fecha_oc,
+  total: 0,
+  estado: "Pendiente",
+  factura: null,
+})
+
 // ---------- Datos iniciales (fallback) ----------
 const initialProductos = [
   {
@@ -176,121 +198,8 @@ const initialProductos = [
     unidad: "Litros",
     stockMin: 800,
     stock: 200,
-    stockTotal: 200, 
+    stockTotal: 200,
     estado: "Activo",
-  },
-]
-
-const cotizaciones = [
-  {
-    id: "COT-2024-041",
-    cliente: "Minera Los Bronces S.A.",
-    fecha: "2024-06-10",
-    vigencia: "2024-07-10",
-    subtotal: 3571429,
-    iva: 678571,
-    total: 4250000,
-    observacion: "Entrega estimada en dos despachos según disponibilidad de bodega.",
-    estado: "Vigente",
-  },
-  {
-    id: "COT-2024-040",
-    cliente: "Constructora Vial Sur Ltda.",
-    fecha: "2024-06-05",
-    vigencia: "2024-07-05",
-    subtotal: 1546218,
-    iva: 293782,
-    total: 1840000,
-    observacion: "Precios sujetos a confirmación de volumen.",
-    estado: "Convertida",
-  },
-  {
-    id: "COT-2024-039",
-    cliente: "Portuaria del Pacífico",
-    fecha: "2024-05-28",
-    vigencia: "2024-06-28",
-    subtotal: 6453782,
-    iva: 1226218,
-    total: 7680000,
-    observacion: "Considerar coordinación previa con el área de operaciones.",
-    estado: "Vencida",
-  },
-  {
-    id: "COT-2024-038",
-    cliente: "Agrícola Atacama SpA",
-    fecha: "2024-05-20",
-    vigencia: "2024-06-20",
-    subtotal: 478992,
-    iva: 91008,
-    total: 570000,
-    observacion: "Despacho a confirmar con el cliente.",
-    estado: "Vigente",
-  },
-]
-
-const facturas = [
-  {
-    id: "FAC-2024-122",
-    oc: "OC-2024-041",
-    cliente: "Minera Los Bronces S.A.",
-    fecha: "2024-06-12",
-    venc: "2024-07-12",
-    subtotal: 3571429,
-    iva: 678571,
-    total: 4250000,
-    estado: "Pendiente",
-  },
-  {
-    id: "FAC-2024-121",
-    oc: "OC-2024-040",
-    cliente: "Constructora Vial Sur Ltda.",
-    fecha: "2024-06-06",
-    venc: "2024-07-06",
-    subtotal: 1546218,
-    iva: 293782,
-    total: 1840000,
-    estado: "Pagada",
-  },
-  {
-    id: "FAC-2024-120",
-    oc: "OC-2024-039",
-    cliente: "Portuaria del Pacífico",
-    fecha: "2024-05-30",
-    venc: "2024-06-30",
-    subtotal: 6453782,
-    iva: 1226218,
-    total: 7680000,
-    estado: "Vencida",
-  },
-]
-
-const ordenes = [
-  {
-    id: "OC-2024-041",
-    cot: "COT-2024-040",
-    cliente: "Constructora Vial Sur Ltda.",
-    fecha: "2024-06-06",
-    total: 1840000,
-    estado: "Aprobada",
-    factura: "FAC-2024-121",
-  },
-  {
-    id: "OC-2024-040",
-    cot: "COT-2024-038",
-    cliente: "Agrícola Atacama SpA",
-    fecha: "2024-05-25",
-    total: 570000,
-    estado: "Pendiente facturar",
-    factura: null,
-  },
-  {
-    id: "OC-2024-039",
-    cot: "COT-2024-039",
-    cliente: "Portuaria del Pacífico",
-    fecha: "2024-06-02",
-    total: 7680000,
-    estado: "En despacho",
-    factura: null,
   },
 ]
 
@@ -311,6 +220,8 @@ export default function App() {
   const [lotesError, setLotesError] = useState("")
   const [movimientos, setMovimientos] = useState<Movimiento[]>([])
   const [movimientosError, setMovimientosError] = useState("")
+  const [facturas, setFacturas] = useState<Invoice[]>([])
+  const [ordenes, setOrdenes] = useState<PurchaseOrder[]>([])
 
   // ---------- Auth ----------
   const handleLogin = (user: AuthUser) => {
@@ -460,6 +371,42 @@ export default function App() {
         )
       })
   }, [authUser, lotes, usuarios])
+
+  // Cargar facturas desde el backend
+  useEffect(() => {
+    if (!authUser) return
+    fetch("/api/facturas/")
+      .then((r) => {
+        if (!r.ok) throw new Error("No se pudo cargar facturas")
+        return r.json()
+      })
+      .then((data) => {
+        const items = Array.isArray(data) ? data : data.value || []
+        setFacturas(items.map(mapFacturaFromApi))
+      })
+      .catch((error) => {
+        console.error("Error cargando facturas:", error)
+        setFacturas([])
+      })
+  }, [authUser])
+
+  // Cargar órdenes de compra desde el backend
+  useEffect(() => {
+    if (!authUser) return
+    fetch("/api/ordenes-compra/")
+      .then((r) => {
+        if (!r.ok) throw new Error("No se pudo cargar órdenes")
+        return r.json()
+      })
+      .then((data) => {
+        const items = Array.isArray(data) ? data : data.value || []
+        setOrdenes(items.map(mapOrdenFromApi))
+      })
+      .catch((error) => {
+        console.error("Error cargando órdenes:", error)
+        setOrdenes([])
+      })
+  }, [authUser])
 
   // ---------- Handlers Usuarios ----------
   const createUser = async (input: UserInput) => {
@@ -926,7 +873,6 @@ export default function App() {
     ),
     cotizaciones: (
       <Cotizaciones
-        cotizaciones={cotizaciones}
         ordenes={ordenes}
         facturas={facturas}
         clientes={clientes}
@@ -944,7 +890,7 @@ export default function App() {
         onCreate={createUser}
         onDelete={deleteUser}
         onUpdate={updateUser}
-        authUser={authUser} 
+        authUser={authUser}
       />
     ),
     login: <Login onEnter={handleLogin} />,

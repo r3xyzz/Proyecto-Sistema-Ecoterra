@@ -6,8 +6,8 @@ class Cotizacion(models.Model):
     id_cliente = models.ForeignKey(
         "clientes.Cliente",
         on_delete=models.DO_NOTHING,
-        db_column="id_cliente",  # <-- Columna en Supabase
-        to_field="id",           # <-- Campo en el modelo Cliente (que mapea a id_cliente)
+        db_column="id_cliente",
+        to_field="id",
     )
     numero_cotizacion = models.CharField(max_length=50, unique=True, db_column="numero_cotizacion")
     fecha_cotizacion = models.DateField(db_column="fecha_cotizacion")
@@ -23,7 +23,7 @@ class Cotizacion(models.Model):
 
     class Meta:
         db_table = "cotizacion"
-        managed = False  # Django NO crea ni modifica esta tabla
+        managed = False
 
     def __str__(self):
         return self.numero_cotizacion
@@ -39,8 +39,8 @@ class DetalleCotizacion(models.Model):
     id_producto = models.ForeignKey(
         "inventario.Producto",
         on_delete=models.DO_NOTHING,
-        db_column="id_producto",  # <-- Columna en Supabase
-        to_field="id",            # <-- Campo en el modelo Producto (que mapea a id_producto)
+        db_column="id_producto",
+        to_field="id",
     )
     descripcion_dc = models.CharField(max_length=255, db_column="descripcion_dc")
     cantidad_dc = models.DecimalField(max_digits=12, decimal_places=2, db_column="cantidad_dc")
@@ -49,7 +49,7 @@ class DetalleCotizacion(models.Model):
 
     class Meta:
         db_table = "detalle_cotizacion"
-        managed = False  # Django NO crea ni modifica esta tabla
+        managed = False
 
     def __str__(self):
         return f"Detalle {self.id_dc} - {self.id_cotizacion.numero_cotizacion}"
