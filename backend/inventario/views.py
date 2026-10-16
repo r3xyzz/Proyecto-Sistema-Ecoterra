@@ -8,6 +8,8 @@ from rest_framework import status
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
 
+from usuarios.permissions import PermisoModulo
+
 from django.db.models import (
     OuterRef,
     Subquery,
@@ -74,28 +76,63 @@ def productos_con_stock():
 class ProductoListView(ListCreateAPIView):
     queryset = productos_con_stock()
     serializer_class = ProductoSerializer
+    permission_classes = [PermisoModulo]
+
+    permisos_por_metodo = {
+    "GET": ("productos", "Consultar"),
+    "POST": ("productos", "Crear"),
+}
 
 
 class ProductoDetailView(RetrieveUpdateDestroyAPIView):
     queryset = productos_con_stock()
     serializer_class = ProductoSerializer
+    permission_classes = [PermisoModulo]
+
+    permisos_por_metodo = {
+    "GET": ("productos", "Consultar"),
+    "PUT": ("productos", "Editar"),
+    "PATCH": ("productos", "Editar"),
+    "DELETE": ("productos", "Eliminar"),
+    }
+
 
 
 # ---------- Inventario (Lotes) ----------
 class InventarioListView(ListCreateAPIView):
     queryset = Inventario.objects.all()
     serializer_class = InventarioSerializer
+    permission_classes = [PermisoModulo]
+
+    permisos_por_metodo = {
+    "GET": ("lotes", "Consultar"),
+    "POST": ("lotes", "Crear"),
+    }
 
 
 class InventarioDetailView(RetrieveUpdateDestroyAPIView):
     queryset = Inventario.objects.all()
     serializer_class = InventarioSerializer
+    permission_classes = [PermisoModulo]
+
+    permisos_por_metodo = {
+    "GET": ("lotes", "Consultar"),
+    "PUT": ("lotes", "Editar"),
+    "PATCH": ("lotes", "Editar"),
+    "DELETE": ("lotes", "Eliminar"),
+    }
 
 
 # ---------- Movimientos ----------
 class MovimientoListView(ListCreateAPIView):
     queryset = Movimiento.objects.all()
     serializer_class = MovimientoSerializer
+    permission_classes = [PermisoModulo]
+
+    permisos_por_metodo = {
+    "GET": ("movimientos", "Consultar"),
+    "POST": ("movimientos", "Crear"),
+    }
 
     def create(self, request, *args, **kwargs):
         tipo = request.data.get("tipo_movimiento")
