@@ -4,7 +4,7 @@ from .serializers import CotizacionSerializer, DetalleCotizacionSerializer
 
 
 class CotizacionViewSet(viewsets.ModelViewSet):
-    queryset = Cotizacion.objects.all()
+    queryset = Cotizacion.objects.all().order_by("-id_cotizacion")
     serializer_class = CotizacionSerializer
 
 

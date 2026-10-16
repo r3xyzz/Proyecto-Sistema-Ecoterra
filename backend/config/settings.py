@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "inventario",
     "proveedores", 
     "cotizaciones",
+    "ventas",
     "usuarios.apps.UsuariosConfig",
 ]
 

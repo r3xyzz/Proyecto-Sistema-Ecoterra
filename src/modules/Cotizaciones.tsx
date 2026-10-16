@@ -1,7 +1,8 @@
-import React, { useState } from "react"
+// cotizaciones.tsx
+import React, { useState, useEffect } from "react"
 import { Badge, fmtCLP, I, Ico, PageTitle, Product } from "../shared"
 
-type Quote = {
+export type Quote = {
   id: string
   cliente: string
   fecha: string
@@ -13,18 +14,26 @@ type Quote = {
   estado: string
 }
 
-type PurchaseOrder = {
+export type PurchaseOrder = {
   id: string
   cot: string
   cliente: string
+  fecha: string
   total: number
   estado: string
   factura: string | null
 }
 
-type Invoice = {
+export type Invoice = {
   id: string
   oc: string
+  cliente: string
+  fecha: string
+  venc: string
+  subtotal: number
+  iva: number
+  total: number
+  estado: string
 }
 
 type Client = {
@@ -40,20 +49,18 @@ type QuoteLine = {
 }
 
 export default function Cotizaciones({
-  cotizaciones,
   ordenes,
   facturas,
-  clientes,
+  clientes: clientesProp,
   productos,
 }: {
-  cotizaciones: Quote[]
   ordenes: PurchaseOrder[]
   facturas: Invoice[]
   clientes: Client[]
   productos: Product[]
 }) {
   const [show, setShow] = useState(false)
-  const [quotes, setQuotes] = useState(cotizaciones)
+  const [quotes, setQuotes] = useState<Quote[]>([])
   const [preview, setPreview] = useState<Quote | null>(null)
   const [quoteToLink, setQuoteToLink] = useState<Quote | null>(null)
   const [selectedOrder, setSelectedOrder] = useState("")
@@ -70,17 +77,64 @@ export default function Cotizaciones({
     { productId: "", quantity: "", unitPrice: "" },
   ])
 
+  const [clientes, setClientes] = useState<Client[]>(clientesProp || [])
+
+  useEffect(() => {
+    reloadCotizaciones()
+    if (!clientesProp || clientesProp.length === 0) {
+      loadClientes()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const loadClientes = async () => {
+    try {
+      const response = await fetch("/api/clientes/")
+      if (!response.ok) return
+      const data = await response.json()
+      const items = data.value || data
+      const mapped: Client[] = items.map((item: any) => ({
+        id: item.id,
+        razon: item.razon_social,
+        ciudad: item.ciudad,
+      }))
+      setClientes(mapped)
+    } catch (error) {
+      console.error("Error cargando clientes:", error)
+    }
+  }
+
+  const reloadCotizaciones = async () => {
+    try {
+      const response = await fetch("/api/cotizaciones/")
+      if (!response.ok) return
+      const data = await response.json()
+      const items = data.value || data
+      const mapped: Quote[] = items.map((item: any) => ({
+        id: item.numero_cotizacion,
+        cliente: item.cliente_nombre || "",
+        fecha: item.fecha_cotizacion,
+        vigencia: item.vigencia_cotizacion,
+        subtotal: Number(item.subtotal_cotizacion),
+        iva: Number(item.iva_cotizacion),
+        total: Number(item.total_cotizacion),
+        observacion: item.observacion_cotizacion || "",
+        estado: item.estado_cotizacion,
+      }))
+      setQuotes(mapped)
+    } catch (error) {
+      console.error("Error recargando cotizaciones:", error)
+    }
+  }
+
   const activeQuotes = quotes.filter((quote) => quote.estado === "Vigente")
-  const convertedQuotes = quotes.filter(
-    (quote) => quote.estado === "Convertida",
-  )
+  const convertedQuotes = quotes.filter((quote) => quote.estado === "Convertida")
   const expiredQuotes = quotes.filter((quote) => quote.estado === "Vencida")
   const totalQuoted = quotes.reduce((sum, quote) => sum + quote.total, 0)
 
   const getPurchaseOrder = (quote: Quote) =>
     ordenes.find(
-      (order) =>
-        order.cot === quote.id || linkedOrders[quote.id] === order.id,
+      (order) => order.cot === quote.id || linkedOrders[quote.id] === order.id,
     ) ?? null
 
   const getInvoice = (quote: Quote) => {
@@ -97,9 +151,7 @@ export default function Cotizaciones({
     setLinkedOrders((current) => ({ ...current, [quoteToLink.id]: order.id }))
     setQuotes((current) =>
       current.map((quote) =>
-        quote.id === quoteToLink.id
-          ? { ...quote, estado: "Convertida" }
-          : quote,
+        quote.id === quoteToLink.id ? { ...quote, estado: "Convertida" } : quote,
       ),
     )
     setQuoteToLink(null)
@@ -114,9 +166,7 @@ export default function Cotizaciones({
     window.location.href = `mailto:?subject=${subject}&body=${body}`
   }
 
-  const selectedClient = clientes.find(
-    (client) => client.razon === quoteClient,
-  )
+  const selectedClient = clientes.find((client) => client.razon === quoteClient)
   const lineSubtotal = quoteLines.reduce(
     (sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0),
     0,
@@ -141,33 +191,69 @@ export default function Cotizaciones({
     resetQuoteForm()
   }
 
-  const saveQuote = (status = quoteStatus) => {
+  const saveQuote = async (status = quoteStatus) => {
     if (!quoteClient || !quoteLines.some((line) => line.productId && line.quantity)) return
 
-    const nextId =
-      Math.max(
-        ...quotes.map((quote) => Number(quote.id.replace("COT-2024-", ""))),
-        0,
-      ) + 1
+    const selectedClientObj = clientes.find((c) => c.razon === quoteClient)
+    if (!selectedClientObj) {
+      alert("Cliente no encontrado")
+      return
+    }
+
     const expiration = new Date(quoteDate)
     expiration.setDate(expiration.getDate() + Number(quoteValidity))
     const expirationDate = expiration.toISOString().slice(0, 10)
 
-    setQuotes((current) => [
-      {
-        id: `COT-2024-${String(nextId).padStart(3, "0")}`,
-        cliente: quoteClient,
-        fecha: quoteDate,
-        vigencia: expirationDate,
-        subtotal: lineSubtotal,
-        iva: lineIva,
-        total: lineTotal,
-        observacion: quoteObservation,
-        estado: status,
-      },
-      ...current,
-    ])
-    closeQuoteForm()
+    const payload = {
+      id_cliente: selectedClientObj.id,
+      fecha_cotizacion: quoteDate,
+      dias_vigencia_cotizacion: Number(quoteValidity),
+      vigencia_cotizacion: expirationDate,
+      condicion_pago_cotizacion: paymentTerm,
+      subtotal_cotizacion: lineSubtotal,
+      iva_cotizacion: lineIva,
+      total_cotizacion: lineTotal,
+      observacion_cotizacion: quoteObservation || "",
+      estado_cotizacion: status,
+      ruta_pdf_cotizacion: "",
+      detalles: quoteLines
+        .filter((line) => line.productId && line.quantity)
+        .map((line) => {
+          const product = productos.find((p) => String(p.id) === line.productId)
+          const subtotal = Number(line.quantity) * Number(line.unitPrice)
+          return {
+            id_producto: Number(line.productId),
+            descripcion_dc: product?.nombre || "Producto",
+            cantidad_dc: Number(line.quantity),
+            precio_unitario_dc: Number(line.unitPrice),
+            subtotal_dc: subtotal,
+          }
+        }),
+    }
+
+    try {
+      const response = await fetch("/api/cotizaciones/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        console.error("Error del backend:", errorData)
+        alert("Error al guardar la cotización. Revisa la consola.")
+        return
+      }
+
+      const nuevaCotizacion = await response.json()
+      console.log("Cotización creada:", nuevaCotizacion)
+
+      await reloadCotizaciones()
+      closeQuoteForm()
+    } catch (error) {
+      console.error("Error de red:", error)
+      alert("No se pudo conectar con el backend.")
+    }
   }
 
   const updateLine = (index: number, changes: Partial<QuoteLine>) => {
@@ -210,12 +296,8 @@ export default function Cotizaciones({
         </div>
         <div className="kpi">
           <div className="kpi-label">Valor total</div>
-          <div className="kpi-value tabular">
-            {fmtCLP(totalQuoted)}
-          </div>
-          <div className="cotizaciones-kpi-note">
-            CLP mes actual
-          </div>
+          <div className="kpi-value tabular">{fmtCLP(totalQuoted)}</div>
+          <div className="cotizaciones-kpi-note">CLP mes actual</div>
         </div>
       </div>
       <div className="panel">
@@ -244,9 +326,7 @@ export default function Cotizaciones({
 
                   return (
                     <>
-                      <td className="cotizaciones-table-id">
-                        {quote.id}
-                      </td>
+                      <td className="cotizaciones-table-id">{quote.id}</td>
                       <td>{quote.cliente}</td>
                       <td>{quote.fecha}</td>
                       <td>{quote.vigencia}</td>
@@ -325,7 +405,7 @@ export default function Cotizaciones({
               <div>
                 <h2 className="cotizaciones-modal-title">Nueva Cotización</h2>
                 <p className="cotizaciones-modal-subtitle">
-                  COT-2024-{String(Math.max(...quotes.map((quote) => Number(quote.id.replace("COT-2024-", ""))), 0) + 1).padStart(3, "0")} · {quoteStatus}
+                  Nueva cotización · {quoteStatus}
                 </p>
               </div>
               <button
@@ -339,25 +419,52 @@ export default function Cotizaciones({
             <div className="cotizaciones-grid-2">
               <div className="field">
                 <label className="label">Cliente *</label>
-                <select className="select" value={quoteClient} onChange={(event) => { setQuoteClient(event.target.value); setQuoteAddress("") }}>
+                <select
+                  className="select"
+                  value={quoteClient}
+                  onChange={(event) => {
+                    setQuoteClient(event.target.value)
+                    setQuoteAddress("")
+                  }}
+                >
                   <option value="">Seleccionar cliente…</option>
-                  {clientes.map((client) => <option key={client.id}>{client.razon}</option>)}
+                  {clientes.map((client) => (
+                    <option key={client.id}>{client.razon}</option>
+                  ))}
                 </select>
               </div>
               <div className="field">
                 <label className="label">Dirección de despacho *</label>
-                <select className="select" value={quoteAddress} onChange={(event) => setQuoteAddress(event.target.value)} disabled={!selectedClient}>
+                <select
+                  className="select"
+                  value={quoteAddress}
+                  onChange={(event) => setQuoteAddress(event.target.value)}
+                  disabled={!selectedClient}
+                >
                   <option value="">Seleccionar dirección…</option>
-                  {selectedClient && <option value={selectedClient.ciudad}>{selectedClient.ciudad} · Dirección principal</option>}
+                  {selectedClient && (
+                    <option value={selectedClient.ciudad}>
+                      {selectedClient.ciudad} · Dirección principal
+                    </option>
+                  )}
                 </select>
               </div>
               <div className="field">
                 <label className="label">Fecha</label>
-                <input className="input" type="date" value={quoteDate} onChange={(event) => setQuoteDate(event.target.value)} />
+                <input
+                  className="input"
+                  type="date"
+                  value={quoteDate}
+                  onChange={(event) => setQuoteDate(event.target.value)}
+                />
               </div>
               <div className="field">
                 <label className="label">Vigencia</label>
-                <select className="select" value={quoteValidity} onChange={(event) => setQuoteValidity(event.target.value)}>
+                <select
+                  className="select"
+                  value={quoteValidity}
+                  onChange={(event) => setQuoteValidity(event.target.value)}
+                >
                   <option value="30">30 días</option>
                   <option value="15">15 días</option>
                   <option value="45">45 días</option>
@@ -366,7 +473,11 @@ export default function Cotizaciones({
               </div>
               <div className="field">
                 <label className="label">Condición de pago</label>
-                <select className="select" value={paymentTerm} onChange={(event) => setPaymentTerm(event.target.value)}>
+                <select
+                  className="select"
+                  value={paymentTerm}
+                  onChange={(event) => setPaymentTerm(event.target.value)}
+                >
                   <option>30 días</option>
                   <option>60 días</option>
                   <option>Contado</option>
@@ -374,14 +485,22 @@ export default function Cotizaciones({
               </div>
               <div className="field">
                 <label className="label">Moneda</label>
-                <select className="select" value={currency} onChange={(event) => setCurrency(event.target.value)}>
+                <select
+                  className="select"
+                  value={currency}
+                  onChange={(event) => setCurrency(event.target.value)}
+                >
                   <option>CLP</option>
                   <option>USD</option>
                 </select>
               </div>
               <div className="field">
                 <label className="label">Estado *</label>
-                <select className="select" value={quoteStatus} onChange={(event) => setQuoteStatus(event.target.value)}>
+                <select
+                  className="select"
+                  value={quoteStatus}
+                  onChange={(event) => setQuoteStatus(event.target.value)}
+                >
                   <option>Borrador</option>
                   <option>Vigente</option>
                   <option>Vencida</option>
@@ -392,26 +511,78 @@ export default function Cotizaciones({
             <div className="cotizaciones-lines">
               <div className="cotizaciones-lines-header">
                 <strong>Productos / Servicios</strong>
-                <button className="btn btn-ghost btn-sm" onClick={() => setQuoteLines((current) => [...current, { productId: "", quantity: "", unitPrice: "" }])}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() =>
+                    setQuoteLines((current) => [
+                      ...current,
+                      { productId: "", quantity: "", unitPrice: "" },
+                    ])
+                  }
+                >
                   <Ico p={I.plus} size={13} /> Agregar línea
                 </button>
               </div>
               <div className="cotizaciones-lines-grid cotizaciones-lines-grid-head">
-                <span>Producto</span><span>Cant.</span><span>P. Unit. ({currency})</span><span>Subtotal</span><span />
+                <span>Producto</span>
+                <span>Cant.</span>
+                <span>P. Unit. ({currency})</span>
+                <span>Subtotal</span>
+                <span />
               </div>
               {quoteLines.map((line, index) => {
                 const product = productos.find((item) => String(item.id) === line.productId)
                 const subtotal = Number(line.quantity || 0) * Number(line.unitPrice || 0)
                 return (
                   <div key={index} className="cotizaciones-lines-grid">
-                    <select className="select" value={line.productId} onChange={(event) => updateLine(index, { productId: event.target.value })}>
+                    <select
+                      className="select"
+                      value={line.productId}
+                      onChange={(event) =>
+                        updateLine(index, { productId: event.target.value })
+                      }
+                    >
                       <option value="">Seleccionar producto…</option>
-                      {productos.map((item) => <option key={item.id} value={item.id}>{item.codigo} · {item.nombre}</option>)}
+                      {productos.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.codigo} · {item.nombre}
+                        </option>
+                      ))}
                     </select>
-                    <input className="input" type="number" min={1} placeholder="0" value={line.quantity} onChange={(event) => updateLine(index, { quantity: event.target.value })} />
-                    <input className="input" type="number" min={0} placeholder="0" value={line.unitPrice} onChange={(event) => updateLine(index, { unitPrice: event.target.value })} />
-                    <span className="cotizaciones-line-subtotal">{product ? fmtCLP(subtotal) : "$0"}</span>
-                    <button className="btn btn-ghost btn-sm" title="Eliminar línea" aria-label="Eliminar línea" disabled={quoteLines.length === 1} onClick={() => setQuoteLines((current) => current.filter((_, lineIndex) => lineIndex !== index))}>
+                    <input
+                      className="input"
+                      type="number"
+                      min={1}
+                      placeholder="0"
+                      value={line.quantity}
+                      onChange={(event) =>
+                        updateLine(index, { quantity: event.target.value })
+                      }
+                    />
+                    <input
+                      className="input"
+                      type="number"
+                      min={0}
+                      placeholder="0"
+                      value={line.unitPrice}
+                      onChange={(event) =>
+                        updateLine(index, { unitPrice: event.target.value })
+                      }
+                    />
+                    <span className="cotizaciones-line-subtotal">
+                      {product ? fmtCLP(subtotal) : "$0"}
+                    </span>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      title="Eliminar línea"
+                      aria-label="Eliminar línea"
+                      disabled={quoteLines.length === 1}
+                      onClick={() =>
+                        setQuoteLines((current) =>
+                          current.filter((_, lineIndex) => lineIndex !== index),
+                        )
+                      }
+                    >
                       <Ico p={I.trash} size={13} />
                     </button>
                   </div>
@@ -420,20 +591,63 @@ export default function Cotizaciones({
             </div>
             <div className="field cotizaciones-observation">
               <label className="label">Observaciones</label>
-              <textarea className="input" rows={3} placeholder="Notas adicionales de la cotización" value={quoteObservation} onChange={(event) => setQuoteObservation(event.target.value)} />
+              <textarea
+                className="input"
+                rows={3}
+                placeholder="Notas adicionales de la cotización"
+                value={quoteObservation}
+                onChange={(event) => setQuoteObservation(event.target.value)}
+              />
             </div>
             <div className="cotizaciones-summary">
-              <span>Subtotal neto <strong>{fmtCLP(lineSubtotal)}</strong></span>
-              <span>IVA (19%) <strong>{fmtCLP(lineIva)}</strong></span>
-              <strong className="cotizaciones-summary-total">Total <span className="cotizaciones-summary-total-value">{fmtCLP(lineTotal)}</span></strong>
+              <span>
+                Subtotal neto <strong>{fmtCLP(lineSubtotal)}</strong>
+              </span>
+              <span>
+                IVA (19%) <strong>{fmtCLP(lineIva)}</strong>
+              </span>
+              <strong className="cotizaciones-summary-total">
+                Total{" "}
+                <span className="cotizaciones-summary-total-value">
+                  {fmtCLP(lineTotal)}
+                </span>
+              </strong>
             </div>
             <div className="cotizaciones-summary-actions">
-              <button className="btn btn-primary" disabled={!quoteClient || !quoteAddress || !quoteLines.some((line) => line.productId && line.quantity)} onClick={() => saveQuote("Borrador")}>
+              <button
+                className="btn btn-primary"
+                disabled={
+                  !quoteClient ||
+                  !quoteAddress ||
+                  !quoteLines.some((line) => line.productId && line.quantity)
+                }
+                onClick={() => saveQuote("Borrador")}
+              >
                 <Ico p={I.check} size={14} /> Guardar borrador
               </button>
-              <button className="btn btn-ghost" onClick={() => window.print()}><Ico p={I.download} size={14} /> Exportar PDF</button>
-              <button className="btn btn-ghost" onClick={() => { const subject = encodeURIComponent("Nueva cotización Ecoterra"); window.location.href = `mailto:?subject=${subject}` }}><Ico p={I.mail} size={14} /> Enviar por correo</button>
-              <button className="btn btn-navy" disabled={!quoteClient || !quoteAddress || !quoteLines.some((line) => line.productId && line.quantity)} onClick={() => saveQuote("Vigente")}><Ico p={I.check} size={14} /> Emitir cotización</button>
+              <button className="btn btn-ghost" onClick={() => window.print()}>
+                <Ico p={I.download} size={14} /> Exportar PDF
+              </button>
+              <button
+                className="btn btn-ghost"
+                onClick={() => {
+                  const subject = encodeURIComponent("Nueva cotización Ecoterra")
+                  window.location.href = `mailto:?subject=${subject}`
+                }}
+              >
+                <Ico p={I.mail} size={14} /> Enviar por correo
+              </button>
+              <button
+                className="btn btn-navy"
+                disabled={
+                  !quoteClient ||
+                  !quoteAddress ||
+                  !quoteLines.some((line) => line.productId && line.quantity)
+                }
+                onClick={() => saveQuote("Vigente")}
+              >
+                <Ico p={I.check} size={14} /> Emitir cotización
+              </button>
             </div>
           </div>
         </div>
@@ -467,12 +681,16 @@ export default function Cotizaciones({
                 <strong>{preview.id}</strong>
               </div>
               <p className="cotizaciones-preview-customer">{preview.cliente}</p>
-              <p className="cotizaciones-preview-meta">Vigencia hasta {preview.vigencia}</p>
+              <p className="cotizaciones-preview-meta">
+                Vigencia hasta {preview.vigencia}
+              </p>
               <p className="cotizaciones-preview-note">{preview.observacion}</p>
               <div className="cotizaciones-preview-summary">
                 <span>Subtotal: {fmtCLP(preview.subtotal)}</span>
                 <span>IVA: {fmtCLP(preview.iva)}</span>
-                <strong className="cotizaciones-summary-total">Total: {fmtCLP(preview.total)}</strong>
+                <strong className="cotizaciones-summary-total">
+                  Total: {fmtCLP(preview.total)}
+                </strong>
               </div>
             </div>
           </div>
@@ -490,7 +708,11 @@ export default function Cotizaciones({
             </p>
             <div className="field">
               <label className="label">Orden de Compra *</label>
-              <select className="select" value={selectedOrder} onChange={(event) => setSelectedOrder(event.target.value)}>
+              <select
+                className="select"
+                value={selectedOrder}
+                onChange={(event) => setSelectedOrder(event.target.value)}
+              >
                 <option value="">Seleccionar OC…</option>
                 {ordenes.map((order) => (
                   <option key={order.id} value={order.id}>
@@ -500,10 +722,16 @@ export default function Cotizaciones({
               </select>
             </div>
             <div className="cotizaciones-link-actions">
-              <button className="btn btn-primary" disabled={!selectedOrder} onClick={linkOrder}>
+              <button
+                className="btn btn-primary"
+                disabled={!selectedOrder}
+                onClick={linkOrder}
+              >
                 <Ico p={I.link} size={14} /> Asociar OC
               </button>
-              <button className="btn btn-ghost" onClick={() => setQuoteToLink(null)}>Cancelar</button>
+              <button className="btn btn-ghost" onClick={() => setQuoteToLink(null)}>
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
