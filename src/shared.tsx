@@ -173,6 +173,7 @@ export type AuthUser = {
   id_rol: number
   estado: string
   permisos: PermissionMap
+  token: string
 }
 
 /**
@@ -222,12 +223,16 @@ export const SCREEN_TO_MODULE: Record<Screen, string | undefined> = {
 }
 
 /**
- * Headers estándar para peticiones autenticadas.
- * Envía el id_rol del usuario en X-User-Role para validación en el backend.
+ * Headers para peticiones autenticadas.
+ * El token permite verificar la identidad en el backend.
  */
-export function authHeaders(user: AuthUser | null): HeadersInit {
+export function authHeaders(
+  user: AuthUser | null,
+): HeadersInit {
   return {
     "Content-Type": "application/json",
-    "X-User-Role": String(user?.id_rol ?? 0),
+    ...(user?.token
+      ? { Authorization: `Bearer ${user.token}` }
+      : {}),
   }
 }
