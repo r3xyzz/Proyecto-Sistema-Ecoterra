@@ -246,7 +246,9 @@ export default function App() {
   // ---------- Cargas iniciales (solo si hay sesión) ----------
   useEffect(() => {
     if (!authUser) return
-    fetch("/api/clientes/")
+    fetch("/api/clientes/", {
+      headers: authHeaders(authUser),
+    })
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar clientes")
         return r.json()
@@ -269,7 +271,9 @@ export default function App() {
 
   useEffect(() => {
     if (!authUser) return
-    fetch("/api/usuarios/")
+    fetch("/api/usuarios/", {
+      headers: authHeaders(authUser),
+    })
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar usuarios")
         return r.json()
@@ -291,7 +295,9 @@ export default function App() {
 
   useEffect(() => {
     if (!authUser) return
-    fetch("/api/proveedores/")
+    fetch("/api/proveedores/", {
+      headers: authHeaders(authUser),
+    })
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar proveedores")
         return r.json()
@@ -314,8 +320,9 @@ export default function App() {
   // Cargar productos + lotes (en cadena porque lotes dependen de productos)
   useEffect(() => {
     if (!authUser) return
-
-    fetch("/api/productos/")
+    fetch("/api/productos/", {
+      headers: authHeaders(authUser),
+    })
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar productos")
         return r.json()
@@ -326,7 +333,9 @@ export default function App() {
           : initialProductos
         setProductos(mappedProductos)
 
-        return fetch("/api/inventario/")
+        return fetch("/api/inventario/", {
+                headers: authHeaders(authUser),
+              })
           .then((r) => {
             if (!r.ok) throw new Error("No se pudo cargar inventario")
             return r.json()
@@ -352,7 +361,9 @@ export default function App() {
   useEffect(() => {
     if (!authUser) return
 
-    fetch("/api/movimientos/")
+    fetch("/api/movimientos/", {
+      headers: authHeaders(authUser),
+    })
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar movimientos")
         return r.json()
@@ -795,6 +806,7 @@ export default function App() {
         observacion: input.observacion || null,
       }),
     })
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => null)
       throw new Error(
@@ -804,21 +816,33 @@ export default function App() {
             : "No se pudo registrar el movimiento"),
       )
     }
+
     const raw = await response.json()
     const created = mapMovimientoFromApi(raw, lotes, usuarios)
+
     setMovimientos((current) => [created, ...current])
 
-    fetch("/api/inventario/")
-      .then((r) => r.json())
+    fetch("/api/inventario/", {
+      headers: authHeaders(authUser),
+    })
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error("No se pudo actualizar el inventario")
+        }
+        return r.json()
+      })
       .then((lotesData) => {
         if (Array.isArray(lotesData)) {
-          setLotes(lotesData.map((l: any) => mapLoteFromApi(l, productos)))
+          setLotes(
+            lotesData.map((l: any) => mapLoteFromApi(l, productos))
+          )
         }
       })
       .catch(() => {})
 
     return created
   }
+
 
   // ---------- Vistas ----------
   const views: Record<Screen, React.ReactNode> = {

@@ -92,20 +92,40 @@ export default function Usuarios({
   // -------------------- CARGA DE DATOS --------------------
   // Cargar catálogo de permisos al montar (solo Admin)
   useEffect(() => {
-    if (!isAdmin) return
-    fetch("/api/permisos/")
-      .then((r) => r.json())
-      .then((data) => setCatalogo(Array.isArray(data) ? data : []))
+    if (!isAdmin || !authUser) return
+
+    fetch("/api/permisos/", {
+      headers: authHeaders(authUser),
+    })
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error("No se pudo cargar el catálogo de permisos")
+        }
+        return r.json()
+      })
+      .then((data) => {
+        setCatalogo(Array.isArray(data) ? data : [])
+      })
       .catch(() => setCatalogo([]))
-  }, [isAdmin])
+  }, [isAdmin, authUser])
 
   // Cargar permisos del rol seleccionado (solo Admin)
   useEffect(() => {
-    if (!isAdmin || !selectedRoleId) return
-    fetch(`/api/roles/${selectedRoleId}/permisos/`)
-      .then((r) => r.json())
+    if (!isAdmin || !authUser || !selectedRoleId) return
+
+    fetch(`/api/roles/${selectedRoleId}/permisos/`, {
+      headers: authHeaders(authUser),
+    })
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error("No se pudieron cargar los permisos del rol")
+        }
+        return r.json()
+      })
       .then((data) => {
-        const ids = new Set<number>((data.permisos ?? []).map((p: any) => p.id))
+        const ids = new Set<number>(
+          (data.permisos ?? []).map((p: any) => p.id)
+        )
         setRolPermisoIds(new Set(ids))
         setPermisoIdsOriginales(new Set(ids))
       })
@@ -113,7 +133,8 @@ export default function Usuarios({
         setRolPermisoIds(new Set())
         setPermisoIdsOriginales(new Set())
       })
-  }, [isAdmin, selectedRoleId])
+  }, [isAdmin, authUser, selectedRoleId])
+
 
   // -------------------- DETECTAR CAMBIOS --------------------
   const hasChanges = useMemo(() => {

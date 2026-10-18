@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from .models import Usuario
 from .serializers import ROLE_ID_TO_LABEL
+from .authentication import crear_token
 
 
 def _cargar_permisos(id_rol):
@@ -59,16 +60,15 @@ def login_view(request):
         )
 
     permisos = _cargar_permisos(usuario.id_rol)
+    token = crear_token(usuario)
 
-    return Response(
-        {
-            "id": usuario.id,
-            "nombre": usuario.nombre,
-            "email": usuario.email,
-            "rol": ROLE_ID_TO_LABEL.get(usuario.id_rol, "Usuario base"),
-            "id_rol": usuario.id_rol,
-            "estado": "Activo" if usuario.activo else "Inactivo",
-            "permisos": permisos,
-        },
-        status=status.HTTP_200_OK,
-    )
+    return Response({
+        "id": usuario.id,
+        "nombre": usuario.nombre,
+        "email": usuario.email,
+        "rol": ROLE_ID_TO_LABEL.get(usuario.id_rol, "Usuario base"),
+        "id_rol": usuario.id_rol,
+        "estado": "Activo" if usuario.activo else "Inactivo",
+        "permisos": permisos,
+        "token": token,
+    }, status=status.HTTP_200_OK)
