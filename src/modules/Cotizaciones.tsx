@@ -48,6 +48,39 @@ type QuoteLine = {
   unitPrice: string
 }
 
+type QuoteDetailLine = {
+  codigo_producto: string
+  nombre_producto: string
+  cantidad_dc: number
+  precio_unitario_dc: number
+  subtotal_dc: number
+}
+
+type QuoteDetail = {
+  numero_cotizacion: string
+  cliente_nombre: string
+  cliente_rut: string
+  cliente_telefono: string
+  cliente_email: string
+  cliente_representante: string
+  cliente_direcciones: Array<{
+    calle: string
+    ciudad: string
+    region: string
+    pais: string
+    principal: boolean
+  }>
+  fecha_cotizacion: string
+  vigencia_cotizacion: string
+  condicion_pago_cotizacion: string
+  subtotal_cotizacion: number
+  iva_cotizacion: number
+  total_cotizacion: number
+  observacion_cotizacion: string
+  estado_cotizacion: string
+  detalles: QuoteDetailLine[]
+}
+
 export default function Cotizaciones({
   ordenes,
   facturas,
@@ -62,6 +95,8 @@ export default function Cotizaciones({
   const [show, setShow] = useState(false)
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [preview, setPreview] = useState<Quote | null>(null)
+  const [detail, setDetail] = useState<QuoteDetail | null>(null)
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false)
   const [quoteToLink, setQuoteToLink] = useState<Quote | null>(null)
   const [selectedOrder, setSelectedOrder] = useState("")
   const [linkedOrders, setLinkedOrders] = useState<Record<string, string>>({})
@@ -76,6 +111,9 @@ export default function Cotizaciones({
   const [quoteLines, setQuoteLines] = useState<QuoteLine[]>([
     { productId: "", quantity: "", unitPrice: "" },
   ])
+
+  // 👇 Estado para saber si estamos editando (guarda el ID interno)
+  const [editQuoteId, setEditQuoteId] = useState<number | null>(null)
 
   const [clientes, setClientes] = useState<Client[]>(clientesProp || [])
 
@@ -127,6 +165,70 @@ export default function Cotizaciones({
     }
   }
 
+  const openPreview = async (quote: Quote) => {
+    setPreview(quote)
+    setDetail(null)
+    setIsLoadingDetail(true)
+    try {
+      const listResp = await fetch("/api/cotizaciones/")
+      const listData = await listResp.json()
+      const items = listData.value || listData
+      const match = items.find((c: any) => c.numero_cotizacion === quote.id)
+      
+      if (match) {
+        const detailResp = await fetch(`/api/cotizaciones/${match.id_cotizacion}/`)
+        if (detailResp.ok) {
+          const detailData = await detailResp.json()
+          setDetail(detailData)
+        }
+      }
+    } catch (error) {
+      console.error("Error cargando detalle:", error)
+    } finally {
+      setIsLoadingDetail(false)
+    }
+  }
+
+  // 👇 Nueva función para abrir el modal en modo edición
+  const openEdit = async (quote: Quote) => {
+    try {
+      const listResp = await fetch("/api/cotizaciones/")
+      const listData = await listResp.json()
+      const items = listData.value || listData
+      const match = items.find((c: any) => c.numero_cotizacion === quote.id)
+      
+      if (!match) return
+
+      const detailResp = await fetch(`/api/cotizaciones/${match.id_cotizacion}/`)
+      if (!detailResp.ok) return
+      
+      const data = await detailResp.json()
+      
+      // Precargar el formulario
+      setEditQuoteId(data.id_cotizacion)
+      setQuoteClient(data.cliente_nombre)
+      setQuoteAddress(data.cliente_direcciones?.[0]?.ciudad || "")
+      setQuoteDate(data.fecha_cotizacion)
+      setQuoteValidity(String(data.dias_vigencia_cotizacion || 30))
+      setPaymentTerm(data.condicion_pago_cotizacion)
+      setQuoteStatus(data.estado_cotizacion)
+      setQuoteObservation(data.observacion_cotizacion || "")
+      
+      // Precargar líneas de productos
+      setQuoteLines(
+        data.detalles.map((d: any) => ({
+          productId: String(d.id_producto),
+          quantity: String(d.cantidad_dc),
+          unitPrice: String(d.precio_unitario_dc),
+        }))
+      )
+
+      setShow(true)
+    } catch (error) {
+      console.error("Error al preparar edición:", error)
+    }
+  }
+
   const activeQuotes = quotes.filter((quote) => quote.estado === "Vigente")
   const convertedQuotes = quotes.filter((quote) => quote.estado === "Convertida")
   const expiredQuotes = quotes.filter((quote) => quote.estado === "Vencida")
@@ -175,6 +277,7 @@ export default function Cotizaciones({
   const lineTotal = lineSubtotal + lineIva
 
   const resetQuoteForm = () => {
+    setEditQuoteId(null)
     setQuoteClient("")
     setQuoteAddress("")
     setQuoteDate(new Date().toISOString().slice(0, 10))
@@ -232,8 +335,12 @@ export default function Cotizaciones({
     }
 
     try {
-      const response = await fetch("/api/cotizaciones/", {
-        method: "POST",
+      // 👇 Si estamos editando, usamos PUT y la URL con ID
+      const url = editQuoteId ? `/api/cotizaciones/${editQuoteId}/` : "/api/cotizaciones/"
+      const method = editQuoteId ? "PUT" : "POST"
+
+      const response = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
@@ -241,12 +348,12 @@ export default function Cotizaciones({
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         console.error("Error del backend:", errorData)
-        alert("Error al guardar la cotización. Revisa la consola.")
+        alert(`Error al ${editQuoteId ? "actualizar" : "guardar"} la cotización. Revisa la consola.`)
         return
       }
 
-      const nuevaCotizacion = await response.json()
-      console.log("Cotización creada:", nuevaCotizacion)
+      const result = await response.json()
+      console.log(editQuoteId ? "Cotización actualizada:" : "Cotización creada:", result)
 
       await reloadCotizaciones()
       closeQuoteForm()
@@ -350,11 +457,20 @@ export default function Cotizaciones({
                       </td>
                       <td>
                         <div className="cotizaciones-row-actions">
+                          {/* 👇 NUEVO BOTÓN DE EDITAR */}
+                          <button
+                            className="btn btn-ghost btn-sm"
+                            title="Editar productos"
+                            aria-label={`Editar ${quote.id}`}
+                            onClick={() => openEdit(quote)}
+                          >
+                            <Ico p={I.edit} size={13} />
+                          </button>
                           <button
                             className="btn btn-ghost btn-sm"
                             title="Vista previa"
                             aria-label={`Vista previa ${quote.id}`}
-                            onClick={() => setPreview(quote)}
+                            onClick={() => openPreview(quote)}
                           >
                             <Ico p={I.pdf} size={13} />
                           </button>
@@ -362,9 +478,9 @@ export default function Cotizaciones({
                             className="btn btn-ghost btn-sm"
                             title="Descargar PDF"
                             aria-label={`Descargar PDF ${quote.id}`}
-                            onClick={() => {
-                              setPreview(quote)
-                              window.setTimeout(() => window.print(), 0)
+                            onClick={async () => {
+                              await openPreview(quote)
+                              window.setTimeout(() => window.print(), 500)
                             }}
                           >
                             <Ico p={I.download} size={13} />
@@ -403,14 +519,16 @@ export default function Cotizaciones({
           >
             <div className="cotizaciones-modal-head">
               <div>
-                <h2 className="cotizaciones-modal-title">Nueva Cotización</h2>
+                <h2 className="cotizaciones-modal-title">
+                  {editQuoteId ? "Editar Cotización" : "Nueva Cotización"}
+                </h2>
                 <p className="cotizaciones-modal-subtitle">
-                  Nueva cotización · {quoteStatus}
+                  {editQuoteId ? "Modificando productos y datos" : "Nueva cotización"} · {quoteStatus}
                 </p>
               </div>
               <button
                 onClick={closeQuoteForm}
-                aria-label="Cerrar nueva cotización"
+                aria-label="Cerrar"
                 className="cotizaciones-modal-close"
               >
                 <Ico p={I.x} size={18} />
@@ -426,6 +544,7 @@ export default function Cotizaciones({
                     setQuoteClient(event.target.value)
                     setQuoteAddress("")
                   }}
+                  disabled={!!editQuoteId}
                 >
                   <option value="">Seleccionar cliente…</option>
                   {clientes.map((client) => (
@@ -623,7 +742,7 @@ export default function Cotizaciones({
                 }
                 onClick={() => saveQuote("Borrador")}
               >
-                <Ico p={I.check} size={14} /> Guardar borrador
+                <Ico p={I.check} size={14} /> {editQuoteId ? "Guardar cambios" : "Guardar borrador"}
               </button>
               <button className="btn btn-ghost" onClick={() => window.print()}>
                 <Ico p={I.download} size={14} /> Exportar PDF
@@ -646,56 +765,169 @@ export default function Cotizaciones({
                 }
                 onClick={() => saveQuote("Vigente")}
               >
-                <Ico p={I.check} size={14} /> Emitir cotización
+                <Ico p={I.check} size={14} /> {editQuoteId ? "Actualizar cotización" : "Emitir cotización"}
               </button>
             </div>
           </div>
         </div>
       )}
+
       {preview && (
         <div className="modal-backdrop" onClick={() => setPreview(null)}>
           <div
             className="modal cotizaciones-modal cotizaciones-preview-modal"
+            style={{ maxWidth: "900px", width: "100%", padding: 0, overflow: "hidden" }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="cotizaciones-preview-head">
+            <div className="cotizaciones-preview-head" style={{ padding: "1rem 1.5rem", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
-                <h2 className="cotizaciones-preview-title">
-                  Vista Previa · {preview.id}
+                <h2 style={{ fontSize: "1.1rem", fontWeight: "bold", margin: 0 }}>
+                  Cotización {preview.id}
                 </h2>
-                <p className="cotizaciones-preview-subtitle">
-                  Cotización comercial · {preview.fecha}
-                </p>
               </div>
-              <button
-                onClick={() => setPreview(null)}
-                aria-label="Cerrar vista previa"
-                className="cotizaciones-modal-close"
-              >
-                <Ico p={I.x} size={18} />
-              </button>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => window.print()}>
+                  <Ico p={I.download} size={14} /> Imprimir / PDF
+                </button>
+                <button onClick={() => setPreview(null)} className="cotizaciones-modal-close" style={{ position: "static" }}>
+                  <Ico p={I.x} size={18} />
+                </button>
+              </div>
             </div>
-            <div className="cotizaciones-preview-shell">
-              <div className="cotizaciones-preview-brand">
-                <strong className="cotizaciones-preview-brand-name">Ecoterra</strong>
-                <strong>{preview.id}</strong>
-              </div>
-              <p className="cotizaciones-preview-customer">{preview.cliente}</p>
-              <p className="cotizaciones-preview-meta">
-                Vigencia hasta {preview.vigencia}
-              </p>
-              <p className="cotizaciones-preview-note">{preview.observacion}</p>
-              <div className="cotizaciones-preview-summary">
-                <span>Subtotal: {fmtCLP(preview.subtotal)}</span>
-                <span>IVA: {fmtCLP(preview.iva)}</span>
-                <strong className="cotizaciones-summary-total">
-                  Total: {fmtCLP(preview.total)}
-                </strong>
-              </div>
+
+            <div className="documento-container" style={{ padding: "2rem", backgroundColor: "#fff", color: "#000" }}>
+              {isLoadingDetail ? (
+                <p style={{ textAlign: "center", padding: "2rem" }}>Cargando documento...</p>
+              ) : detail ? (
+                <div style={{ border: "2px solid #000", maxWidth: "800px", margin: "0 auto" }}>
+                  
+                  {/* HEADER DEL DOCUMENTO */}
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "1.5rem", borderBottom: "2px solid #000" }}>
+                    <div>
+                      <div style={{ fontSize: "2.5rem", fontWeight: 900, color: "#0f9d58", letterSpacing: "-1px", marginBottom: "0.5rem" }}>
+                        EcoTerra
+                      </div>
+                      <div style={{ fontWeight: "bold", fontSize: "1.1rem" }}>Ecoterra LLC.</div>
+                      <div style={{ fontSize: "0.85rem" }}>600 CLEVELAND STREET STE 393 OFC 665</div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "1.8rem", fontWeight: "bold", marginBottom: "0.5rem" }}>QUOTE</div>
+                      <div style={{ fontSize: "1rem", fontWeight: "bold" }}>{detail.numero_cotizacion}</div>
+                      <div style={{ fontSize: "0.85rem", marginTop: "0.5rem" }}>
+                        <strong>DATE:</strong> {detail.fecha_cotizacion}
+                      </div>
+                      <div style={{ fontSize: "0.85rem" }}>
+                        <strong>VIGENCIA:</strong> {detail.vigencia_cotizacion}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* BLOQUE CLIENTE */}
+                  <div style={{ display: "flex", borderBottom: "2px solid #000" }}>
+                    <div style={{ flex: 2, padding: "1.5rem", borderRight: "2px solid #000", fontSize: "0.9rem" }}>
+                      <div style={{ fontWeight: "bold", marginBottom: "0.5rem", fontSize: "0.8rem", textTransform: "uppercase" }}>Customer:</div>
+                      <div style={{ fontWeight: "bold", marginBottom: "0.25rem" }}>{detail.cliente_nombre}</div>
+                      <div style={{ marginBottom: "0.25rem" }}>RUT: {detail.cliente_rut}</div>
+                      <div style={{ marginBottom: "0.25rem" }}>Representante: {detail.cliente_representante || "—"}</div>
+                      
+                      {detail.cliente_direcciones && detail.cliente_direcciones.length > 0 && (
+                        <div style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}>
+                          {detail.cliente_direcciones.map((dir, idx) => (
+                             <div key={idx}>
+                               {dir.calle}, {dir.ciudad}, {dir.region}, {dir.pais}
+                             </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1, padding: "1.5rem", fontSize: "0.9rem" }}>
+                      <div style={{ display: "flex", marginBottom: "0.5rem" }}>
+                        <span style={{ width: "60px", fontWeight: "bold" }}>FONO:</span>
+                        <span>{detail.cliente_telefono || "—"}</span>
+                      </div>
+                      <div style={{ display: "flex" }}>
+                        <span style={{ width: "60px", fontWeight: "bold" }}>MAIL:</span>
+                        <span>{detail.cliente_email || "—"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* TABLA DE PRODUCTOS */}
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+                    <thead>
+                      <tr style={{ backgroundColor: "#f8fafc", borderBottom: "2px solid #000" }}>
+                        <th style={{ padding: "0.5rem", borderRight: "1px solid #000", width: "40px" }}>ITEM</th>
+                        <th style={{ padding: "0.5rem", borderRight: "1px solid #000", width: "80px" }}>CODE</th>
+                        <th style={{ padding: "0.5rem", borderRight: "1px solid #000", textAlign: "left" }}>DESCRIPTION</th>
+                        <th style={{ padding: "0.5rem", borderRight: "1px solid #000", width: "100px" }}>QUANTITY</th>
+                        <th style={{ padding: "0.5rem", borderRight: "1px solid #000", width: "100px" }}>UNIT PRICE</th>
+                        <th style={{ padding: "0.5rem", width: "120px" }}>AMOUNT</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {detail.detalles.map((line, idx) => (
+                        <tr key={idx} style={{ borderBottom: "1px solid #000" }}>
+                          <td style={{ padding: "0.5rem", textAlign: "center", borderRight: "1px solid #000" }}>{idx + 1}</td>
+                          <td style={{ padding: "0.5rem", textAlign: "center", borderRight: "1px solid #000" }}>{line.codigo_producto}</td>
+                          <td style={{ padding: "0.5rem", borderRight: "1px solid #000" }}>{line.nombre_producto}</td>
+                          <td style={{ padding: "0.5rem", textAlign: "right", borderRight: "1px solid #000" }}>{Number(line.cantidad_dc).toLocaleString('es-CL')}</td>
+                          <td style={{ padding: "0.5rem", textAlign: "right", borderRight: "1px solid #000" }}>{fmtCLP(Number(line.precio_unitario_dc))}</td>
+                          <td style={{ padding: "0.5rem", textAlign: "right" }}>{fmtCLP(Number(line.subtotal_dc))}</td>
+                        </tr>
+                      ))}
+                      {Array.from({ length: Math.max(0, 5 - detail.detalles.length) }).map((_, i) => (
+                        <tr key={`empty-${i}`} style={{ borderBottom: "1px solid #000" }}>
+                          <td style={{ padding: "1rem", borderRight: "1px solid #000" }}>&nbsp;</td>
+                          <td style={{ borderRight: "1px solid #000" }}></td>
+                          <td style={{ borderRight: "1px solid #000" }}></td>
+                          <td style={{ borderRight: "1px solid #000" }}></td>
+                          <td style={{ borderRight: "1px solid #000" }}></td>
+                          <td></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* TOTALES */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", borderBottom: "2px solid #000" }}>
+                    <table style={{ width: "300px", borderCollapse: "collapse", fontSize: "0.9rem" }}>
+                      <tbody>
+                        <tr style={{ borderBottom: "1px solid #000" }}>
+                          <td style={{ padding: "0.5rem", textAlign: "right", fontWeight: "bold", borderRight: "2px solid #000" }}>NET VALUE</td>
+                          <td style={{ padding: "0.5rem", textAlign: "right" }}>{fmtCLP(Number(detail.subtotal_cotizacion))}</td>
+                        </tr>
+                        <tr style={{ borderBottom: "1px solid #000" }}>
+                          <td style={{ padding: "0.5rem", textAlign: "right", fontWeight: "bold", borderRight: "2px solid #000" }}>IVA (19%)</td>
+                          <td style={{ padding: "0.5rem", textAlign: "right" }}>{fmtCLP(Number(detail.iva_cotizacion))}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ padding: "0.5rem", textAlign: "right", fontWeight: "bold", fontSize: "1.1rem", borderRight: "2px solid #000" }}>TOTAL</td>
+                          <td style={{ padding: "0.5rem", textAlign: "right", fontWeight: "bold", fontSize: "1.1rem" }}>{fmtCLP(Number(detail.total_cotizacion))}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* OBSERVACIONES / NOTAS */}
+                  <div style={{ padding: "1.5rem", minHeight: "120px", fontSize: "0.85rem" }}>
+                    <div style={{ fontWeight: "bold", marginBottom: "0.5rem", textTransform: "uppercase" }}>NOTES:</div>
+                    <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>
+                      {detail.observacion_cotizacion || "Sin observaciones adicionales."}
+                    </p>
+                    <br />
+                    <div style={{ fontWeight: "bold" }}>Condición de Pago:</div>
+                    <p style={{ margin: 0 }}>{detail.condicion_pago_cotizacion}</p>
+                  </div>
+
+                </div>
+              ) : (
+                <p style={{ textAlign: "center", padding: "2rem" }}>No se pudo cargar el detalle.</p>
+              )}
             </div>
           </div>
         </div>
       )}
+
       {quoteToLink && (
         <div className="modal-backdrop" onClick={() => setQuoteToLink(null)}>
           <div
