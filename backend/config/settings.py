@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "clientes",
     "inventario",
+    "facturacion",
     "proveedores", 
     "cotizaciones",
     "ventas",
