@@ -246,9 +246,7 @@ export default function App() {
   // ---------- Cargas iniciales (solo si hay sesión) ----------
   useEffect(() => {
     if (!authUser) return
-    fetch("/api/clientes/", {
-      headers: authHeaders(authUser),
-    })
+    fetch("/api/clientes/", { headers: authHeaders(authUser) })
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar clientes")
         return r.json()
@@ -271,9 +269,7 @@ export default function App() {
 
   useEffect(() => {
     if (!authUser) return
-    fetch("/api/usuarios/", {
-      headers: authHeaders(authUser),
-    })
+    fetch("/api/usuarios/", { headers: authHeaders(authUser) })
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar usuarios")
         return r.json()
@@ -295,9 +291,7 @@ export default function App() {
 
   useEffect(() => {
     if (!authUser) return
-    fetch("/api/proveedores/", {
-      headers: authHeaders(authUser),
-    })
+    fetch("/api/proveedores/", { headers: authHeaders(authUser) })
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar proveedores")
         return r.json()
@@ -320,9 +314,7 @@ export default function App() {
   // Cargar productos + lotes (en cadena porque lotes dependen de productos)
   useEffect(() => {
     if (!authUser) return
-    fetch("/api/productos/", {
-      headers: authHeaders(authUser),
-    })
+    fetch("/api/productos/", { headers: authHeaders(authUser) })
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar productos")
         return r.json()
@@ -333,9 +325,7 @@ export default function App() {
           : initialProductos
         setProductos(mappedProductos)
 
-        return fetch("/api/inventario/", {
-                headers: authHeaders(authUser),
-              })
+        return fetch("/api/inventario/", { headers: authHeaders(authUser) })
           .then((r) => {
             if (!r.ok) throw new Error("No se pudo cargar inventario")
             return r.json()
@@ -361,9 +351,7 @@ export default function App() {
   useEffect(() => {
     if (!authUser) return
 
-    fetch("/api/movimientos/", {
-      headers: authHeaders(authUser),
-    })
+    fetch("/api/movimientos/", { headers: authHeaders(authUser) })
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar movimientos")
         return r.json()
@@ -386,7 +374,7 @@ export default function App() {
   // Cargar facturas desde el backend
   useEffect(() => {
     if (!authUser) return
-    fetch("/api/facturas/")
+    fetch("/api/facturas/", { headers: authHeaders(authUser) }) // 👈 TOKEN AGREGADO
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar facturas")
         return r.json()
@@ -404,7 +392,7 @@ export default function App() {
   // Cargar órdenes de compra desde el backend
   useEffect(() => {
     if (!authUser) return
-    fetch("/api/ordenes-compra/")
+    fetch("/api/ordenes-compra/", { headers: authHeaders(authUser) }) // 👈 TOKEN AGREGADO
       .then((r) => {
         if (!r.ok) throw new Error("No se pudo cargar órdenes")
         return r.json()
@@ -897,6 +885,7 @@ export default function App() {
     ),
     cotizaciones: (
       <Cotizaciones
+        authUser={authUser}
         ordenes={ordenes}
         facturas={facturas}
         clientes={clientes}
