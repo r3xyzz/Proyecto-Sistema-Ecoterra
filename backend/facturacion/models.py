@@ -10,42 +10,51 @@ from clientes.models import Cliente
 from inventario.models import Producto
 
 
+
 class OrdenCompra(models.Model):
     id = models.AutoField(
         primary_key=True,
-        db_column="id_orden_compra",
+        db_column="id_oc",
     )
 
     id_cliente = models.ForeignKey(
         Cliente,
-        on_delete=models.PROTECT,
+        on_delete=models.DO_NOTHING,
         db_column="id_cliente",
+        to_field="id",
+    )
+
+    id_cotizacion = models.ForeignKey(
+        "cotizaciones.Cotizacion",
+        on_delete=models.DO_NOTHING,
+        db_column="id_cotizacion",
+        to_field="id_cotizacion",
+        null=True,
+        blank=True,
+    )
+
+    numero_oc = models.CharField(
+        max_length=50,
+        unique=True,
+        db_column="numero_oc",
     )
 
     fecha_orden = models.DateField(
-        auto_now_add=True,
-        db_column="fecha_orden",
+        db_column="fecha_oc",
     )
 
-    estado = models.CharField(
-        max_length=20,
-        choices=[
-            ("PENDIENTE", "Pendiente"),
-            ("APROBADA", "Aprobada"),
-            ("ANULADA", "Anulada"),
-        ],
-        default="PENDIENTE",
-        db_column="estado_orden",
+    ruta_documento_oc = models.CharField(
+        max_length=255,
+        db_column="ruta_documento_oc",
     )
 
     class Meta:
         db_table = "orden_compra"
-        ordering = ["-fecha_orden"]
-        verbose_name = "orden de compra"
-        verbose_name_plural = "órdenes de compra"
+        managed = False
 
     def __str__(self):
-        return f"OC {self.id} - {self.id_cliente}"
+        return self.numero_oc
+
 
 
 class Factura(models.Model):
@@ -178,10 +187,11 @@ class Factura(models.Model):
             )
 
 
+
 class DetalleFactura(models.Model):
     id = models.AutoField(
         primary_key=True,
-        db_column="id_detalle_factura",
+        db_column="id_df",
     )
 
     id_factura = models.ForeignKey(
@@ -196,33 +206,34 @@ class DetalleFactura(models.Model):
         db_column="id_producto",
     )
 
+    descripcion_df = models.CharField(
+        max_length=200,
+        db_column="descripcion_df",
+    )
+
     cantidad = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
-        db_column="cantidad_detalle",
+        db_column="cantidad_df",
     )
 
     precio_unitario = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.01"))],
-        db_column="precio_unitario_detalle",
+        db_column="precio_unitario_df",
     )
 
-    descuento = models.DecimalField(
+    subtotal_df = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        default=Decimal("0.00"),
-        db_column="descuento_detalle",
+        db_column="subtotal_df",
     )
 
     class Meta:
         db_table = "detalle_factura"
-        unique_together = ("id_factura", "id_producto")
+        managed = False
 
     def __str__(self):
-        return (
-            f"Detalle {self.id} - "
-            f"{self.id_producto} x {self.cantidad}"
-        )
+        return f"Detalle {self.id} - {self.id_producto} x {self.cantidad}"
