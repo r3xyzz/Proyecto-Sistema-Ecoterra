@@ -134,6 +134,7 @@ const mapFacturaFromApi = (item: any): Invoice => ({
 const mapOrdenFromApi = (item: any): PurchaseOrder => ({
   idOc: Number(item.id_oc),
   id: item.numero_oc,
+  clienteId: Number(item.id_cliente),
   cotizacionId:
     item.id_cotizacion == null
       ? null
@@ -141,7 +142,7 @@ const mapOrdenFromApi = (item: any): PurchaseOrder => ({
   cot: item.cotizacion_numero || "",
   cliente: item.cliente_nombre || "",
   fecha: item.fecha_oc,
-  total: 0,
+  total: Number(item.cotizacion_detalle?.total_cotizacion ?? 0),
   estado: "Pendiente",
   factura: null,
 })
