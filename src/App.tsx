@@ -7,8 +7,10 @@ import Proveedores, { Proveedor, ProveedorInput } from "./modules/Proveedores"
 import Productos, { ProductInput } from "./modules/Productos"
 import Lotes, { Lote, LoteInput } from "./modules/Lotes"
 import Movimientos, { Movimiento, MovimientoInput } from "./modules/Movimientos"
-import Cotizaciones, { PurchaseOrder, Invoice } from "./modules/Cotizaciones"
-import OrdenesCompra from "./modules/OrdenesCompra"
+import Cotizaciones, { Invoice } from "./modules/Cotizaciones"
+import OrdenesCompra, {
+  type PurchaseOrder,
+} from "./modules/OrdenesCompra"
 import Facturacion from "./modules/Facturacion"
 import NotasCredito from "./modules/NotasCredito"
 import IaPanel from "./modules/IaPanel"
@@ -130,7 +132,12 @@ const mapFacturaFromApi = (item: any): Invoice => ({
 })
 
 const mapOrdenFromApi = (item: any): PurchaseOrder => ({
+  idOc: Number(item.id_oc),
   id: item.numero_oc,
+  cotizacionId:
+    item.id_cotizacion == null
+      ? null
+      : Number(item.id_cotizacion),
   cot: item.cotizacion_numero || "",
   cliente: item.cliente_nombre || "",
   fecha: item.fecha_oc,
@@ -222,6 +229,23 @@ export default function App() {
   const [movimientosError, setMovimientosError] = useState("")
   const [facturas, setFacturas] = useState<Invoice[]>([])
   const [ordenes, setOrdenes] = useState<PurchaseOrder[]>([])
+  const reloadOrdenes = async () => {
+    if (!authUser) return
+
+    const response = await fetch("/api/ordenes-compra/", {
+      headers: authHeaders(authUser),
+    })
+
+    if (!response.ok) {
+      throw new Error("No se pudieron actualizar las órdenes de compra.")
+    }
+
+    const data = await response.json()
+    const items = Array.isArray(data) ? data : data.value || []
+
+    setOrdenes(items.map(mapOrdenFromApi))
+  }
+
 
   // ---------- Auth ----------
   const handleLogin = (user: AuthUser) => {
@@ -390,22 +414,16 @@ export default function App() {
   }, [authUser])
 
   // Cargar órdenes de compra desde el backend
+  
   useEffect(() => {
     if (!authUser) return
-    fetch("/api/ordenes-compra/", { headers: authHeaders(authUser) }) // 👈 TOKEN AGREGADO
-      .then((r) => {
-        if (!r.ok) throw new Error("No se pudo cargar órdenes")
-        return r.json()
-      })
-      .then((data) => {
-        const items = Array.isArray(data) ? data : data.value || []
-        setOrdenes(items.map(mapOrdenFromApi))
-      })
-      .catch((error) => {
-        console.error("Error cargando órdenes:", error)
-        setOrdenes([])
-      })
+
+    reloadOrdenes().catch((error) => {
+      console.error("Error cargando órdenes:", error)
+      setOrdenes([])
+    })
   }, [authUser])
+
 
   // ---------- Handlers Usuarios ----------
   const createUser = async (input: UserInput) => {
@@ -883,6 +901,7 @@ export default function App() {
         onCreate={createMovimiento}
       />
     ),
+    
     cotizaciones: (
       <Cotizaciones
         authUser={authUser}
@@ -890,9 +909,19 @@ export default function App() {
         facturas={facturas}
         clientes={clientes}
         productos={productos}
+        onOrdenesChange={reloadOrdenes}
       />
     ),
-    oc: <OrdenesCompra ordenes={ordenes} facturas={facturas} />,
+
+    
+    oc: (
+      <OrdenesCompra
+        ordenes={ordenes}
+        facturas={facturas}
+        authUser={authUser}
+        onOrdenesChange={reloadOrdenes}
+      />
+    ),
     facturacion: <Facturacion facturas={facturas} authUser={authUser} />,
     nc: <NotasCredito facturas={facturas} />,
     ia: <IaPanel productos={productos} />,
