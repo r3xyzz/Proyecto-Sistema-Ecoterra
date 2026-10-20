@@ -893,7 +893,7 @@ export default function App() {
       />
     ),
     oc: <OrdenesCompra ordenes={ordenes} facturas={facturas} />,
-    facturacion: <Facturacion facturas={facturas} />,
+    facturacion: <Facturacion facturas={facturas} authUser={authUser} />,
     nc: <NotasCredito facturas={facturas} />,
     ia: <IaPanel productos={productos} />,
     usuarios: (

@@ -1,36 +1,32 @@
-# backend/facturacion/models.py
+
+from decimal import Decimal
+
 from django.db import models
-from django.db.models import (
-    F,
-    Sum,
-)
+from django.db.models import F, Sum, ExpressionWrapper, DecimalField
 from django.db.models.functions import Coalesce
 from django.core.validators import MinValueValidator
-from clientes.models import Cliente   # modelo existente en la app "clientes"
-from inventario.models import Producto   # modelo existente en la app "inventario"
+
+from clientes.models import Cliente
+from inventario.models import Producto
 
 
-# ----------------------------------------------------------------------
-#  OrdenCompra – modelo de órdenes de compra
-# ----------------------------------------------------------------------
 class OrdenCompra(models.Model):
-    """
-    Representa una orden de compra vinculada a un cliente y con estado
-    (PENDIENTE, APROBADA, ANULADA).
-    """
     id = models.AutoField(
         primary_key=True,
         db_column="id_orden_compra",
     )
+
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
         db_column="id_cliente",
     )
+
     fecha_orden = models.DateField(
         auto_now_add=True,
         db_column="fecha_orden",
     )
+
     estado = models.CharField(
         max_length=20,
         choices=[
@@ -46,15 +42,12 @@ class OrdenCompra(models.Model):
         db_table = "orden_compra"
         ordering = ["-fecha_orden"]
         verbose_name = "orden de compra"
-        verbose_name_plural = "ordenes de compra"
+        verbose_name_plural = "órdenes de compra"
 
     def __str__(self):
         return f"OC {self.id} - {self.id_cliente}"
 
 
-# ----------------------------------------------------------------------
-#  Factura – tabla principal de facturación
-# ----------------------------------------------------------------------
 class Factura(models.Model):
     ESTADO_CHOICES = [
         ("PENDIENTE", "Pendiente"),
@@ -67,65 +60,66 @@ class Factura(models.Model):
         primary_key=True,
         db_column="id_factura",
     )
+
+    id_orden_compra = models.ForeignKey(
+        OrdenCompra,
+        on_delete=models.PROTECT,
+        db_column="id_oc",
+    )
+
     id_cliente = models.ForeignKey(
         Cliente,
         on_delete=models.PROTECT,
         db_column="id_cliente",
     )
-    id_orden_compra = models.ForeignKey(
-        OrdenCompra,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        db_column="id_orden_compra",
+
+    numero_factura = models.CharField(
+        max_length=50,
+        unique=True,
+        db_column="numero_factura",
     )
+
     fecha_emision = models.DateField(
         auto_now_add=True,
-        db_column="fecha_emision",
+        db_column="fecha_factura",
     )
-    fecha_vencimiento = models.DateField(
-        db_column="fecha_vencimiento",
-    )
+
     subtotal = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         editable=False,
-        db_column="subtotal",
+        db_column="subtotal_factura",
     )
-    descuento = models.DecimalField(
-        max_digits=12,
-        decimal_places=2,
-        default=0,
-        db_column="descuento",
-    )
+
     iva = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         editable=False,
-        db_column="iva",
+        db_column="iva_factura",
     )
+
     total = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         editable=False,
         db_column="total_factura",
     )
+
     estado = models.CharField(
-        max_length=10,
+        max_length=20,
         choices=ESTADO_CHOICES,
         default="PENDIENTE",
         db_column="estado_factura",
     )
-    numero_factura = models.CharField(
-        max_length=50,
-        unique=True,
-        db_column="numero_factura",
-    )
-    notas = models.TextField(
+
+    
+    ruta_pdf_factura = models.CharField(
+        max_length=255,
         blank=True,
-        null=True,
-        db_column="notas_factura",
+        default="",
+        db_column="ruta_pdf_factura",
     )
+
 
     class Meta:
         db_table = "factura"
@@ -138,66 +132,88 @@ class Factura(models.Model):
     def __str__(self):
         return f"Factura {self.numero_factura} - {self.id_cliente}"
 
-    def save(self, *args, **kwargs):
+    def recalcular_totales(self, guardar=True):
         """
-        Se recalculan automáticamente los campos monetarios:
-            subtotal = Σ(cantidad × precio_unitario)
-            iva      = subtotal × 0.19 (19 % de IVA)
-            total    = subtotal + iva − descuento
+        Calcula subtotal, IVA del 19 % y total a partir
+        de los detalles asociados a esta factura.
         """
-        subtotal = (
-            self.detallefactura_set
-            .aggregate(
-                total=Coalesce(
-                    Sum(F("cantidad") * F("precio_unitario")),
-                    0,
-                )
-            )["total"]
-            or 0
+        if not self.pk:
+            raise ValueError(
+                "La factura debe guardarse antes de calcular sus totales."
+            )
+
+        expresion_subtotal = ExpressionWrapper(
+            F("cantidad") * F("precio_unitario"),
+            output_field=DecimalField(
+                max_digits=24,
+                decimal_places=4,
+            ),
         )
+
+        resultado = self.detallefactura_set.aggregate(
+            subtotal=Coalesce(
+                Sum(expresion_subtotal),
+                Decimal("0.00"),
+                output_field=DecimalField(
+                    max_digits=24,
+                    decimal_places=4,
+                ),
+            )
+        )
+
+        subtotal = resultado["subtotal"] or Decimal("0.00")
+        iva = (subtotal * Decimal("0.19")).quantize(
+            Decimal("0.01")
+        )
+
         self.subtotal = subtotal
-        self.iva = subtotal * 0.19
-        self.total = subtotal + self.iva - self.descuento
-        super().save(*args, **kwargs)
+        self.iva = iva
+        self.total = subtotal + iva
+
+        if guardar:
+            Factura.objects.filter(pk=self.pk).update(
+                subtotal=self.subtotal,
+                iva=self.iva,
+                total=self.total,
+            )
 
 
-# ----------------------------------------------------------------------
-#  DetalleFactura – línea de producto dentro de una factura
-# ----------------------------------------------------------------------
 class DetalleFactura(models.Model):
-    """
-    Cada línea de una factura (producto + cantidad + precio + descuento).
-    """
     id = models.AutoField(
         primary_key=True,
         db_column="id_detalle_factura",
     )
+
     id_factura = models.ForeignKey(
         Factura,
         on_delete=models.CASCADE,
         db_column="id_factura",
     )
+
     id_producto = models.ForeignKey(
         Producto,
         on_delete=models.PROTECT,
         db_column="id_producto",
     )
+
     cantidad = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        validators=[MinValueValidator(0.01)],
+        validators=[MinValueValidator(Decimal("0.01"))],
         db_column="cantidad_detalle",
     )
+
     precio_unitario = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        validators=[MinValueValidator(0.01)],
+        validators=[MinValueValidator(Decimal("0.01"))],
         db_column="precio_unitario_detalle",
     )
+
     descuento = models.DecimalField(
         max_digits=12,
         decimal_places=2,
-        default=0,
+        default=Decimal("0.00"),
         db_column="descuento_detalle",
     )
 
@@ -206,4 +222,7 @@ class DetalleFactura(models.Model):
         unique_together = ("id_factura", "id_producto")
 
     def __str__(self):
-        return f"Detalle {self.id} – {self.id_producto} x {self.cantidad}"
+        return (
+            f"Detalle {self.id} - "
+            f"{self.id_producto} x {self.cantidad}"
+        )
