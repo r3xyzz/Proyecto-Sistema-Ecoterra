@@ -313,70 +313,99 @@ export default function Facturacion({
       `mailto:?subject=${subject}&body=${body}`
   }
 
-  const downloadInvoicePdf = (invoice: Invoice) => {
-    const printWindow = window.open(
-      "",
-      "_blank",
-      "width=900,height=700",
-    )
+  
+const downloadInvoicePdf = async (invoice: Invoice) => {
+  const printWindow = window.open("about:blank", "_blank")
 
-    if (!printWindow) {
-      setErrorGuardado(
-        "El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes.",
+  if (!printWindow) {
+    alert("Permite las ventanas emergentes para abrir el PDF.")
+    return
+  }
+
+  if (!authUser) {
+    printWindow.close()
+    alert("Tu sesión ha expirado. Inicia sesión nuevamente.")
+    return
+  }
+
+  printWindow.document.title = `Factura ${invoice.id}`
+  printWindow.document.body.textContent = "Cargando PDF..."
+
+  try {
+    const headers = authHeaders(authUser)
+
+    // Buscar el ID interno de la factura en Django.
+    const respuestaFacturas = await fetch("/api/facturas/", {
+      headers,
+    })
+
+    const datosFacturas = await respuestaFacturas
+      .json()
+      .catch(() => null)
+
+    if (!respuestaFacturas.ok) {
+      throw new Error(
+        errorDeRespuesta(datosFacturas, respuestaFacturas.status),
       )
-      return
     }
 
-    const escaparHTML = (valor: string) =>
-      valor.replace(/[&<>"']/g, (caracter) => {
-        const entidades: Record<string, string> = {
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;",
-        }
+    const listaFacturas = extraerLista(datosFacturas)
 
-        return entidades[caracter]
-      })
+    if (!listaFacturas) {
+      throw new Error("La API no devolvió una lista de facturas válida.")
+    }
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html lang="es">
-        <head>
-          <meta charset="UTF-8" />
-          <title>Factura ${escaparHTML(invoice.id)}</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 32px; color: #0f172a; }
-            .card { border: 1px solid #e2e8f0; padding: 24px; border-radius: 12px; }
-            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #00995a; padding-bottom: 14px; margin-bottom: 18px; }
-            .brand { color: #00995a; font-size: 20px; font-weight: 700; }
-            .meta { color: #64748b; font-size: 12px; margin-top: 6px; }
-            .totals { margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 14px; display: flex; justify-content: space-between; font-weight: 700; }
-          </style>
-        </head>
-        <body>
-          <div class="card">
-            <div class="header">
-              <div>
-                <div class="brand">Ecoterra</div>
-                <div class="meta">Documento electrónico</div>
-              </div>
-              <strong>${escaparHTML(invoice.id)}</strong>
-            </div>
-            <p><strong>${escaparHTML(invoice.cliente)}</strong></p>
-            <p>OC ${escaparHTML(invoice.oc)} · Emisión ${escaparHTML(invoice.fecha)}</p>
-            <div class="totals"><span>SUBTOTAL CLP</span><span>${fmtCLP(invoice.subtotal)}</span></div>
-            <div class="totals"><span>IVA (19%)</span><span>${fmtCLP(invoice.iva)}</span></div>
-            <div class="totals"><span>TOTAL CLP</span><span>${fmtCLP(invoice.total ?? invoice.subtotal + invoice.iva)}</span></div>
-          </div>
-          <script>window.onload = () => { window.focus(); window.print(); };</script>
-        </body>
-      </html>
-    `)
+    const facturaAPI = listaFacturas.find(
+      (item: any) =>
+        item.numero_factura === invoice.id
+    )
 
-    printWindow.document.close()
+    if (!facturaAPI) {
+      throw new Error(
+        `No se encontró la factura ${invoice.id} en el backend.`
+      )
+    }
+
+    const facturaId =
+      facturaAPI.id_factura ?? facturaAPI.id
+
+    if (facturaId === undefined || facturaId === null) {
+      throw new Error("No se encontró el ID interno de la factura.")
+    }
+
+    // Obtener la URL firmada del PDF almacenado en Supabase.
+    const respuestaPDF = await fetch(
+      `/api/facturas/${facturaId}/pdf/`,
+      { headers },
+    )
+
+    const datosPDF = await respuestaPDF
+      .json()
+      .catch(() => null)
+
+    if (!respuestaPDF.ok) {
+      throw new Error(
+        errorDeRespuesta(datosPDF, respuestaPDF.status),
+      )
+    }
+
+    if (!datosPDF?.url) {
+      throw new Error("El backend no devolvió la URL del PDF.")
+    }
+
+    // Abrir el documento real en la ventana emergente.
+    printWindow.location.href = datosPDF.url
+  } catch (error) {
+    printWindow.close()
+
+    alert(
+      error instanceof Error
+        ? error.message
+        : "No se pudo abrir el PDF de la factura."
+    )
   }
+}
+
 
   const guardarFactura = async () => {
     setErrorGuardado("")
