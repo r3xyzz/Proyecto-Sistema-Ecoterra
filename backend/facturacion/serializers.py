@@ -111,7 +111,7 @@ class FacturaSerializer(serializers.ModelSerializer):
     )
 
     detalles_factura = DetalleFacturaSerializer(
-        source="detallefactura_set",
+        source="detalles",
         many=True,
         read_only=True,
     )
