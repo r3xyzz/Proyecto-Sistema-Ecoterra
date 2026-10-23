@@ -25,6 +25,7 @@ class DetalleFacturaEntradaSerializer(serializers.Serializer):
     )
 
 
+
 class DetalleFacturaSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(
         source="id_producto.nombre_producto",
@@ -39,11 +40,13 @@ class DetalleFacturaSerializer(serializers.ModelSerializer):
             "id_factura",
             "id_producto",
             "producto_nombre",
+            "descripcion_df",
             "cantidad",
             "precio_unitario",
-            "descuento",
+            "subtotal_df",
         ]
-        read_only_fields = ["id"]
+        read_only_fields = ["id", "subtotal_df"]
+
 
 
 class OrdenCompraSerializer(serializers.ModelSerializer):
@@ -280,7 +283,7 @@ class FacturaSerializer(serializers.ModelSerializer):
         )
 
         factura = Factura.objects.create(
-            numero_factura=f"TEMP-{uuid4().hex}",
+            numero_factura=f"TMP-{uuid4().hex[:20]}",
             subtotal=Decimal("0.00"),
             iva=Decimal("0.00"),
             total=Decimal("0.00"),
@@ -297,13 +300,34 @@ class FacturaSerializer(serializers.ModelSerializer):
         factura.numero_factura = numero
         factura.save(update_fields=["numero_factura"])
 
+        
         for detalle in detalles_data:
+            producto = detalle["id_producto"]
+            cantidad = detalle["cantidad"]
+            precio_unitario = detalle["precio_unitario"]
+
+            descripcion = (
+                getattr(producto, "nombre_producto", None)
+                or str(producto)
+            )[:200]
+
+            subtotal_detalle = (
+                cantidad * precio_unitario
+            ).quantize(Decimal("0.01"))
+
             DetalleFactura.objects.create(
                 id_factura=factura,
-                id_producto=detalle["id_producto"],
-                cantidad=detalle["cantidad"],
-                precio_unitario=detalle["precio_unitario"],
+                id_producto=producto,
+                descripcion_df=descripcion,
+                cantidad=cantidad,
+                precio_unitario=precio_unitario,
+                subtotal_df=subtotal_detalle,
             )
+
+        factura.recalcular_totales()
+        factura.refresh_from_db()
+        return factura
+
 
         factura.recalcular_totales()
         factura.refresh_from_db()

@@ -37,7 +37,7 @@ type ClienteOrdenAPI = {
 }
 
 type OrdenAPI = {
-  id: number | string
+  id_oc: number | string
   id_cliente: number | string | ClienteOrdenAPI
   numero_oc?: string
   id_cotizacion?: number | string
@@ -242,9 +242,9 @@ export default function Facturacion({
   }, [authUser])
 
   const ordenActual = ordenesCompra.find(
-    (orden) =>
-      String(orden.id) === String(ordenSeleccionada),
-  )
+  (orden) =>
+    String(orden.id_oc) === String(ordenSeleccionada),
+)
 
   const clienteId = obtenerClienteId(ordenActual)
   const nombreCliente = obtenerNombreCliente(ordenActual)
@@ -440,7 +440,7 @@ export default function Facturacion({
         },
         body: JSON.stringify({
           cliente_id: clienteId,
-          id_orden_compra: ordenActual.id,
+          id_orden_compra: ordenActual.id_oc,
           ruta_pdf_factura: "",
           detalles: detalles.map((detalle) => ({
             producto_id: Number(detalle.producto_id),
@@ -461,7 +461,7 @@ export default function Facturacion({
       const facturaCreada: Invoice = {
         id: String(data.numero_factura ?? data.id),
         oc: String(
-          data.oc_numero ?? ordenActual.numero_oc ?? ordenActual.id,
+          data.oc_numero ?? ordenActual.numero_oc ?? ordenActual.id_oc,
         ),
         cliente:
           data.cliente_nombre ||
@@ -766,11 +766,11 @@ export default function Facturacion({
                       </option>
                       {ordenesCompra.map((orden) => (
                         <option
-                          key={String(orden.id)}
-                          value={String(orden.id)}
+                          key={String(orden.id_oc)}
+                          value={String(orden.id_oc)}
                         >
                           {orden.numero_oc ||
-                            `OC #${orden.id}`}
+                            `OC #${orden.id_oc}`}
                           {obtenerNombreCliente(orden)
                             ? ` — ${obtenerNombreCliente(orden)}`
                             : ""}

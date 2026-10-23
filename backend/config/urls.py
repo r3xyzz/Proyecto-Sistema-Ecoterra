@@ -9,7 +9,7 @@ urlpatterns = [
     path("api/", include("proveedores.urls")),
     path("api/", include("usuarios.urls")),
     path("api/", include("cotizaciones.urls")),
+    path("api/", include("facturacion.urls")),
     path("api/", include("ventas.urls")),
-    path("api/", include("facturacion.urls")),   # <--  aquí está la nueva app
 ]
 
