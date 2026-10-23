@@ -9,6 +9,7 @@ import siteConfiguration from './.figma/make/site.json'
 export default defineConfig(({ mode }) => {
   // .figma/make/deploy-preview passes `--mode development` for cached-preview builds.
   const emitSourcemaps = mode === 'development'
+  const apiTarget = process.env.VITE_API_TARGET || 'http://127.0.0.1:8444'
 
   return {
     base: process.env.FIGMA_PUBLIC_URL ? `${process.env.FIGMA_PUBLIC_URL}/` : '/',
@@ -31,12 +32,19 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',
-      port: parseInt(process.env.PORT || '8443'),
+      port: parseInt(process.env.PORT || '5173'),
       strictPort: false,
       proxy: {
-        '/api': 'http://localhost:8444',
+        '/api': {
+          target: apiTarget, 
+          changeOrigin: true,
+          secure: false,
+        },
       },
-      watch: { ignored: ['**/.figma/**'] },
+      watch: { 
+        usePolling: true, // Permite a Vite detectar cambios dentro de carpetas compartidas en Docker
+        ignored: ['**/.figma/**'] 
+      },
     },
     preview: {
       host: process.env.FIGMA_DEV_SERVER_HOST || '0.0.0.0',

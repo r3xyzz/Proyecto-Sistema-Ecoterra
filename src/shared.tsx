@@ -1,3 +1,4 @@
+// shared.tsx
 import React, { ReactNode } from "react"
 
 export function Ico({
@@ -78,7 +79,20 @@ export const I = {
   sparkle: "M12 3l1.88 5.28 5.62.42-4.38 3.66 1.5 5.5L12 15l-4.62 2.86 1.5-5.5L4.5 8.7l5.62-.42z",
 }
 
-export type Screen = "login" | "dashboard" | "clientes" | "proveedores" | "productos" | "lotes" | "movimientos" | "cotizaciones" | "oc" | "facturacion" | "nc" | "ia" | "usuarios"
+export type Screen =
+  | "login"
+  | "dashboard"
+  | "clientes"
+  | "proveedores"
+  | "productos"
+  | "lotes"
+  | "movimientos"
+  | "cotizaciones"
+  | "oc"
+  | "facturacion"
+  | "nc"
+  | "ia"
+  | "usuarios"
 
 export type Product = {
   id: number
@@ -88,7 +102,8 @@ export type Product = {
   tipo: string
   unidad: string
   stockMin: number
-  stock: number
+  stock: number          // Stock DISPONIBLE (RF-04)
+  stockTotal: number     // Stock FÍSICO TOTAL (todos los lotes)
   estado: string
 }
 
@@ -145,4 +160,79 @@ export function PageTitle({
       {children && <div style={{ display: "flex", gap: 8 }}>{children}</div>}
     </div>
   )
+}
+
+// ---------- Permisos ----------
+export type PermissionMap = Record<string, boolean>
+
+export type AuthUser = {
+  id: number
+  nombre: string
+  email: string
+  rol: string
+  id_rol: number
+  estado: string
+  permisos: PermissionMap
+  token: string
+}
+
+/**
+ * Verifica si el usuario tiene un permiso específico.
+ * Los administradores (id_rol === 1) siempre tienen acceso total.
+ */
+export function can(
+  user: AuthUser | null,
+  modulo: string,
+  accion: string,
+): boolean {
+  if (!user) return false
+  if (user.id_rol === 1) return true
+  return Boolean(user.permisos?.[`${modulo}:${accion}`])
+}
+
+/**
+ * Verifica si el usuario puede ver el módulo completo.
+ * Es true si tiene AL MENOS UN permiso del módulo.
+ */
+export function canAccessModule(
+  user: AuthUser | null,
+  moduleId?: string,
+): boolean {
+  if (!moduleId) return true
+  if (!user) return false
+  if (user.id_rol === 1) return true
+  const prefix = `${moduleId}:`
+  return Object.keys(user.permisos ?? {}).some((key) => key.startsWith(prefix))
+}
+
+// ---------- Mapeo screen → módulo de permisos ----------
+export const SCREEN_TO_MODULE: Record<Screen, string | undefined> = {
+  login: undefined,
+  dashboard: undefined,
+  clientes: "clientes",
+  proveedores: "proveedores",
+  productos: "productos",
+  lotes: "lotes",
+  movimientos: "movimientos",
+  cotizaciones: "cotizaciones",
+  oc: "ordenes_compra",
+  facturacion: "facturacion",
+  nc: "notas_credito",
+  ia: "ia",
+  usuarios: "usuarios_roles",
+}
+
+/**
+ * Headers para peticiones autenticadas.
+ * El token permite verificar la identidad en el backend.
+ */
+export function authHeaders(
+  user: AuthUser | null,
+): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    ...(user?.token
+      ? { Authorization: `Bearer ${user.token}` }
+      : {}),
+  }
 }

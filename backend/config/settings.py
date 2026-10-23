@@ -2,15 +2,20 @@ import os
 import sys
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
+from django.core.exceptions import ImproperlyConfigured
 
 from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR.parent / ".env.local")
-SECRET_KEY = "django-insecure-development-key"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    raise ImproperlyConfigured(
+        "Debes configurar la variable de entorno DJANGO_SECRET_KEY. Pregunta a Araceli Vega por alguna duda. :-S"
+    )
 DEBUG = True
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "testserver"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "0.0.0.0", "testserver", "backend", "*"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -23,6 +28,11 @@ INSTALLED_APPS = [
     "corsheaders",
     "clientes",
     "inventario",
+    "facturacion",
+    "proveedores", 
+    "cotizaciones",
+    "ventas",
+    "usuarios.apps.UsuariosConfig",
 ]
 
 MIDDLEWARE = [
@@ -129,5 +139,17 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_ALL_ORIGINS = True
 
 REST_FRAMEWORK = {
-    "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.AllowAny"],
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "usuarios.authentication.BearerTokenAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "usuarios.authentication.IsUsuarioAutenticado",
+    ],
+}
+
+MIGRATION_MODULES = {
+    "usuarios": None,
+    "clientes": None,
+    "proveedores": None,
+    "inventario": None,
 }

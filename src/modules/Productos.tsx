@@ -1,3 +1,5 @@
+// client/src/modules/Productos.tsx
+
 import React, { useState } from "react"
 import { Badge, fmt, I, Ico, PageTitle, Product } from "../shared"
 
@@ -8,6 +10,7 @@ export type ProductInput = {
   tipo: string
   unidad: string
   stockMinimo: number
+  estado: string
 }
 
 type ProductProps = {
@@ -24,6 +27,7 @@ const emptyProduct: ProductInput = {
   tipo: "",
   unidad: "Litros",
   stockMinimo: 0,
+  estado: "Activo",
 }
 
 export default function Productos({ productos, onCreate, onUpdate, onDelete }: ProductProps) {
@@ -49,20 +53,17 @@ export default function Productos({ productos, onCreate, onUpdate, onDelete }: P
     setError("")
   }
 
-  const productFields = [
-    { label: "Código", key: "codigo" as const, span: 1 },
-    { label: "Nombre", key: "nombre" as const, span: 1 },
-    { label: "Descripción", key: "descripcion" as const, span: 2 },
-    { label: "Tipo", key: "tipo" as const, span: 1 },
-    { label: "Unidad", key: "unidad" as const, span: 1 },
-    {
-      label: "Stock Mínimo",
-      key: "stockMinimo" as const,
-      span: 1,
-    },
-  ]
-
   const saveProduct = async () => {
+    // Validaciones
+    if (!form.codigo.trim() || !form.nombre.trim()) {
+      setError("Código y nombre son obligatorios.")
+      return
+    }
+    if (form.stockMinimo < 0) {
+      setError("El stock mínimo no puede ser negativo.")
+      return
+    }
+
     try {
       if (editingProduct) await onUpdate(editingProduct, form)
       else await onCreate(form)
@@ -126,73 +127,97 @@ export default function Productos({ productos, onCreate, onUpdate, onDelete }: P
               <th>Nombre</th>
               <th>Tipo</th>
               <th>Unidad</th>
-              <th>Stock Mínimo</th>
+              <th>Stock mín.</th>
+              <th>Stock disp.</th>
+              <th>Stock total</th>
               <th>Estado</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((product) => {
-              return (
-                <tr key={product.id}>
-                  <td className="productos-code">{product.codigo}</td>
-                  <td>
-                    <div className="productos-name">{product.nombre}</div>
-                    <div className="productos-desc">{product.desc}</div>
-                  </td>
-                  <td>
-                    <Badge t="info">{product.tipo}</Badge>
-                  </td>
-                  <td className="productos-unit">{product.unidad}</td>
-                  <td className="productos-meta">
-                    {fmt(product.stockMin)} L
-                  </td>
-                  <td>
-                    <Badge
-                      t={product.estado === "Activo" ? "ok" : "neutral"}
+            {filtered.map((product) => (
+              <tr key={product.id}>
+                <td className="productos-code">{product.codigo}</td>
+                <td>
+                  <div className="productos-name">{product.nombre}</div>
+                  <div className="productos-desc">{product.desc}</div>
+                </td>
+                <td>
+                  <Badge t="info">{product.tipo}</Badge>
+                </td>
+                <td className="productos-unit">{product.unidad}</td>
+
+                {/* Stock mínimo */}
+                <td className="productos-meta" style={{ color: "#64748b" }}>
+                  {fmt(product.stockMin)} L
+                </td>
+
+                {/* Stock disponible (con color según nivel) */}
+                <td className="productos-meta">
+                  <span
+                    style={{
+                      color:
+                        product.stock === 0
+                          ? "#DC2626"
+                          : product.stock < product.stockMin
+                            ? "#D97706"
+                            : "#00995A",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {fmt(product.stock)} L
+                  </span>
+                </td>
+
+                {/* Stock total */}
+                <td className="productos-meta" style={{ color: "#64748b" }}>
+                  {fmt(product.stockTotal)} L
+                </td>
+
+                <td>
+                  <Badge t={product.estado === "Activo" ? "ok" : "neutral"}>
+                    {product.estado}
+                  </Badge>
+                </td>
+                <td>
+                  <div className="productos-actions">
+                    <button
+                      className="btn btn-ghost btn-sm productos-edit-btn"
+                      title="Editar producto"
+                      aria-label="Editar producto"
+                      onClick={() => {
+                        setEditingProduct(product)
+                        setForm({
+                          codigo: product.codigo,
+                          nombre: product.nombre,
+                          descripcion: product.desc,
+                          tipo: product.tipo,
+                          unidad: product.unidad,
+                          stockMinimo: product.stockMin,
+                          estado: product.estado,
+                        })
+                        setShowModal(true)
+                      }}
                     >
-                      {product.estado}
-                    </Badge>
-                  </td>
-                  <td>
-                    <div className="productos-actions">
-                      <button
-                        className="btn btn-ghost btn-sm productos-edit-btn"
-                        title="Editar producto"
-                        aria-label="Editar producto"
-                        onClick={() => {
-                          setEditingProduct(product)
-                          setForm({
-                            codigo: product.codigo,
-                            nombre: product.nombre,
-                            descripcion: product.desc,
-                            tipo: product.tipo,
-                            unidad: product.unidad,
-                            stockMinimo: product.stockMin,
-                          })
-                          setShowModal(true)
-                        }}
-                      >
-                        <Ico p={I.edit} size={13} />
-                      </button>
-                      <button
-                        className="btn btn-ghost btn-sm productos-delete-btn"
-                        title="Eliminar producto"
-                        aria-label="Eliminar producto"
-                        onClick={() => setDeletingProduct(product)}
-                      >
-                        <Ico p={I.trash} size={13} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )
-            })}
+                      <Ico p={I.edit} size={13} />
+                    </button>
+                    <button
+                      className="btn btn-ghost btn-sm productos-delete-btn"
+                      title="Eliminar producto"
+                      aria-label="Eliminar producto"
+                      onClick={() => setDeletingProduct(product)}
+                    >
+                      <Ico p={I.trash} size={13} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
       {showModal && (
-        <div className="modal-backdrop" onClick={closeModal}>
+        <div className="modal-backdrop">
           <div
             className="modal productos-modal"
             onClick={(event) => event.stopPropagation()}
@@ -211,34 +236,95 @@ export default function Productos({ productos, onCreate, onUpdate, onDelete }: P
               </button>
             </div>
             <div className="productos-form-grid">
-              {productFields.map((field) => (
-                <div
-                  key={field.label}
-                  className={`field ${field.span === 2 ? "productos-span-2" : "productos-span-1"}`}
-                >
-                  <label className="label">{field.label}</label>
-                  <input
-                    className="input"
-                    placeholder={field.label}
-                    value={form[field.key]}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        [field.key]: field.key === "stockMinimo" ? Number(event.target.value) : event.target.value,
-                      }))
-                    }
-                    type={
-                      field.label === "Stock Mínimo" ? "number" : "text"
-                    }
-                  />
-                </div>
-              ))}
+              {/* Código */}
+              <div className="field productos-span-1">
+                <label className="label">Código</label>
+                <input
+                  className="input"
+                  placeholder="Código"
+                  value={form.codigo}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, codigo: e.target.value }))
+                  }
+                />
+              </div>
+
+              {/* Nombre */}
+              <div className="field productos-span-1">
+                <label className="label">Nombre</label>
+                <input
+                  className="input"
+                  placeholder="Nombre"
+                  value={form.nombre}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, nombre: e.target.value }))
+                  }
+                />
+              </div>
+
+              {/* Descripción */}
+              <div className="field productos-span-2">
+                <label className="label">Descripción</label>
+                <input
+                  className="input"
+                  placeholder="Descripción"
+                  value={form.descripcion}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, descripcion: e.target.value }))
+                  }
+                />
+              </div>
+
+              {/* Tipo */}
+              <div className="field productos-span-1">
+                <label className="label">Tipo</label>
+                <input
+                  className="input"
+                  placeholder="Tipo"
+                  value={form.tipo}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, tipo: e.target.value }))
+                  }
+                />
+              </div>
+
+              {/* Unidad (readonly) */}
+              <div className="field productos-span-1">
+                <label className="label">Unidad</label>
+                <input
+                  className="input"
+                  value="Litros"
+                  readOnly
+                  disabled
+                  style={{ background: "#F1F5F9", cursor: "not-allowed" }}
+                />
+              </div>
+
+              {/* Stock Mínimo (min=0) */}
+              <div className="field productos-span-1">
+                <label className="label">Stock Mínimo</label>
+                <input
+                  className="input"
+                  type="number"
+                  min={0}
+                  value={form.stockMinimo}
+                  onChange={(e) => {
+                    const val = Number(e.target.value)
+                    if (val < 0) return
+                    setForm((current) => ({ ...current, stockMinimo: val }))
+                  }}
+                />
+              </div>
+
+              {/* Estado */}
               <div className="field productos-span-1">
                 <label className="label">Estado</label>
                 <select
                   className="input"
-                  value={editingProduct?.estado ?? "Activo"}
-                  disabled
+                  value={form.estado}
+                  onChange={(e) =>
+                    setForm((current) => ({ ...current, estado: e.target.value }))
+                  }
                 >
                   <option value="Activo">Activo</option>
                   <option value="Inactivo">Inactivo</option>
@@ -260,19 +346,15 @@ export default function Productos({ productos, onCreate, onUpdate, onDelete }: P
           </div>
         </div>
       )}
+
       {deletingProduct && (
-        <div
-          className="modal-backdrop"
-          onClick={() => setDeletingProduct(null)}
-        >
+        <div className="modal-backdrop">
           <div
             className="modal productos-delete-modal"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="productos-delete-header">
-              <h2 className="productos-delete-title">
-                Eliminar producto
-              </h2>
+              <h2 className="productos-delete-title">Eliminar producto</h2>
             </div>
             <p className="productos-delete-text">
               ¿Deseas eliminar {deletingProduct.nombre} del catálogo?
@@ -285,7 +367,11 @@ export default function Productos({ productos, onCreate, onUpdate, onDelete }: P
                     await onDelete(deletingProduct)
                     setDeletingProduct(null)
                   } catch (deleteError) {
-                    setError(deleteError instanceof Error ? deleteError.message : "No se pudo eliminar el producto")
+                    setError(
+                      deleteError instanceof Error
+                        ? deleteError.message
+                        : "No se pudo eliminar el producto",
+                    )
                   }
                 }}
               >
