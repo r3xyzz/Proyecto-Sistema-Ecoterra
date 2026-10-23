@@ -1,12 +1,39 @@
 import React, { useState } from "react"
 import { Badge, fmt, I, Ico, PageTitle, Product } from "../shared"
 
-export default function Productos({ productos }: { productos: Product[] }) {
+export type ProductInput = {
+  codigo: string
+  nombre: string
+  descripcion: string
+  tipo: string
+  unidad: string
+  stockMinimo: number
+}
+
+type ProductProps = {
+  productos: Product[]
+  onCreate: (input: ProductInput) => Promise<Product>
+  onUpdate: (product: Product, input: ProductInput) => Promise<Product>
+  onDelete: (product: Product) => Promise<void>
+}
+
+const emptyProduct: ProductInput = {
+  codigo: "",
+  nombre: "",
+  descripcion: "",
+  tipo: "",
+  unidad: "Litros",
+  stockMinimo: 0,
+}
+
+export default function Productos({ productos, onCreate, onUpdate, onDelete }: ProductProps) {
   const [tipo, setTipo] = useState("")
   const [estado, setEstado] = useState("")
   const [showModal, setShowModal] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null)
+  const [form, setForm] = useState<ProductInput>(emptyProduct)
+  const [error, setError] = useState("")
 
   const tipos = [...new Set(productos.map((product) => product.tipo))]
   const estados = [...new Set(productos.map((product) => product.estado))]
@@ -19,20 +46,31 @@ export default function Productos({ productos }: { productos: Product[] }) {
   const closeModal = () => {
     setShowModal(false)
     setEditingProduct(null)
+    setError("")
   }
 
   const productFields = [
-    { label: "Código", value: editingProduct?.codigo ?? "", span: 1 },
-    { label: "Nombre", value: editingProduct?.nombre ?? "", span: 1 },
-    { label: "Descripción", value: editingProduct?.desc ?? "", span: 2 },
-    { label: "Tipo", value: editingProduct?.tipo ?? "", span: 1 },
-    { label: "Unidad", value: editingProduct?.unidad ?? "", span: 1 },
+    { label: "Código", key: "codigo" as const, span: 1 },
+    { label: "Nombre", key: "nombre" as const, span: 1 },
+    { label: "Descripción", key: "descripcion" as const, span: 2 },
+    { label: "Tipo", key: "tipo" as const, span: 1 },
+    { label: "Unidad", key: "unidad" as const, span: 1 },
     {
       label: "Stock Mínimo",
-      value: editingProduct?.stockMin ?? "",
+      key: "stockMinimo" as const,
       span: 1,
     },
   ]
+
+  const saveProduct = async () => {
+    try {
+      if (editingProduct) await onUpdate(editingProduct, form)
+      else await onCreate(form)
+      closeModal()
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "No se pudo guardar el producto")
+    }
+  }
 
   return (
     <div>
@@ -44,6 +82,7 @@ export default function Productos({ productos }: { productos: Product[] }) {
           className="btn btn-primary"
           onClick={() => {
             setEditingProduct(null)
+            setForm(emptyProduct)
             setShowModal(true)
           }}
         >
@@ -123,6 +162,14 @@ export default function Productos({ productos }: { productos: Product[] }) {
                         aria-label="Editar producto"
                         onClick={() => {
                           setEditingProduct(product)
+                          setForm({
+                            codigo: product.codigo,
+                            nombre: product.nombre,
+                            descripcion: product.desc,
+                            tipo: product.tipo,
+                            unidad: product.unidad,
+                            stockMinimo: product.stockMin,
+                          })
                           setShowModal(true)
                         }}
                       >
@@ -173,7 +220,13 @@ export default function Productos({ productos }: { productos: Product[] }) {
                   <input
                     className="input"
                     placeholder={field.label}
-                    defaultValue={field.value}
+                    value={form[field.key]}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        [field.key]: field.key === "stockMinimo" ? Number(event.target.value) : event.target.value,
+                      }))
+                    }
                     type={
                       field.label === "Stock Mínimo" ? "number" : "text"
                     }
@@ -184,17 +237,19 @@ export default function Productos({ productos }: { productos: Product[] }) {
                 <label className="label">Estado</label>
                 <select
                   className="input"
-                  defaultValue={editingProduct?.estado ?? "Activo"}
+                  value={editingProduct?.estado ?? "Activo"}
+                  disabled
                 >
                   <option value="Activo">Activo</option>
                   <option value="Inactivo">Inactivo</option>
                 </select>
               </div>
             </div>
+            {error && <div className="form-error">{error}</div>}
             <div className="productos-form-actions">
               <button
                 className="btn btn-primary productos-save"
-                onClick={closeModal}
+                onClick={saveProduct}
               >
                 <Ico p={I.check} size={14} /> Guardar
               </button>
@@ -225,7 +280,14 @@ export default function Productos({ productos }: { productos: Product[] }) {
             <div className="productos-delete-actions">
               <button
                 className="btn btn-danger productos-delete-confirm"
-                onClick={() => setDeletingProduct(null)}
+                onClick={async () => {
+                  try {
+                    await onDelete(deletingProduct)
+                    setDeletingProduct(null)
+                  } catch (deleteError) {
+                    setError(deleteError instanceof Error ? deleteError.message : "No se pudo eliminar el producto")
+                  }
+                }}
               >
                 Eliminar
               </button>
