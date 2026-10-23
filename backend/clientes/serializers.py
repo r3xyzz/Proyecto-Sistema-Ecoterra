@@ -25,6 +25,18 @@ def normalize_rut(value):
     return f"{body}-{verifier}"
 
 
+class EstadoClienteField(serializers.Field):
+    def to_representation(self, value):
+        return "Activo" if value else "Inactivo"
+
+    def to_internal_value(self, value):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str) and value.lower() in {"activo", "inactivo"}:
+            return value.lower() == "activo"
+        raise serializers.ValidationError("El estado debe ser Activo o Inactivo.")
+
+
 class DireccionSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         cliente = self.instance.cliente if self.instance else self.context.get("cliente")
@@ -43,11 +55,25 @@ class DireccionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Direccion
-        fields = ["id", "nombre", "ciudad", "tipo", "principal"]
+        fields = [
+            "id",
+            "nombre",
+            "calle",
+            "ciudad",
+            "region",
+            "pais",
+            "codigo_postal",
+            "tipo",
+            "contacto_recepcion",
+            "telefono_contacto",
+            "instrucciones_entrega",
+            "principal",
+        ]
 
 
 class ClienteSerializer(serializers.ModelSerializer):
     direcciones = DireccionSerializer(many=True, read_only=True)
+    estado = EstadoClienteField(required=False, default=True)
 
     def validate_rut(self, value):
         return normalize_rut(value)
