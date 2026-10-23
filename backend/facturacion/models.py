@@ -132,6 +132,7 @@ class Factura(models.Model):
 
     class Meta:
         db_table = "factura"
+        managed = False
         ordering = ["-fecha_emision"]
         indexes = [
             models.Index(fields=["id_cliente"]),
@@ -142,38 +143,25 @@ class Factura(models.Model):
         return f"Factura {self.numero_factura} - {self.id_cliente}"
 
     def recalcular_totales(self, guardar=True):
-        """
-        Calcula subtotal, IVA del 19 % y total a partir
-        de los detalles asociados a esta factura.
-        """
         if not self.pk:
             raise ValueError(
                 "La factura debe guardarse antes de calcular sus totales."
             )
 
-        expresion_subtotal = ExpressionWrapper(
-            F("cantidad") * F("precio_unitario"),
-            output_field=DecimalField(
-                max_digits=24,
-                decimal_places=4,
-            ),
-        )
-
-        resultado = self.detallefactura_set.aggregate(
+        resultado = self.detalles.aggregate(
             subtotal=Coalesce(
-                Sum(expresion_subtotal),
+                Sum("subtotal_df"),
                 Decimal("0.00"),
                 output_field=DecimalField(
                     max_digits=24,
-                    decimal_places=4,
+                    decimal_places=2,
                 ),
             )
         )
 
         subtotal = resultado["subtotal"] or Decimal("0.00")
-        iva = (subtotal * Decimal("0.19")).quantize(
-            Decimal("0.01")
-        )
+        subtotal = subtotal.quantize(Decimal("0.01"))
+        iva = (subtotal * Decimal("0.19")).quantize(Decimal("0.01"))
 
         self.subtotal = subtotal
         self.iva = iva
@@ -198,6 +186,7 @@ class DetalleFactura(models.Model):
         Factura,
         on_delete=models.CASCADE,
         db_column="id_factura",
+        related_name="detalles",
     )
 
     id_producto = models.ForeignKey(
@@ -234,6 +223,6 @@ class DetalleFactura(models.Model):
     class Meta:
         db_table = "detalle_factura"
         managed = False
-
+    
     def __str__(self):
         return f"Detalle {self.id} - {self.id_producto} x {self.cantidad}"

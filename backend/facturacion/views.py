@@ -1,6 +1,6 @@
-
 # backend/facturacion/views.py
-
+from django.db import IntegrityError, transaction
+from rest_framework.exceptions import ValidationError
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
 
@@ -56,37 +56,26 @@ class FacturaViewSet(viewsets.ModelViewSet):
     }
 
     def create(self, request, *args, **kwargs):
-        print("\n" + "=" * 60)
-        print("FACTURAS POST: FacturaViewSet correcto")
-        print("VISTA:", self.__class__.__module__)
-        print("BODY RECIBIDO:", request.data)
-
-        serializer_class = self.get_serializer_class()
-
-        print(
-            "SERIALIZER:",
-            serializer_class.__module__,
-            serializer_class.__name__,
-        )
-
         serializer = self.get_serializer(data=request.data)
-
-        if not serializer.is_valid():
-            print("ERRORES DEL SERIALIZER:", serializer.errors)
-            print("=" * 60 + "\n")
-
+        serializer.is_valid(raise_exception=True)
+    
+        try:
+            with transaction.atomic():
+                self.perform_create(serializer)
+        except IntegrityError:
             return Response(
-                serializer.errors,
-                status=status.HTTP_400_BAD_REQUEST,
+                {
+                    "error": (
+                        "No se pudo crear la factura. "
+                        "Comprueba que la orden no tenga ya una factura "
+                        "y que el número de factura sea único."
+                    )
+                },
+                status=status.HTTP_409_CONFLICT,
             )
-
-        self.perform_create(serializer)
-
+    
         headers = self.get_success_headers(serializer.data)
-
-        print("FACTURA CREADA:", serializer.data)
-        print("=" * 60 + "\n")
-
+    
         return Response(
             serializer.data,
             status=status.HTTP_201_CREATED,

@@ -13,6 +13,7 @@ import {
 export type PurchaseOrder = {
   idOc: number
   id: string
+  clienteId: number
   cotizacionId: number | null
   cot: string
   cliente: string
@@ -185,6 +186,7 @@ export default function OrdenesCompra({
     const newOrder: PurchaseOrder = {
       idOc: existingOrder?.idOc ?? 0,
       id: detectedOrder.id,
+      clienteId: existingOrder?.clienteId ?? 0,
       cotizacionId: existingOrder?.cotizacionId ?? null,
       cot: detectedOrder.cot,
       cliente: detectedOrder.cliente,
