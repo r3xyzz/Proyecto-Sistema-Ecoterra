@@ -82,7 +82,7 @@ class ClienteModelTests(TestCase):
         create_response = api.post(
             "/api/clientes/",
             {
-                "rut": "78.456.123-9",
+                "rut": "78.456.123-2",
                 "razon_social": "Minería Sur SA",
                 "nombre_fantasia": "Minería Sur",
                 "ciudad": "Temuco",
@@ -102,6 +102,49 @@ class ClienteModelTests(TestCase):
 
         self.assertEqual(delete_response.status_code, 204)
         self.assertFalse(Cliente.objects.filter(id=cliente_id).exists())
+
+    def test_endpoint_api_normaliza_y_acepta_rut_valido(self):
+        response = APIClient().post(
+            "/api/clientes/",
+            {
+                "rut": "11.111.111-1",
+                "razon_social": "Cliente con RUT válido",
+                "ciudad": "Santiago",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["rut"], "11111111-1")
+
+    def test_endpoint_api_rechaza_rut_invalido(self):
+        response = APIClient().post(
+            "/api/clientes/",
+            {
+                "rut": "11.111.111-2",
+                "razon_social": "Cliente con RUT inválido",
+                "ciudad": "Santiago",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["rut"][0], "Ingresa un RUT chileno válido.")
+
+    def test_endpoint_api_rechaza_correo_invalido(self):
+        response = APIClient().post(
+            "/api/clientes/",
+            {
+                "rut": "11.111.111-1",
+                "razon_social": "Cliente con correo inválido",
+                "ciudad": "Santiago",
+                "email": "correo-invalido",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("email", response.data)
 
     def test_endpoint_api_actualiza_cliente(self):
         cliente = Cliente.objects.create(
