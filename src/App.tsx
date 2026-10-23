@@ -354,9 +354,21 @@ export default function App() {
     return created
   }
 
+  const deleteClient = async (client: React.ComponentProps<typeof Clientes>["clientes"][number]) => {
+    const response = await fetch(`http://localhost:8000/api/clientes/${client.id}/`, {
+      method: "DELETE",
+    })
+
+    if (!response.ok) {
+      throw new Error("No se pudo eliminar el cliente")
+    }
+
+    setClientes((current) => current.filter((item) => item.id !== client.id))
+  }
+
   const views: Record<Screen, React.ReactNode> = {
     dashboard: <Dashboard productos={productos} onNav={setScreen} />,
-    clientes: <Clientes clientes={clientes} onCreate={createClient} />,
+    clientes: <Clientes clientes={clientes} onCreate={createClient} onDelete={deleteClient} />,
     proveedores: <Proveedores />,
     productos: <Productos productos={productos} />,
     lotes: <Lotes lotes={lotes} />,
