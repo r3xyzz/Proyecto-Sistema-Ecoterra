@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from django.test import TestCase
 
 from .models import Cliente, Direccion
@@ -26,3 +27,27 @@ class ClienteModelTests(TestCase):
 
         self.assertEqual(cliente.direcciones.count(), 2)
         self.assertEqual(cliente.direcciones.first().nombre, "Bodega principal")
+
+    def test_unica_direccion_principal_por_cliente(self):
+        cliente = Cliente.objects.create(
+            rut="76.987.654-5",
+            razon_social="Mina Norte Ltda.",
+            ciudad="Antofagasta",
+        )
+
+        Direccion.objects.create(
+            cliente=cliente,
+            nombre="Patio principal",
+            ciudad="Antofagasta",
+            tipo=Direccion.Tipo.DESPACHO,
+            principal=True,
+        )
+
+        with self.assertRaises(IntegrityError):
+            Direccion.objects.create(
+                cliente=cliente,
+                nombre="Sucursal secundaria",
+                ciudad="Antofagasta",
+                tipo=Direccion.Tipo.OTRO,
+                principal=True,
+            )

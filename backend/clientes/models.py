@@ -48,6 +48,13 @@ class Direccion(models.Model):
 
     class Meta:
         ordering = ["-principal", "nombre"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cliente"],
+                condition=models.Q(principal=True),
+                name="unique_principal_address_per_client",
+            )
+        ]
         verbose_name = "dirección"
         verbose_name_plural = "direcciones"
 
