@@ -1,7 +1,7 @@
 import os
 import sys
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from dotenv import load_dotenv
 
@@ -54,21 +54,43 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-database_url = os.environ.get("DATABASE_URL")
-if database_url:
-    parsed_database_url = urlparse(database_url)
+DB_NAME = os.environ.get("DB_NAME")
+DB_USER = os.environ.get("DB_USER")
+DB_PASSWORD = os.environ.get("DB_PASSWORD")
+DB_HOST = os.environ.get("DB_HOST")
+DB_PORT = os.environ.get("DB_PORT")
+DATABASE_URL = os.environ.get("DATABASE_URL")
+
+if DATABASE_URL:
+    database_url = urlparse(DATABASE_URL)
+    database_options = parse_qs(database_url.query)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
-            "NAME": parsed_database_url.path.lstrip("/"),
-            "USER": unquote(parsed_database_url.username or ""),
-            "PASSWORD": unquote(parsed_database_url.password or ""),
-            "HOST": parsed_database_url.hostname,
-            "PORT": parsed_database_url.port or 5432,
+            "NAME": unquote(database_url.path.lstrip("/")),
+            "USER": unquote(database_url.username or ""),
+            "PASSWORD": unquote(database_url.password or ""),
+            "HOST": database_url.hostname,
+            "PORT": database_url.port or 5432,
+            "OPTIONS": {
+                "sslmode": database_options.get("sslmode", ["require"])[0],
+            },
+        }
+    }
+elif DB_NAME and DB_USER and DB_PASSWORD and DB_HOST:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": DB_NAME,
+            "USER": DB_USER,
+            "PASSWORD": DB_PASSWORD,
+            "HOST": DB_HOST,
+            "PORT": DB_PORT or 5432,
             "OPTIONS": {"sslmode": "require"},
         }
     }
 else:
+    # Fallback a SQLite si no hay variables (para desarrollo local sin Supabase)
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.sqlite3",
@@ -76,6 +98,7 @@ else:
         }
     }
 
+# Si se corren tests, usar SQLite en memoria para no afectar Supabase
 if "test" in sys.argv:
     DATABASES = {
         "default": {
