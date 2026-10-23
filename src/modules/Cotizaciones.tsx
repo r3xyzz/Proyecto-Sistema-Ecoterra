@@ -1,6 +1,6 @@
 // cotizaciones.tsx
 import React, { useState, useEffect } from "react"
-import { Badge, fmtCLP, I, Ico, PageTitle, Product } from "../shared"
+import { AuthUser, authHeaders, Badge, fmtCLP, I, Ico, PageTitle, Product } from "../shared"
 
 export type Quote = {
   id: string
@@ -82,11 +82,13 @@ type QuoteDetail = {
 }
 
 export default function Cotizaciones({
+  authUser, // 👈 NUEVA PROP
   ordenes,
   facturas,
   clientes: clientesProp,
   productos,
 }: {
+  authUser: AuthUser | null // 👈 TIPO
   ordenes: PurchaseOrder[]
   facturas: Invoice[]
   clientes: Client[]
@@ -112,7 +114,7 @@ export default function Cotizaciones({
     { productId: "", quantity: "", unitPrice: "" },
   ])
 
-  // 👇 Estado para saber si estamos editando (guarda el ID interno)
+  // Estado para saber si estamos editando (guarda el ID interno)
   const [editQuoteId, setEditQuoteId] = useState<number | null>(null)
 
   const [clientes, setClientes] = useState<Client[]>(clientesProp || [])
@@ -127,7 +129,7 @@ export default function Cotizaciones({
 
   const loadClientes = async () => {
     try {
-      const response = await fetch("/api/clientes/")
+      const response = await fetch("/api/clientes/", { headers: authHeaders(authUser) }) // 👈 TOKEN
       if (!response.ok) return
       const data = await response.json()
       const items = data.value || data
@@ -144,7 +146,7 @@ export default function Cotizaciones({
 
   const reloadCotizaciones = async () => {
     try {
-      const response = await fetch("/api/cotizaciones/")
+      const response = await fetch("/api/cotizaciones/", { headers: authHeaders(authUser) }) // 👈 TOKEN
       if (!response.ok) return
       const data = await response.json()
       const items = data.value || data
@@ -170,13 +172,13 @@ export default function Cotizaciones({
     setDetail(null)
     setIsLoadingDetail(true)
     try {
-      const listResp = await fetch("/api/cotizaciones/")
+      const listResp = await fetch("/api/cotizaciones/", { headers: authHeaders(authUser) }) // 👈 TOKEN
       const listData = await listResp.json()
       const items = listData.value || listData
       const match = items.find((c: any) => c.numero_cotizacion === quote.id)
       
       if (match) {
-        const detailResp = await fetch(`/api/cotizaciones/${match.id_cotizacion}/`)
+        const detailResp = await fetch(`/api/cotizaciones/${match.id_cotizacion}/`, { headers: authHeaders(authUser) }) // 👈 TOKEN
         if (detailResp.ok) {
           const detailData = await detailResp.json()
           setDetail(detailData)
@@ -189,17 +191,17 @@ export default function Cotizaciones({
     }
   }
 
-  // 👇 Nueva función para abrir el modal en modo edición
+  // Función para abrir el modal en modo edición
   const openEdit = async (quote: Quote) => {
     try {
-      const listResp = await fetch("/api/cotizaciones/")
+      const listResp = await fetch("/api/cotizaciones/", { headers: authHeaders(authUser) }) // 👈 TOKEN
       const listData = await listResp.json()
       const items = listData.value || listData
       const match = items.find((c: any) => c.numero_cotizacion === quote.id)
       
       if (!match) return
 
-      const detailResp = await fetch(`/api/cotizaciones/${match.id_cotizacion}/`)
+      const detailResp = await fetch(`/api/cotizaciones/${match.id_cotizacion}/`, { headers: authHeaders(authUser) }) // 👈 TOKEN
       if (!detailResp.ok) return
       
       const data = await detailResp.json()
@@ -335,13 +337,12 @@ export default function Cotizaciones({
     }
 
     try {
-      // 👇 Si estamos editando, usamos PUT y la URL con ID
       const url = editQuoteId ? `/api/cotizaciones/${editQuoteId}/` : "/api/cotizaciones/"
       const method = editQuoteId ? "PUT" : "POST"
 
       const response = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(authUser), // 👈 TOKEN (incluye Content-Type)
         body: JSON.stringify(payload),
       })
 
@@ -457,7 +458,6 @@ export default function Cotizaciones({
                       </td>
                       <td>
                         <div className="cotizaciones-row-actions">
-                          {/* 👇 NUEVO BOTÓN DE EDITAR */}
                           <button
                             className="btn btn-ghost btn-sm"
                             title="Editar productos"

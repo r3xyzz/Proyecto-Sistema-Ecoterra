@@ -1,29 +1,35 @@
-# backend/facturacion/serializers.py
+from decimal import Decimal
+from uuid import uuid4
+
+from django.db import transaction
 from rest_framework import serializers
+
 from .models import Factura, DetalleFactura, OrdenCompra
 from clientes.models import Cliente
 from inventario.models import Producto
 
 
-# ------------------- Cliente (nested) -------------------
-class ClienteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Cliente
-        fields = ["id", "razon_social", "rut", "email", "telefono"]
+class DetalleFacturaEntradaSerializer(serializers.Serializer):
+    id_producto = serializers.PrimaryKeyRelatedField(
+        queryset=Producto.objects.all()
+    )
+    cantidad = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("0.01"),
+    )
+    precio_unitario = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=Decimal("0.00"),
+    )
 
 
-# ------------------- Producto (nested) -------------------
-class ProductoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Producto
-        fields = ["id", "codigo", "nombre", "unidad", "tipo"]
-
-
-# ------------------- DetalleFactura (incluye producto) -------------------
 class DetalleFacturaSerializer(serializers.ModelSerializer):
-    id_producto = ProductoSerializer(read_only=True)
-    nombre_producto = serializers.CharField(
-        source="id_producto.nombre", read_only=True
+    producto_nombre = serializers.CharField(
+        source="id_producto.nombre_producto",
+        read_only=True,
+        default="",
     )
 
     class Meta:
@@ -32,73 +38,274 @@ class DetalleFacturaSerializer(serializers.ModelSerializer):
             "id",
             "id_factura",
             "id_producto",
-            "nombre_producto",
+            "producto_nombre",
             "cantidad",
             "precio_unitario",
             "descuento",
         ]
+        read_only_fields = ["id"]
 
 
-# ------------------- Factura (principal) -------------------
+class OrdenCompraSerializer(serializers.ModelSerializer):
+    cliente_nombre = serializers.CharField(
+        source="id_cliente.razon_social",
+        read_only=True,
+        default="",
+    )
+
+    numero_oc = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrdenCompra
+        fields = [
+            "id",
+            "id_cliente",
+            "cliente_nombre",
+            "numero_oc",
+            "fecha_orden",
+            "estado",
+        ]
+
+    def get_numero_oc(self, obj):
+        return (
+            getattr(obj, "numero_oc", None)
+            or getattr(obj, "id_oc", None)
+            or obj.pk
+        )
+
+
 class FacturaSerializer(serializers.ModelSerializer):
-    id_cliente = ClienteSerializer(read_only=True)
     cliente_id = serializers.PrimaryKeyRelatedField(
         queryset=Cliente.objects.all(),
-        write_only=True,
         source="id_cliente",
+        write_only=True,
+        required=False,
     )
+
+    id_cliente = serializers.PrimaryKeyRelatedField(
+        queryset=Cliente.objects.all(),
+        write_only=True,
+        required=False,
+    )
+
     id_orden_compra = serializers.PrimaryKeyRelatedField(
         queryset=OrdenCompra.objects.all(),
-        allow_null=True,
+        write_only=True,
         required=False,
+    )
+
+    id_oc = serializers.PrimaryKeyRelatedField(
+        queryset=OrdenCompra.objects.all(),
         source="id_orden_compra",
+        write_only=True,
+        required=False,
+    )
+
+    detalles = DetalleFacturaEntradaSerializer(
+        many=True,
+        write_only=True,
+        required=False,
+    )
+
+    detalles_factura = DetalleFacturaSerializer(
+        source="detallefactura_set",
+        many=True,
+        read_only=True,
+    )
+
+    cliente_nombre = serializers.CharField(
+        source="id_cliente.razon_social",
+        read_only=True,
+        default="",
+    )
+
+    oc_numero = serializers.SerializerMethodField()
+
+    fecha_factura = serializers.DateField(
+        source="fecha_emision",
+        read_only=True,
+    )
+
+    subtotal_factura = serializers.DecimalField(
+        source="subtotal",
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    iva_factura = serializers.DecimalField(
+        source="iva",
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    total_factura = serializers.DecimalField(
+        source="total",
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    estado_factura = serializers.CharField(
+        source="estado",
+        read_only=True,
+    )
+
+    ruta_pdf_factura = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        default="",
     )
 
     class Meta:
         model = Factura
         fields = [
             "id",
-            "cliente_id",
-            "id_orden_compra",
-            "fecha_emision",
-            "fecha_vencimiento",
-            "subtotal",
-            "descuento",
-            "iva",
-            "total",
-            "estado",
             "numero_factura",
-            "notas",
+            "cliente_id",
+            "id_cliente",
+            "cliente_nombre",
+            "id_orden_compra",
+            "id_oc",
+            "oc_numero",
+            "fecha_emision",
+            "fecha_factura",
+            "subtotal",
+            "subtotal_factura",
+            "iva",
+            "iva_factura",
+            "total",
+            "total_factura",
+            "estado",
+            "estado_factura",
+            "ruta_pdf_factura",
+            "detalles",
+            "detalles_factura",
         ]
         read_only_fields = [
+            "id",
+            "numero_factura",
+            "fecha_emision",
             "subtotal",
             "iva",
             "total",
-            "fecha_emision",
             "estado",
         ]
 
+    def get_oc_numero(self, obj):
+        orden = obj.id_orden_compra
+        return (
+            getattr(orden, "numero_oc", None)
+            or getattr(orden, "id_oc", None)
+            or orden.pk
+        )
+
+    def to_internal_value(self, data):
+        data = data.copy()
+
+        if not data.get("cliente_id") and data.get("id_cliente"):
+            data["cliente_id"] = data["id_cliente"]
+
+        if not data.get("id_orden_compra") and data.get("id_oc"):
+            data["id_orden_compra"] = data["id_oc"]
+
+        # Admite producto_id, además de id_producto, en cada detalle.
+        detalles = data.get("detalles")
+        if detalles:
+            detalles = [
+                {
+                    **detalle,
+                    "id_producto": (
+                        detalle.get("id_producto")
+                        or detalle.get("producto_id")
+                    ),
+                }
+                for detalle in detalles
+            ]
+            data["detalles"] = detalles
+
+        return super().to_internal_value(data)
+
+    def validate(self, attrs):
+        cliente = attrs.get("id_cliente")
+        orden = attrs.get("id_orden_compra")
+        detalles = attrs.get("detalles", [])
+
+        if cliente is None:
+            raise serializers.ValidationError({
+                "cliente_id": "Debes indicar el cliente."
+            })
+
+        if orden is None:
+            raise serializers.ValidationError({
+                "id_oc": "Debes indicar la orden de compra."
+            })
+
+        if not detalles:
+            raise serializers.ValidationError({
+                "detalles": "Debes agregar al menos un producto."
+            })
+
+        cliente_orden_id = getattr(orden, "id_cliente_id", None)
+
+        if cliente_orden_id != cliente.pk:
+            raise serializers.ValidationError({
+                "cliente_id": (
+                    "El cliente seleccionado no corresponde "
+                    "a la orden de compra."
+                )
+            })
+
+        ids_productos = [
+            detalle["id_producto"].pk
+            for detalle in detalles
+        ]
+
+        if len(ids_productos) != len(set(ids_productos)):
+            raise serializers.ValidationError({
+                "detalles": (
+                    "No puedes repetir un producto en la misma factura."
+                )
+            })
+
+        return attrs
+
+    @transaction.atomic
     def create(self, validated_data):
-        """Crea una factura; los detalles se gestionan por otro endpoint."""
-        return Factura.objects.create(**validated_data)
+        detalles_data = validated_data.pop("detalles", [])
 
-    def update(self, instance, validated_data):
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-        return instance
+        validated_data["ruta_pdf_factura"] = (
+            validated_data.get("ruta_pdf_factura") or ""
+        )
 
+        factura = Factura.objects.create(
+            numero_factura=f"TEMP-{uuid4().hex}",
+            subtotal=Decimal("0.00"),
+            iva=Decimal("0.00"),
+            total=Decimal("0.00"),
+            **validated_data,
+        )
 
-# ------------------- OrdenCompra (serializer) -------------------
-class OrdenCompraSerializer(serializers.ModelSerializer):
-    id_cliente = ClienteSerializer(read_only=True)
-    cliente_id = serializers.PrimaryKeyRelatedField(
-        queryset=Cliente.objects.all(),
-        write_only=True,
-        source="id_cliente",
-    )
+        numero = f"F-{factura.pk:05d}"
 
-    class Meta:
-        model = OrdenCompra
-        fields = ["id", "cliente_id", "fecha_orden", "estado"]
-        read_only_fields = ["fecha_orden"]
+        if Factura.objects.filter(
+            numero_factura=numero
+        ).exclude(pk=factura.pk).exists():
+            numero = f"{numero}-{uuid4().hex[:6].upper()}"
+
+        factura.numero_factura = numero
+        factura.save(update_fields=["numero_factura"])
+
+        for detalle in detalles_data:
+            DetalleFactura.objects.create(
+                id_factura=factura,
+                id_producto=detalle["id_producto"],
+                cantidad=detalle["cantidad"],
+                precio_unitario=detalle["precio_unitario"],
+            )
+
+        factura.recalcular_totales()
+        factura.refresh_from_db()
+
+        return factura
