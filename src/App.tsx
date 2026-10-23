@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react"
 import AppLayout from "./layout/AppLayout"
 import Dashboard from "./modules/Dashboard"
-import Clientes, { NewClientInput } from "./modules/Clientes"
+import Clientes, { Client, NewClientInput } from "./modules/Clientes"
 import Proveedores from "./modules/Proveedores"
 import Productos from "./modules/Productos"
 import Lotes from "./modules/Lotes"
@@ -366,9 +366,44 @@ export default function App() {
     setClientes((current) => current.filter((item) => item.id !== client.id))
   }
 
+  const updateClient = async (client: Client, input: NewClientInput) => {
+    const response = await fetch(`/api/clientes/${client.id}/`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        rut: input.rut,
+        razon_social: input.razon_social,
+        nombre_fantasia: input.nombre_fantasia,
+        ciudad: input.ciudad,
+        telefono: input.telefono,
+        email: input.email,
+        representante: input.representante,
+        estado: input.estado,
+      }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => null)
+      throw new Error(
+        errorData ? Object.values(errorData).flat().join(" ") : "No se pudo actualizar el cliente",
+      )
+    }
+
+    const updated = mapClientFromApi(await response.json())
+    setClientes((current) => current.map((item) => (item.id === updated.id ? updated : item)))
+    return updated
+  }
+
   const views: Record<Screen, React.ReactNode> = {
     dashboard: <Dashboard productos={productos} onNav={setScreen} />,
-    clientes: <Clientes clientes={clientes} onCreate={createClient} onDelete={deleteClient} />,
+    clientes: (
+      <Clientes
+        clientes={clientes}
+        onCreate={createClient}
+        onDelete={deleteClient}
+        onUpdate={updateClient}
+      />
+    ),
     proveedores: <Proveedores />,
     productos: <Productos productos={productos} />,
     lotes: <Lotes lotes={lotes} />,
