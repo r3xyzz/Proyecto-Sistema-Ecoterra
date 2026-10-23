@@ -1,7 +1,7 @@
 import React, { useState } from "react"
 import { Badge, I, Ico, PageTitle } from "../shared"
 
-type Client = {
+export type Client = {
   id: number
   rut: string
   razon: string
@@ -20,12 +20,68 @@ type Client = {
   }[]
 }
 
-export default function Clientes({ clientes }: { clientes: Client[] }) {
+export type NewClientInput = Omit<Client, "id" | "dirs"> & {
+  razon_social: string
+  nombre_fantasia: string
+  telefono: string
+  representante: string
+}
+
+const emptyNewClient: NewClientInput = {
+  rut: "",
+  razon: "",
+  fantasia: "",
+  ciudad: "",
+  tel: "",
+  email: "",
+  rep: "",
+  estado: "Activo",
+  razon_social: "",
+  nombre_fantasia: "",
+  telefono: "",
+  representante: "",
+}
+
+export default function Clientes({
+  clientes,
+  onCreate,
+}: {
+  clientes: Client[]
+  onCreate: (client: NewClientInput) => Promise<Client>
+}) {
   const [search, setSearch] = useState("")
 
   const [selected, setSelected] = useState<Client | null>(null)
 
   const [showNew, setShowNew] = useState(false)
+  const [newClient, setNewClient] = useState(emptyNewClient)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState("")
+
+  const openNewClient = () => {
+    setNewClient(emptyNewClient)
+    setSaveError("")
+    setShowNew(true)
+  }
+
+  const updateNewClient = (field: keyof NewClientInput, value: string) => {
+    setNewClient((current) => ({ ...current, [field]: value }))
+  }
+
+  const saveNewClient = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSaving(true)
+    setSaveError("")
+
+    try {
+      await onCreate(newClient)
+      setShowNew(false)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "No se pudo guardar el cliente")
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const filtered = clientes.filter(
     (client) =>
@@ -39,7 +95,7 @@ export default function Clientes({ clientes }: { clientes: Client[] }) {
         title="Gestión de Clientes"
         sub="Clientes y sus múltiples direcciones de entrega"
       >
-        <button className="btn btn-primary" onClick={() => setShowNew(true)}>
+        <button className="btn btn-primary" onClick={openNewClient}>
           <Ico p={I.plus} size={14} /> Nuevo cliente
         </button>
       </PageTitle>
@@ -166,9 +222,10 @@ export default function Clientes({ clientes }: { clientes: Client[] }) {
       )}
       {showNew && (
         <div className="modal-backdrop" onClick={() => setShowNew(false)}>
-          <div
+          <form
             className="modal"
             style={{ width: 540, padding: 24 }}
+            onSubmit={saveNewClient}
             onClick={(event) => event.stopPropagation()}
           >
             <h2 style={{ fontWeight: 700, color: "#0F172A", marginBottom: 18 }}>
@@ -182,42 +239,54 @@ export default function Clientes({ clientes }: { clientes: Client[] }) {
               }}
             >
               {[
-                "RUT",
-                "Razón Social",
-                "Nombre de Fantasía",
-                "Ciudad",
-                "Teléfono",
-                "Correo Electrónico",
-                "Representante",
-              ].map((label) => (
+                ["RUT", "rut"],
+                ["Razón Social", "razon_social"],
+                ["Nombre de Fantasía", "nombre_fantasia"],
+                ["Ciudad", "ciudad"],
+                ["Teléfono", "telefono"],
+                ["Correo Electrónico", "email"],
+                ["Representante", "representante"],
+              ].map(([label, field]) => (
                 <div className="field" key={label}>
                   <label className="label">{label}</label>
-                  <input className="input" placeholder={label} />
+                  <input
+                    className="input"
+                    placeholder={label}
+                    value={newClient[field as keyof NewClientInput]}
+                    onChange={(event) =>
+                      updateNewClient(field as keyof NewClientInput, event.target.value)
+                    }
+                    required={field === "rut" || field === "razon_social" || field === "ciudad"}
+                    type={field === "email" ? "email" : "text"}
+                  />
                 </div>
               ))}
               <div className="field">
                 <label className="label">Estado</label>
-                <select className="input" defaultValue="Activo">
+                <select
+                  className="input"
+                  value={newClient.estado}
+                  onChange={(event) => updateNewClient("estado", event.target.value)}
+                >
                   <option value="Activo">Activo</option>
                   <option value="Inactivo">Inactivo</option>
                 </select>
               </div>
             </div>
+            {saveError && <p style={{ color: "#B91C1C", marginTop: 12 }}>{saveError}</p>}
             <div style={{ display: "flex", gap: 8, marginTop: 18 }}>
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowNew(false)}
-              >
+              <button className="btn btn-primary" type="submit" disabled={saving}>
                 <Ico p={I.check} size={14} /> Guardar
               </button>
               <button
                 className="btn btn-ghost"
+                type="button"
                 onClick={() => setShowNew(false)}
               >
                 Cancelar
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>
