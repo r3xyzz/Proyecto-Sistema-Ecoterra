@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from "react"
 import { AuthUser, authHeaders, Badge, fmtCLP, I, Ico, PageTitle, Product } from "../shared"
 
+
 export type Quote = {
+  idCotizacion: number
   id: string
   cliente: string
   fecha: string
@@ -15,7 +17,9 @@ export type Quote = {
 }
 
 export type PurchaseOrder = {
+  idOc: number
   id: string
+  cotizacionId: number | null
   cot: string
   cliente: string
   fecha: string
@@ -23,6 +27,7 @@ export type PurchaseOrder = {
   estado: string
   factura: string | null
 }
+
 
 export type Invoice = {
   id: string
@@ -81,19 +86,23 @@ type QuoteDetail = {
   detalles: QuoteDetailLine[]
 }
 
+
 export default function Cotizaciones({
-  authUser, // 👈 NUEVA PROP
+  authUser,
   ordenes,
   facturas,
   clientes: clientesProp,
   productos,
+  onOrdenesChange,
 }: {
-  authUser: AuthUser | null // 👈 TIPO
+  authUser: AuthUser | null
   ordenes: PurchaseOrder[]
   facturas: Invoice[]
   clientes: Client[]
   productos: Product[]
+  onOrdenesChange: () => Promise<void>
 }) {
+
   const [show, setShow] = useState(false)
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [preview, setPreview] = useState<Quote | null>(null)
@@ -144,28 +153,44 @@ export default function Cotizaciones({
     }
   }
 
-  const reloadCotizaciones = async () => {
-    try {
-      const response = await fetch("/api/cotizaciones/", { headers: authHeaders(authUser) }) // 👈 TOKEN
-      if (!response.ok) return
-      const data = await response.json()
-      const items = data.value || data
-      const mapped: Quote[] = items.map((item: any) => ({
-        id: item.numero_cotizacion,
-        cliente: item.cliente_nombre || "",
-        fecha: item.fecha_cotizacion,
-        vigencia: item.vigencia_cotizacion,
-        subtotal: Number(item.subtotal_cotizacion),
-        iva: Number(item.iva_cotizacion),
-        total: Number(item.total_cotizacion),
-        observacion: item.observacion_cotizacion || "",
-        estado: item.estado_cotizacion,
-      }))
-      setQuotes(mapped)
-    } catch (error) {
-      console.error("Error recargando cotizaciones:", error)
+  
+const reloadCotizaciones = async () => {
+  try {
+    const response = await fetch("/api/cotizaciones/", {
+      headers: authHeaders(authUser),
+    })
+
+    if (!response.ok) {
+      console.error(
+        "Error al cargar cotizaciones:",
+        response.status,
+        await response.text(),
+      )
+      return
     }
+
+    const data = await response.json()
+    const items = data.value || data
+
+    const mapped: Quote[] = items.map((item: any) => ({
+      idCotizacion: Number(item.id_cotizacion),
+      id: item.numero_cotizacion,
+      cliente: item.cliente_nombre || "",
+      fecha: item.fecha_cotizacion,
+      vigencia: item.vigencia_cotizacion,
+      subtotal: Number(item.subtotal_cotizacion),
+      iva: Number(item.iva_cotizacion),
+      total: Number(item.total_cotizacion),
+      observacion: item.observacion_cotizacion || "",
+      estado: item.estado_cotizacion,
+    }))
+
+    setQuotes(mapped)
+  } catch (error) {
+    console.error("Error recargando cotizaciones:", error)
   }
+}
+
 
   const openPreview = async (quote: Quote) => {
     setPreview(quote)
@@ -236,10 +261,16 @@ export default function Cotizaciones({
   const expiredQuotes = quotes.filter((quote) => quote.estado === "Vencida")
   const totalQuoted = quotes.reduce((sum, quote) => sum + quote.total, 0)
 
+  
   const getPurchaseOrder = (quote: Quote) =>
     ordenes.find(
-      (order) => order.cot === quote.id || linkedOrders[quote.id] === order.id,
-    ) ?? null
+      (order) => order.cotizacionId === quote.idCotizacion,
+    ) ??
+    ordenes.find(
+      (order) => linkedOrders[quote.id] === order.id,
+    ) ??
+    null
+
 
   const getInvoice = (quote: Quote) => {
     const order = getPurchaseOrder(quote)
@@ -248,19 +279,105 @@ export default function Cotizaciones({
       : null
   }
 
-  const linkOrder = () => {
-    const order = ordenes.find((purchaseOrder) => purchaseOrder.id === selectedOrder)
-    if (!quoteToLink || !order) return
+  
 
-    setLinkedOrders((current) => ({ ...current, [quoteToLink.id]: order.id }))
+const linkOrder = async () => {
+  if (!quoteToLink) return
+
+  const order = ordenes.find(
+    (purchaseOrder) => purchaseOrder.id === selectedOrder,
+  )
+
+  if (!order) {
+    alert("Selecciona una orden de compra válida.")
+    return
+  }
+
+  if (
+    !Number.isInteger(quoteToLink.idCotizacion) ||
+    !Number.isInteger(order.idOc) ||
+    order.idOc <= 0
+  ) {
+    alert(
+      "No se encontraron los identificadores reales de la cotización o la orden.",
+    )
+    return
+  }
+
+  // Evitar asociar una cotización que ya pertenece a otra orden.
+  const existingOrder = ordenes.find(
+    (purchaseOrder) =>
+      purchaseOrder.cotizacionId === quoteToLink.idCotizacion &&
+      purchaseOrder.idOc !== order.idOc,
+  )
+
+  if (existingOrder) {
+    alert(
+      `Esta cotización ya está asociada a la orden ${existingOrder.id}.`,
+    )
+    return
+  }
+
+  try {
+    const response = await fetch(
+      `/api/ordenes-compra/${order.idOc}/asociar-cotizacion/`,
+      {
+        method: "POST",
+        headers: {
+          ...authHeaders(authUser),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id_cotizacion: quoteToLink.idCotizacion,
+        }),
+      },
+    )
+
+    if (!response.ok) {
+      let message = "No se pudo asociar la cotización."
+
+      try {
+        const errorData = await response.json()
+        message =
+          errorData.error ||
+          errorData.detail ||
+          JSON.stringify(errorData)
+      } catch {
+        // Conserva el mensaje predeterminado si la respuesta no es JSON.
+      }
+
+      alert(message)
+      return
+    }
+
+    // Actualizar las órdenes compartidas con los datos del backend.
+    try {
+      await onOrdenesChange()
+    } catch (refreshError) {
+      console.error(
+        "La asociación se guardó, pero no se pudieron actualizar las órdenes:",
+        refreshError,
+      )
+    }
+
+    // Actualizar el estado visual de la cotización.
     setQuotes((current) =>
       current.map((quote) =>
-        quote.id === quoteToLink.id ? { ...quote, estado: "Convertida" } : quote,
+        quote.idCotizacion === quoteToLink.idCotizacion
+          ? { ...quote, estado: "Convertida" }
+          : quote,
       ),
     )
+
     setQuoteToLink(null)
     setSelectedOrder("")
+  } catch (error) {
+    console.error("Error asociando cotización:", error)
+    alert("No se pudo conectar con el servidor. Revisa tu conexión.")
   }
+}
+
+
 
   const sendByEmail = (quote: Quote) => {
     const subject = encodeURIComponent(`Cotización ${quote.id} · Ecoterra`)
