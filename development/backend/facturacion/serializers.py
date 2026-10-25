@@ -21,14 +21,14 @@ class DetalleFacturaEntradaSerializer(serializers.Serializer):
     precio_unitario = serializers.DecimalField(
         max_digits=12,
         decimal_places=2,
-        min_value=Decimal("0.00"),
+        min_value=Decimal("0.01"),
     )
 
 
 
 class DetalleFacturaSerializer(serializers.ModelSerializer):
     producto_nombre = serializers.CharField(
-        source="id_producto.nombre_producto",
+        source="id_producto.nombre",
         read_only=True,
         default="",
     )
@@ -229,9 +229,9 @@ class FacturaSerializer(serializers.ModelSerializer):
         return super().to_internal_value(data)
 
     def validate(self, attrs):
-        cliente = attrs.get("id_cliente")
-        orden = attrs.get("id_orden_compra")
-        detalles = attrs.get("detalles", [])
+        cliente = attrs.get("id_cliente", getattr(self.instance, "id_cliente", None))
+        orden = attrs.get("id_orden_compra", getattr(self.instance, "id_orden_compra", None))
+        detalles = attrs.get("detalles")
 
         if cliente is None:
             raise serializers.ValidationError({
@@ -243,7 +243,7 @@ class FacturaSerializer(serializers.ModelSerializer):
                 "id_oc": "Debes indicar la orden de compra."
             })
 
-        if not detalles:
+        if detalles == [] or (self.instance is None and not detalles):
             raise serializers.ValidationError({
                 "detalles": "Debes agregar al menos un producto."
             })
@@ -258,9 +258,11 @@ class FacturaSerializer(serializers.ModelSerializer):
                 )
             })
 
+        self.validar_orden_disponible(orden)
+
         ids_productos = [
             detalle["id_producto"].pk
-            for detalle in detalles
+            for detalle in (detalles or [])
         ]
 
         if len(ids_productos) != len(set(ids_productos)):
@@ -272,9 +274,31 @@ class FacturaSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    def validar_orden_disponible(self, orden):
+        facturas = Factura.objects.filter(id_orden_compra=orden)
+        if self.instance is not None:
+            facturas = facturas.exclude(pk=self.instance.pk)
+        if facturas.exists():
+            raise serializers.ValidationError({
+                "id_oc": "Esta orden de compra ya tiene una factura asociada."
+            })
+
+    def guardar_detalles(self, factura, detalles):
+        for detalle in detalles:
+            DetalleFactura.objects.create(
+                id_factura=factura,
+                id_producto=detalle["id_producto"],
+                descripcion_df=detalle["id_producto"].nombre[:200],
+                cantidad=detalle["cantidad"],
+                precio_unitario=detalle["precio_unitario"],
+                subtotal_df=(detalle["cantidad"] * detalle["precio_unitario"]).quantize(Decimal("0.01")),
+            )
+
     @transaction.atomic
     def create(self, validated_data):
         detalles_data = validated_data.pop("detalles", [])
+        orden = OrdenCompra.objects.select_for_update().get(pk=validated_data["id_orden_compra"].pk)
+        self.validar_orden_disponible(orden)
 
         validated_data["ruta_pdf_factura"] = (
             validated_data.get("ruta_pdf_factura") or ""
@@ -298,36 +322,25 @@ class FacturaSerializer(serializers.ModelSerializer):
         factura.numero_factura = numero
         factura.save(update_fields=["numero_factura"])
 
-        
-        for detalle in detalles_data:
-            producto = detalle["id_producto"]
-            cantidad = detalle["cantidad"]
-            precio_unitario = detalle["precio_unitario"]
-
-            descripcion = (
-                getattr(producto, "nombre_producto", None)
-                or str(producto)
-            )[:200]
-
-            subtotal_detalle = (
-                cantidad * precio_unitario
-            ).quantize(Decimal("0.01"))
-
-            DetalleFactura.objects.create(
-                id_factura=factura,
-                id_producto=producto,
-                descripcion_df=descripcion,
-                cantidad=cantidad,
-                precio_unitario=precio_unitario,
-                subtotal_df=subtotal_detalle,
-            )
-
+        self.guardar_detalles(factura, detalles_data)
         factura.recalcular_totales()
         factura.refresh_from_db()
         return factura
 
-
+    @transaction.atomic
+    def update(self, instance, validated_data):
+        detalles = validated_data.pop("detalles", None)
+        orden = validated_data.get("id_orden_compra", instance.id_orden_compra)
+        OrdenCompra.objects.select_for_update().get(pk=orden.pk)
+        self.validar_orden_disponible(orden)
+        factura = Factura.objects.select_for_update().get(pk=instance.pk)
+        for field, value in validated_data.items():
+            setattr(factura, field, value)
+        factura.ruta_pdf_factura = ""
+        factura.save()
+        if detalles is not None:
+            factura.detalles.all().delete()
+            self.guardar_detalles(factura, detalles)
         factura.recalcular_totales()
         factura.refresh_from_db()
-
         return factura

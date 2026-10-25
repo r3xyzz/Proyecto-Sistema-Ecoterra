@@ -11,7 +11,7 @@ import {
   authHeaders,
 } from "../shared"
 
-type Invoice = {
+export type Invoice = {
   id: string
   oc: string
   cliente: string
@@ -41,6 +41,7 @@ type OrdenAPI = {
   id_oc: number | string
   id_cliente: number | string | ClienteOrdenAPI
   numero_oc?: string
+  cliente_nombre?: string
   id_cotizacion?: number | string
   fecha_orden?: string
   fecha_oc?: string
@@ -56,6 +57,7 @@ type DetalleForm = {
 type FacturacionProps = {
   facturas: Invoice[]
   authUser: AuthUser | null
+  onCreated: (invoice: Invoice) => void
 }
 
 const estadoLegible = (estado: string) => {
@@ -123,6 +125,7 @@ const obtenerNombreCliente = (
 ): string => {
   if (!orden) return ""
 
+  if (orden.cliente_nombre) return orden.cliente_nombre
   const cliente = orden.id_cliente
 
   if (typeof cliente === "object" && cliente !== null) {
@@ -139,6 +142,7 @@ const obtenerNombreCliente = (
 export default function Facturacion({
   facturas,
   authUser,
+  onCreated,
 }: FacturacionProps) {
   const [invoices, setInvoices] = useState<Invoice[]>(facturas)
   const [preview, setPreview] = useState<Invoice | null>(null)
@@ -496,6 +500,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
           (item) => item.id !== facturaCreada.id,
         ),
       ])
+      onCreated(facturaCreada)
 
       setPreview(facturaCreada)
       setShowNew(false)
