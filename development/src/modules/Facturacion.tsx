@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from "react"
+import { getDocumentPdfUrl } from "../documentPdf"
 import {
   Badge,
   fmtCLP,
@@ -329,6 +330,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
   }
 
   printWindow.document.title = `Factura ${invoice.id}`
+  printWindow.opener = null
   printWindow.document.body.textContent = "Cargando PDF..."
 
   try {
@@ -373,28 +375,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
       throw new Error("No se encontró el ID interno de la factura.")
     }
 
-    // Obtener la URL firmada del PDF almacenado en Supabase.
-    const respuestaPDF = await fetch(
-      `/api/facturas/${facturaId}/pdf/`,
-      { headers },
-    )
-
-    const datosPDF = await respuestaPDF
-      .json()
-      .catch(() => null)
-
-    if (!respuestaPDF.ok) {
-      throw new Error(
-        errorDeRespuesta(datosPDF, respuestaPDF.status),
-      )
-    }
-
-    if (!datosPDF?.url) {
-      throw new Error("El backend no devolvió la URL del PDF.")
-    }
-
-    // Abrir el documento real en la ventana emergente.
-    printWindow.location.href = datosPDF.url
+    printWindow.location.href = await getDocumentPdfUrl(`/api/facturas/${facturaId}`, authUser)
   } catch (error) {
     printWindow.close()
 

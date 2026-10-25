@@ -1,5 +1,6 @@
 // cotizaciones.tsx
 import React, { useState, useEffect } from "react"
+import { getDocumentPdfUrl } from "../documentPdf"
 import { AuthUser, authHeaders, Badge, fmtCLP, I, Ico, PageTitle, Product } from "../shared"
 
 
@@ -104,6 +105,18 @@ export default function Cotizaciones({
 }) {
 
   const [show, setShow] = useState(false)
+  const downloadQuotePdf = async (quote: Quote) => {
+    const tab = window.open("about:blank", "_blank")
+    if (!tab) { alert("Permite las ventanas emergentes para abrir el PDF."); return }
+    tab.opener = null
+    tab.document.body.textContent = "Consultando documento..."
+    try {
+      tab.location.href = await getDocumentPdfUrl(`/api/cotizaciones/${quote.idCotizacion}`, authUser)
+    } catch (error) {
+      tab.close()
+      alert(error instanceof Error ? error.message : "No se pudo abrir el PDF.")
+    }
+  }
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [preview, setPreview] = useState<Quote | null>(null)
   const [detail, setDetail] = useState<QuoteDetail | null>(null)
@@ -475,6 +488,7 @@ const linkOrder = async () => {
 
       await reloadCotizaciones()
       closeQuoteForm()
+      return result
     } catch (error) {
       console.error("Error de red:", error)
       alert("No se pudo conectar con el backend.")
@@ -595,10 +609,7 @@ const linkOrder = async () => {
                             className="btn btn-ghost btn-sm"
                             title="Descargar PDF"
                             aria-label={`Descargar PDF ${quote.id}`}
-                            onClick={async () => {
-                              await openPreview(quote)
-                              window.setTimeout(() => window.print(), 500)
-                            }}
+                            onClick={() => downloadQuotePdf(quote)}
                           >
                             <Ico p={I.download} size={13} />
                           </button>
@@ -861,7 +872,20 @@ const linkOrder = async () => {
               >
                 <Ico p={I.check} size={14} /> {editQuoteId ? "Guardar cambios" : "Guardar borrador"}
               </button>
-              <button className="btn btn-ghost" onClick={() => window.print()}>
+              <button className="btn btn-ghost" onClick={async () => {
+                const tab = window.open("about:blank", "_blank")
+                if (!tab) { alert("Permite las ventanas emergentes para abrir el PDF."); return }
+                tab.opener = null
+                tab.document.body.textContent = "Guardando cotización y generando PDF..."
+                try {
+                  const saved = await saveQuote()
+                  if (!saved) { tab.close(); return }
+                  tab.location.href = await getDocumentPdfUrl(`/api/cotizaciones/${saved.id_cotizacion}`, authUser)
+                } catch (error) {
+                  tab.close()
+                  alert(error instanceof Error ? error.message : "No se pudo abrir el PDF.")
+                }
+              }}>
                 <Ico p={I.download} size={14} /> Exportar PDF
               </button>
               <button
@@ -903,7 +927,7 @@ const linkOrder = async () => {
                 </h2>
               </div>
               <div style={{ display: "flex", gap: "10px" }}>
-                <button className="btn btn-ghost btn-sm" onClick={() => window.print()}>
+                <button className="btn btn-ghost btn-sm" onClick={() => downloadQuotePdf(preview)}>
                   <Ico p={I.download} size={14} /> Imprimir / PDF
                 </button>
                 <button onClick={() => setPreview(null)} className="cotizaciones-modal-close" style={{ position: "static" }}>

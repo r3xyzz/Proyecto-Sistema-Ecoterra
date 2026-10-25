@@ -3,9 +3,21 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 
 from .models import Cliente, Direccion
+from usuarios.models import Usuario
+from usuarios.authentication import crear_token
+from config.test_support import SalesTablesMixin
 
 
-class ClienteModelTests(TestCase):
+class ClienteModelTests(SalesTablesMixin, TestCase):
+    def authenticated_api(self):
+        user, _ = Usuario.objects.get_or_create(
+            email="cliente-tests@example.com",
+            defaults={"nombre": "Admin de pruebas", "id_rol": 1, "activo": True},
+        )
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {crear_token(user)}")
+        return api
+
     def test_cliente_puede_tener_varias_direcciones(self):
         cliente = Cliente.objects.create(
             rut="76.123.456-7",
@@ -99,14 +111,14 @@ class ClienteModelTests(TestCase):
             principal=True,
         )
 
-        response = APIClient().get("/api/clientes/")
+        response = self.authenticated_api().get("/api/clientes/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data[0]["rut"], "77.123.456-1")
         self.assertEqual(response.data[0]["direcciones"][0]["nombre"], "Oficina central")
 
     def test_endpoint_api_crea_y_elimina_cliente(self):
-        api = APIClient()
+        api = self.authenticated_api()
 
         create_response = api.post(
             "/api/clientes/",
@@ -133,7 +145,7 @@ class ClienteModelTests(TestCase):
         self.assertFalse(Cliente.objects.filter(id=cliente_id).exists())
 
     def test_endpoint_api_normaliza_y_acepta_rut_valido(self):
-        response = APIClient().post(
+        response = self.authenticated_api().post(
             "/api/clientes/",
             {
                 "rut": "11.111.111-1",
@@ -149,7 +161,7 @@ class ClienteModelTests(TestCase):
         self.assertEqual(response.data["rut"], "11111111-1")
 
     def test_endpoint_api_rechaza_rut_invalido(self):
-        response = APIClient().post(
+        response = self.authenticated_api().post(
             "/api/clientes/",
             {
                 "rut": "11.111.111-2",
@@ -163,7 +175,7 @@ class ClienteModelTests(TestCase):
         self.assertEqual(response.data["rut"][0], "Ingresa un RUT chileno válido.")
 
     def test_endpoint_api_rechaza_correo_invalido(self):
-        response = APIClient().post(
+        response = self.authenticated_api().post(
             "/api/clientes/",
             {
                 "rut": "11.111.111-1",
@@ -184,7 +196,7 @@ class ClienteModelTests(TestCase):
             ciudad="Santiago",
         )
 
-        response = APIClient().patch(
+        response = self.authenticated_api().patch(
             f"/api/clientes/{cliente.id}/",
             {
                 "razon_social": "Cliente Actualizado",
@@ -201,7 +213,7 @@ class ClienteModelTests(TestCase):
         self.assertEqual(cliente.ciudad, "Concepción")
 
     def test_endpoint_api_gestiona_direcciones_de_cliente(self):
-        api = APIClient()
+        api = self.authenticated_api()
         cliente = Cliente.objects.create(
             rut="79.654.321-0",
             razon_social="Cliente con Direcciones",
@@ -247,7 +259,7 @@ class ClienteModelTests(TestCase):
         self.assertFalse(Direccion.objects.filter(id=address_id).exists())
 
     def test_endpoint_api_explica_direccion_principal_duplicada(self):
-        api = APIClient()
+        api = self.authenticated_api()
         cliente = Cliente.objects.create(
             rut="79.765.432-1",
             razon_social="Cliente Principal",
