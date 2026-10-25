@@ -2,6 +2,7 @@
 
 import os
 import logging
+from uuid import uuid4
 from io import BytesIO
 from decimal import Decimal
 from xml.sax.saxutils import escape
@@ -207,7 +208,7 @@ def generar_pdf_factura(factura):
     )
 
     tabla.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F5135")),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#DBEADD")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D0D7D2")),
@@ -342,14 +343,14 @@ class FacturaViewSet(viewsets.ModelViewSet):
             cliente_supabase = obtener_cliente_supabase()
             bucket = obtener_nombre_bucket()
 
-            ruta_storage = f"facturas/{factura.numero_factura}.pdf"
+            ruta_storage = f"facturas/{factura.pk}/{uuid4().hex}.pdf"
 
             cliente_supabase.storage.from_(bucket).upload(
                 ruta_storage,
                 contenido_pdf,
                 file_options={
                     "content-type": "application/pdf",
-                    "upsert": "true",
+                    "upsert": "false",
                 },
             )
 
@@ -433,14 +434,13 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 )
                 url_firmada = base_url.rstrip("/") + url_firmada
 
-            return Response(
-                {
-                    "numero_factura": factura.numero_factura,
-                    "url": url_firmada,
-                    "expira_en_segundos": 300,
-                },
-                status=status.HTTP_200_OK,
-            )
+            response = Response({
+                "numero_factura": factura.numero_factura,
+                "url": url_firmada,
+                "expira_en_segundos": 300,
+            })
+            response["Cache-Control"] = "no-store"
+            return response
 
         except Exception:
             return Response(
@@ -483,7 +483,8 @@ class FacturaViewSet(viewsets.ModelViewSet):
             )
 
         factura.estado = nuevo_estado
-        factura.save(update_fields=["estado"])
+        factura.ruta_pdf_factura = ""
+        factura.save(update_fields=["estado", "ruta_pdf_factura"])
 
         return Response(
             FacturaSerializer(factura).data,

@@ -1,4 +1,10 @@
 from rest_framework import viewsets
+import logging
+from uuid import uuid4
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from facturacion.views import obtener_cliente_supabase, obtener_nombre_bucket
+from .pdf import generar_pdf_cotizacion
 from usuarios.permissions import PermisoModulo
 from .models import Cotizacion, DetalleCotizacion
 from .serializers import CotizacionSerializer, DetalleCotizacionSerializer
@@ -18,6 +24,43 @@ class CotizacionViewSet(viewsets.ModelViewSet):
         "PATCH": ("cotizaciones", "Editar"),
         "DELETE": ("cotizaciones", "Eliminar"),
     }
+
+    def perform_update(self, serializer):
+        serializer.save(ruta_pdf_cotizacion="")
+
+    @action(detail=True, methods=["post"], url_path="generar-pdf")
+    def generar_pdf(self, request, pk=None):
+        cotizacion = self.get_object()
+        # Se conserva cada versión; un fallo al guardar la asociación no pisa el PDF anterior.
+        path = f"cotizaciones/{cotizacion.pk}/{uuid4().hex}.pdf"
+        try:
+            bucket = obtener_cliente_supabase().storage.from_(obtener_nombre_bucket())
+            bucket.upload(path, generar_pdf_cotizacion(cotizacion),
+                          file_options={"content-type": "application/pdf", "upsert": "false"})
+            cotizacion.ruta_pdf_cotizacion = path
+            cotizacion.save(update_fields=["ruta_pdf_cotizacion"])
+            return Response({"ruta_pdf_cotizacion": path})
+        except Exception:
+            logging.getLogger(__name__).exception("Error al guardar PDF de cotización")
+            return Response({"error": "No se pudo generar o almacenar el PDF. Revisa Storage y los registros del backend."}, status=502)
+
+    @action(detail=True, methods=["get"], url_path="pdf")
+    def obtener_pdf(self, request, pk=None):
+        cotizacion = self.get_object()
+        if not cotizacion.ruta_pdf_cotizacion:
+            return Response({"error": "Primero debes generar el PDF."}, status=404)
+        try:
+            bucket = obtener_cliente_supabase().storage.from_(obtener_nombre_bucket())
+            result = bucket.create_signed_url(cotizacion.ruta_pdf_cotizacion, 300)
+            url = result.get("signedURL") or result.get("signedUrl")
+            if not url:
+                raise RuntimeError("Storage no devolvió un enlace")
+            response = Response({"url": url, "expira_en_segundos": 300})
+            response["Cache-Control"] = "no-store"
+            return response
+        except Exception:
+            logging.getLogger(__name__).exception("Error al consultar PDF de cotización")
+            return Response({"error": "No se pudo consultar el documento almacenado."}, status=502)
 
 
 class DetalleCotizacionViewSet(viewsets.ModelViewSet):

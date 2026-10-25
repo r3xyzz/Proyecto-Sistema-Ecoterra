@@ -156,9 +156,7 @@ class FacturaSerializer(serializers.ModelSerializer):
     )
 
     ruta_pdf_factura = serializers.CharField(
-        required=False,
-        allow_blank=True,
-        default="",
+        read_only=True,
     )
 
     class Meta:

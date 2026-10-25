@@ -1,0 +1,45 @@
+Creating test database for alias 'default'...
+
+.......................F......F..F..........F.......
+======================================================================
+FAIL: test_07_product_name_is_returned_in_detail (facturacion.tests.FacturacionAcceptanceTests.test_07_product_name_is_returned_in_detail)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\benja\Downloads\Proyecto-Sistema-Ecoterra\backend\facturacion\tests.py", line 97, in test_07_product_name_is_returned_in_detail
+    self.assertEqual(response.data["detalles_factura"][0]["producto_nombre"], self.product.nombre)
+AssertionError: '' != 'Pol�mero agr�cola'
++ Pol�mero agr�cola
+
+
+======================================================================
+FAIL: test_14_zero_price_matches_model_and_frontend_rule (facturacion.tests.FacturacionAcceptanceTests.test_14_zero_price_matches_model_and_frontend_rule)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\benja\Downloads\Proyecto-Sistema-Ecoterra\backend\facturacion\tests.py", line 136, in test_14_zero_price_matches_model_and_frontend_rule
+    self.assertEqual(self.create().status_code, 400)
+AssertionError: 201 != 400
+
+======================================================================
+FAIL: test_17_one_invoice_per_order (facturacion.tests.FacturacionAcceptanceTests.test_17_one_invoice_per_order)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\benja\Downloads\Proyecto-Sistema-Ecoterra\backend\facturacion\tests.py", line 158, in test_17_one_invoice_per_order
+    self.assertIn(response.status_code, (400, 409))
+AssertionError: 201 not found in (400, 409)
+
+======================================================================
+FAIL: test_28_general_patch_of_details_does_not_return_500 (facturacion.tests.FacturacionAcceptanceTests.test_28_general_patch_of_details_does_not_return_500)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\benja\Downloads\Proyecto-Sistema-Ecoterra\backend\facturacion\tests.py", line 236, in test_28_general_patch_of_details_does_not_return_500
+    self.assertLess(response.status_code, 500)
+AssertionError: 500 not less than 500
+
+----------------------------------------------------------------------
+Ran 52 tests in 0.566s
+
+FAILED (failures=4)
+Destroying test database for alias 'default'...
+
+Found 52 test(s).
+System check identified no issues (0 silenced).
