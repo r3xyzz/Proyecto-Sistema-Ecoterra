@@ -226,3 +226,4 @@ class DetalleFactura(models.Model):
     
     def __str__(self):
         return f"Detalle {self.id} - {self.id_producto} x {self.cantidad}"
+
