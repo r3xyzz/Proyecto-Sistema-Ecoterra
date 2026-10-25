@@ -296,6 +296,13 @@ class FacturaViewSet(viewsets.ModelViewSet):
         "DELETE": ("facturacion", "Eliminar"),
     }
 
+    def update(self, request, *args, **kwargs):
+        try:
+            return super().update(request, *args, **kwargs)
+        except IntegrityError:
+            return Response({"error": "No se pudo actualizar la factura. Revisa la asociación con la orden de compra."},
+                            status=status.HTTP_409_CONFLICT)
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

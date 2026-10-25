@@ -923,7 +923,12 @@ export default function App() {
         onOrdenesChange={reloadOrdenes}
       />
     ),
-    facturacion: <Facturacion facturas={facturas} authUser={authUser} />,
+    facturacion: <Facturacion facturas={facturas} authUser={authUser} onCreated={(invoice) => {
+      setFacturas((current) => [
+        { ...invoice, total: invoice.total ?? invoice.subtotal + invoice.iva, venc: invoice.fecha },
+        ...current.filter((item) => item.id !== invoice.id),
+      ])
+    }} />,
     nc: <NotasCredito facturas={facturas} />,
     ia: <IaPanel productos={productos} />,
     usuarios: (

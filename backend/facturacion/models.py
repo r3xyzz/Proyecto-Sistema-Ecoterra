@@ -70,7 +70,7 @@ class Factura(models.Model):
         db_column="id_factura",
     )
 
-    id_orden_compra = models.ForeignKey(
+    id_orden_compra = models.OneToOneField(
         OrdenCompra,
         on_delete=models.PROTECT,
         db_column="id_oc",

@@ -233,4 +233,64 @@ class FacturacionAcceptanceTests(SalesTablesMixin, TestCase):
         api = APIClient(raise_request_exception=False)
         api.credentials(HTTP_AUTHORIZATION=f"Bearer {crear_token(self.admin)}")
         response = api.patch(f"/api/facturas/{invoice.pk}/", self.payload, format="json")
-        self.assertLess(response.status_code, 500)
+        self.assertEqual(response.status_code, 200, response.data)
+
+    def test_29_patch_details_only_replaces_lines_and_recalculates(self):
+        invoice = self.invoice()
+        invoice.ruta_pdf_factura = "previous.pdf"
+        invoice.save(update_fields=["ruta_pdf_factura"])
+        response = self.api.patch(f"/api/facturas/{invoice.pk}/", {"detalles": [
+            {"id_producto": self.second_product.pk, "cantidad": "1.5", "precio_unitario": "200"},
+        ]}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.detalles.count(), 1)
+        self.assertEqual(invoice.detalles.get().id_producto_id, self.second_product.pk)
+        self.assertEqual((invoice.subtotal, invoice.iva, invoice.total),
+                         (Decimal("300"), Decimal("57"), Decimal("357")))
+        self.assertEqual(invoice.ruta_pdf_factura, "")
+
+    def test_30_patch_empty_details_preserves_previous_lines(self):
+        invoice = self.invoice()
+        response = self.api.patch(f"/api/facturas/{invoice.pk}/", {"detalles": []}, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(invoice.detalles.count(), 1)
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.total, Decimal("2380"))
+
+    def test_31_patch_cannot_take_another_invoices_order(self):
+        first = self.invoice()
+        order = OrdenCompra.objects.create(id_cliente=self.customer, numero_oc="OC-QA-OTHER",
+            fecha_orden=date(2026, 10, 25), ruta_documento_oc="")
+        self.payload["id_oc"] = order.pk
+        second = self.invoice()
+        response = self.api.patch(f"/api/facturas/{second.pk}/", {"id_oc": first.id_orden_compra_id}, format="json")
+        self.assertEqual(response.status_code, 400)
+        second.refresh_from_db()
+        self.assertEqual(second.id_orden_compra_id, order.pk)
+
+    def test_32_update_rollback_restores_details_and_pdf(self):
+        invoice = self.invoice()
+        invoice.ruta_pdf_factura = "previous.pdf"
+        invoice.save(update_fields=["ruta_pdf_factura"])
+        with patch("facturacion.serializers.DetalleFactura.objects.create", side_effect=IntegrityError("test")):
+            response = self.api.patch(f"/api/facturas/{invoice.pk}/", {"detalles": self.payload["detalles"]}, format="json")
+        self.assertEqual(response.status_code, 409)
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.ruta_pdf_factura, "previous.pdf")
+        self.assertEqual(invoice.detalles.count(), 1)
+        self.assertEqual(invoice.total, Decimal("2380"))
+
+    def test_33_header_only_patch_keeps_details(self):
+        invoice = self.invoice()
+        response = self.api.patch(f"/api/facturas/{invoice.pk}/", {}, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(invoice.detalles.count(), 1)
+
+    def test_34_put_replaces_details(self):
+        invoice = self.invoice()
+        self.payload["detalles"][0]["cantidad"] = "3"
+        response = self.api.put(f"/api/facturas/{invoice.pk}/", self.payload, format="json")
+        self.assertEqual(response.status_code, 200, response.data)
+        invoice.refresh_from_db()
+        self.assertEqual(invoice.total, Decimal("3570"))
