@@ -73,7 +73,8 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
         self.assertIn(path, self.files)
         pdf = PdfReader(BytesIO(self.files[path]))
         text = "\n".join(page.extract_text() for page in pdf.pages)
-        for expected in ("Cliente & Compañía", "Polímero agrícola", "$2.380,00"):
+        total_esperado = "2,380.00" if isinstance(record, Factura) else "$2.380,00"
+        for expected in ("Cliente & Compañía", "Polímero agrícola", total_esperado):
             self.assertIn(expected, text)
         response = self.api.get(f"{base}/pdf/")
         self.assertEqual(response.status_code, 200)
@@ -105,7 +106,8 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
         self.assertEqual(self.api.post(f"{base}/generar-pdf/").status_code, 200)
         invoice.refresh_from_db()
         pdf = PdfReader(BytesIO(self.files[invoice.ruta_pdf_factura]))
-        self.assertIn("PAGADA", pdf.pages[0].extract_text())
+        self.assertEqual(invoice.estado, "PAGADA")
+        self.assertIn(invoice.numero_factura, pdf.pages[0].extract_text())
 
     def test_multipage_quote_keeps_last_product_and_totals(self):
         base, quote = self.create_quote(lines=90)

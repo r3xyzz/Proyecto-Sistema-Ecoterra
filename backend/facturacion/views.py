@@ -17,6 +17,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from reportlab.lib.utils import ImageReader  
+from reportlab.platypus import Image          
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -89,177 +91,281 @@ def formato_moneda(valor):
     return f"${texto}"
 
 
+def _num(valor):
+    """Formato de la plantilla: 6,049.44"""
+    return f"{Decimal(str(valor or 0)):,.2f}"
+
+
+def _logo_proporcional(ruta, ancho_max, alto_max):
+    """Carga el logo sin deformarlo, ajustado a un recuadro máximo."""
+    ancho, alto = ImageReader(ruta).getSize()
+    escala = min(ancho_max / ancho, alto_max / alto)
+    return Image(ruta, width=ancho * escala, height=alto * escala, hAlign="LEFT")
+
+
 def generar_pdf_factura(factura):
     """
-    Genera un PDF en memoria con los datos reales de la factura.
-    No crea ni modifica la factura ni sus detalles.
+    Genera el PDF de la factura replicando la plantilla Ecoterra (Invoice):
+    un único marco exterior con logo, encabezado, cliente, tabla de ítems
+    con columnas verticales, totales y recuadro de observaciones.
     """
     buffer = BytesIO()
-
-    documento = SimpleDocTemplate(
+    doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=18 * mm,
-        leftMargin=18 * mm,
-        topMargin=18 * mm,
-        bottomMargin=18 * mm,
-        title=f"Factura {factura.numero_factura}",
-        author="Sistema Ecoterra",
+        rightMargin=10 * mm,
+        leftMargin=10 * mm,
+        topMargin=10 * mm,
+        bottomMargin=10 * mm,
     )
 
-    estilos = getSampleStyleSheet()
+    # ---------------- ESTILOS ----------------
+    base = getSampleStyleSheet()["Normal"]
 
-    titulo = ParagraphStyle(
-        "TituloFactura",
-        parent=estilos["Title"],
-        alignment=TA_CENTER,
-        fontSize=19,
-        leading=24,
-        textColor=colors.HexColor("#1F5135"),
-        spaceAfter=12,
-    )
+    def est(nombre, **kw):
+        params = dict(parent=base, fontName="Helvetica", fontSize=7, leading=8.5)
+        params.update(kw)
+        return ParagraphStyle(nombre, **params)
 
-    texto_normal = ParagraphStyle(
-        "TextoFactura",
-        parent=estilos["Normal"],
-        fontSize=9,
-        leading=13,
-    )
+    s_txt = est("txt")
+    s_bold = est("bold", fontName="Helvetica-Bold")
+    s_head = est("head", fontName="Helvetica-Bold", alignment=TA_CENTER)
+    s_center = est("center", alignment=TA_CENTER)
+    s_right = est("right", alignment=TA_RIGHT)
+    s_empresa = est("empresa", fontName="Times-Bold", fontSize=13, leading=15)
+    s_invoice = est("invoice", fontName="Times-Bold", fontSize=12, leading=14)
+    s_inv_num = est("invnum", fontName="Times-Roman", fontSize=12, leading=14)
+    s_fecha_lbl = est("fechalbl", fontName="Times-Bold", fontSize=6.5)
+    s_cli_lbl = est("clilbl", fontName="Times-Bold", fontSize=6.5)
+    s_cli = est("cli", fontName="Times-Roman", fontSize=8, leading=9.5)
+    s_cli_dir = est("clidir", fontName="Times-Roman", fontSize=5.5, leading=7)
+    s_contacto = est("contacto", fontName="Times-Roman", fontSize=7, leading=10)
+    s_valor = est("valor", fontSize=7, leading=10)
 
-    texto_derecha = ParagraphStyle(
-        "TextoDerecha",
-        parent=texto_normal,
-        alignment=TA_RIGHT,
-    )
-
-    texto_centro = ParagraphStyle(
-        "TextoCentro",
-        parent=texto_normal,
-        alignment=TA_CENTER,
-    )
-
-    elementos = [
-        Paragraph("FACTURA", titulo),
-        Paragraph(
-            f"<b>Número:</b> {escape(str(factura.numero_factura))}",
-            texto_normal,
-        ),
-        Paragraph(
-            f"<b>Fecha de emisión:</b> "
-            f"{factura.fecha_emision.strftime('%d-%m-%Y')}",
-            texto_normal,
-        ),
-        Paragraph(
-            f"<b>Estado:</b> {escape(str(factura.estado))}",
-            texto_normal,
-        ),
-        Spacer(1, 8 * mm),
-        Paragraph("DATOS DEL CLIENTE", estilos["Heading2"]),
-        Paragraph(
-            escape(str(
-                getattr(factura.id_cliente, "razon_social", "")
-                or "Cliente"
-            )),
-            texto_normal,
-        ),
-        Spacer(1, 5 * mm),
+    # ---------------- DATOS ----------------
+    cliente = factura.id_cliente
+    razon_social = escape(str(getattr(cliente, "razon_social", "") or "Cliente"))
+    partes_dir = [
+        getattr(cliente, "direccion", ""),
+        getattr(cliente, "ciudad", ""),
+        getattr(cliente, "pais", "") or "Chile",
     ]
+    direccion = escape(" - ".join(str(p) for p in partes_dir if p).upper())
+    telefono = escape(str(getattr(cliente, "telefono", "") or ""))
+    email = escape(str(getattr(cliente, "email", "") or ""))
 
-    orden = factura.id_orden_compra
-    numero_oc = getattr(orden, "numero_oc", None) or orden.pk
+    f = factura.fecha_emision
+    fecha_txt = f"{f.month}/{f.day}/{f.year}"  # 5/24/2024 como en la plantilla
 
-    elementos.extend([
-        Paragraph("ORDEN DE COMPRA", estilos["Heading2"]),
-        Paragraph(
-            f"Número de orden: {escape(str(numero_oc))}",
-            texto_normal,
-        ),
-        Spacer(1, 6 * mm),
-        Paragraph("DETALLE DE PRODUCTOS", estilos["Heading2"]),
-        Spacer(1, 2 * mm),
-    ])
+    # Rejilla de 7 columnas (suman 190 mm).
+    # La columna DESCRIPTION de la tabla = columnas 2 y 3 combinadas.
+    col_w = [11 * mm, 17 * mm, 70 * mm, 34 * mm, 20 * mm, 20 * mm, 18 * mm]
+    ULT = 6
 
-    detalles = factura.detalles.select_related("id_producto").all()
+    rows, alturas, cmds = [], [], []
 
-    datos_tabla = [[
-        Paragraph("<b>Producto / descripción</b>", texto_normal),
-        Paragraph("<b>Cantidad</b>", texto_centro),
-        Paragraph("<b>Precio unitario</b>", texto_derecha),
-        Paragraph("<b>Subtotal</b>", texto_derecha),
-    ]]
+    def fila(celdas, alto):
+        rows.append(celdas + [""] * (7 - len(celdas)))
+        alturas.append(alto * mm)
+        return len(rows) - 1
 
-    for detalle in detalles:
-        descripcion = (
-            getattr(detalle, "descripcion_df", None)
-            or getattr(detalle.id_producto, "nombre_producto", None)
-            or str(detalle.id_producto)
+    # ---------------- 0. LOGO ----------------
+    logo_path = os.path.join(settings.BASE_DIR, "static", "logo.png")
+    if os.path.exists(logo_path):
+        logo = _logo_proporcional(logo_path, 110 * mm, 19 * mm)
+    else:
+        logger.warning("No se encontró el logo en %s", logo_path)
+        logo = Paragraph(
+            '<font size="24" color="#009933"><b>Eco</b></font>'
+            '<font size="24" color="#333333"><b>Terra</b></font>',
+            s_txt,
         )
-
-        datos_tabla.append([
-            Paragraph(escape(str(descripcion)), texto_normal),
-            Paragraph(str(detalle.cantidad), texto_centro),
-            Paragraph(formato_moneda(detalle.precio_unitario), texto_derecha),
-            Paragraph(formato_moneda(detalle.subtotal_df), texto_derecha),
-        ])
-
-    tabla = Table(
-        datos_tabla,
-        colWidths=[83 * mm, 22 * mm, 32 * mm, 32 * mm],
-        repeatRows=1,
-    )
-
-    tabla.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#DBEADD")),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#D0D7D2")),
-        ("LEFTPADDING", (0, 0), (-1, -1), 6),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-        ("TOPPADDING", (0, 0), (-1, -1), 7),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-    ]))
-
-    elementos.extend([
-        tabla,
-        Spacer(1, 8 * mm),
-    ])
-
-    resumen = [
-        ["Subtotal:", formato_moneda(factura.subtotal)],
-        ["IVA (19%):", formato_moneda(factura.iva)],
-        ["TOTAL:", formato_moneda(factura.total)],
+    r = fila([logo], 23)
+    cmds += [
+        ("SPAN", (0, r), (ULT, r)),
+        ("VALIGN", (0, r), (ULT, r), "MIDDLE"),
+        ("LEFTPADDING", (0, r), (0, r), 3 * mm),
+        ("LINEBELOW", (0, r), (ULT, r), 0.7, colors.black),
     ]
 
-    tabla_resumen = Table(
-        [
-            [
-                Paragraph(
-                    f"<b>{etiqueta}</b>",
-                    texto_derecha,
-                ),
-                Paragraph(
-                    f"<b>{valor}</b>" if etiqueta == "TOTAL:" else valor,
-                    texto_derecha,
-                ),
-            ]
-            for etiqueta, valor in resumen
-        ],
-        colWidths=[130 * mm, 39 * mm],
+    # ---------------- 1-2. EMPRESA / INVOICE / FECHA ----------------
+    r = fila(
+        [Paragraph("Ecoterra LLC.", s_empresa), "", "", "",
+         Paragraph("Invoice", s_invoice), Paragraph(escape(str(factura.numero_factura)), s_inv_num), ""],
+        9,
     )
+    cmds += [
+        ("SPAN", (0, r), (3, r)),
+        ("SPAN", (5, r), (6, r)),
+        ("VALIGN", (0, r), (ULT, r), "BOTTOM"),
+    ]
+    r = fila(
+        [Paragraph("600 CLEVELAND STREET STE 393 OFC 665", s_txt), "", "", "",
+         Paragraph("Fecha:", s_fecha_lbl), Paragraph(fecha_txt, s_txt), ""],
+        8,
+    )
+    cmds += [
+        ("SPAN", (0, r), (3, r)),
+        ("SPAN", (5, r), (6, r)),
+        ("VALIGN", (0, r), (ULT, r), "MIDDLE"),
+        ("LINEBELOW", (0, r), (ULT, r), 0.7, colors.black),
+    ]
 
-    tabla_resumen.setStyle(TableStyle([
-        ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
-        ("LINEABOVE", (0, 2), (-1, 2), 1, colors.HexColor("#1F5135")),
-        ("TOPPADDING", (0, 0), (-1, -1), 5),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-    ]))
+    # ---------------- 3-4. CLIENTE / CONTACTO ----------------
+    r_cli = fila([Paragraph("Cliente:", s_cli_lbl)], 5.5)
+    cmds += [
+        ("SPAN", (0, r_cli), (2, r_cli)),
+        ("SPAN", (3, r_cli), (ULT, r_cli)),
+        ("VALIGN", (0, r_cli), (ULT, r_cli), "TOP"),
+    ]
+    r = fila(
+        [[Paragraph(razon_social, s_cli), Paragraph(direccion, s_cli_dir)], "", "",
+         Paragraph("FONO:<br/>MAIL:", s_contacto),
+         Paragraph(f"{telefono}<br/>{email}", s_valor), "", ""],
+        14,
+    )
+    cmds += [
+        ("SPAN", (0, r), (2, r)),
+        ("SPAN", (4, r), (ULT, r)),
+        ("VALIGN", (0, r), (ULT, r), "TOP"),
+        ("TOPPADDING", (0, r), (ULT, r), 2.5 * mm),
+        ("LEFTPADDING", (3, r), (3, r), 18 * mm),
+        ("LINEAFTER", (2, r_cli), (2, r), 0.7, colors.black),
+        ("LINEBELOW", (0, r), (ULT, r), 0.7, colors.black),
+    ]
 
-    elementos.append(tabla_resumen)
+    # ---------------- 5. TEXTO INTRODUCTORIO ----------------
+    r = fila(
+        [Paragraph("De acuerdo a lo solicitado, nos es grato cotizarles lo siguiente :", s_bold)],
+        4.2,
+    )
+    cmds += [
+        ("SPAN", (0, r), (ULT, r)),
+        ("VALIGN", (0, r), (ULT, r), "MIDDLE"),
+        ("LINEBELOW", (0, r), (ULT, r), 0.7, colors.black),
+    ]
 
-    documento.build(elementos)
+    # ---------------- 6. CABECERA DE LA TABLA ----------------
+    r_head = fila(
+        [Paragraph("ITEM", s_head), Paragraph("CODE", s_head),
+         Paragraph("DESCRIPTION", s_head), "",
+         Paragraph("QUANTITY", s_head), Paragraph("UNIT PRICE", s_head),
+         Paragraph("AMOUNT", s_head)],
+        4.2,
+    )
+    cmds += [
+        ("SPAN", (2, r_head), (3, r_head)),
+        ("VALIGN", (0, r_head), (ULT, r_head), "MIDDLE"),
+        ("LINEBELOW", (0, r_head), (ULT, r_head), 0.7, colors.black),
+    ]
+
+    # ---------------- 7. CUERPO (ítems + filas numeradas vacías) ----------------
+    detalles = list(factura.detalles.select_related("id_producto").all())
+    total_filas = max(5, len(detalles))
+    r_body_ini = len(rows)
+
+    for i in range(1, total_filas + 1):
+        if i <= len(detalles):
+            d = detalles[i - 1]
+            producto = d.id_producto
+            codigo = escape(str(getattr(producto, "codigo", "") or ""))
+            desc = escape(str(getattr(d, "descripcion_df", "") or getattr(producto, "nombre", "") or ""))
+            celdas = [
+                Paragraph(str(i), s_center), Paragraph(codigo, s_txt),
+                Paragraph(desc, s_txt), "",
+                Paragraph(_num(d.cantidad), s_center),
+                Paragraph(_num(d.precio_unitario), s_center),
+                Paragraph(_num(d.subtotal_df), s_right),
+            ]
+        else:
+            celdas = [Paragraph(str(i), s_center), "", "", "", "", "", ""]
+
+        primera = i == 1
+        r = fila(celdas, 4.2 + (3.5 if primera else 0))
+        cmds += [
+            ("SPAN", (2, r), (3, r)),
+            ("VALIGN", (0, r), (ULT, r), "MIDDLE"),
+            ("TOPPADDING", (0, r), (ULT, r), 3.5 * mm if primera else 1),
+            ("RIGHTPADDING", (6, r), (6, r), 3 * mm),
+        ]
+
+    # Relleno inferior del cuerpo para que las líneas verticales lleguen al borde
+    r_pad = fila([], 2)
+    r_body_fin = r_pad
+
+    # Líneas verticales de columnas (la 3 queda dentro de DESCRIPTION: no se dibuja)
+    for col in (1, 2, 4, 5, 6):
+        cmds.append(("LINEBEFORE", (col, r_head), (col, r_body_fin), 0.7, colors.black))
+    cmds.append(("LINEBELOW", (0, r_body_fin), (ULT, r_body_fin), 0.7, colors.black))
+
+    # Franja vacía entre el cuerpo y los totales
+    r = fila([], 3.8)
+    cmds.append(("LINEBELOW", (0, r), (ULT, r), 0.7, colors.black))
+
+    # ---------------- 8. TOTALES ----------------
+    r_t1 = fila(
+        ["", "", "", "", Paragraph("NET VALUE", s_center), "", Paragraph(_num(factura.subtotal), s_right)],
+        7.5,
+    )
+    r_t2 = fila(
+        ["", "", "", "", Paragraph("TOTAL", s_center), "", Paragraph(_num(factura.total), s_right)],
+        7.5,
+    )
+    for rr in (r_t1, r_t2):
+        cmds += [
+            ("SPAN", (0, rr), (3, rr)),
+            ("SPAN", (4, rr), (5, rr)),
+            ("VALIGN", (0, rr), (ULT, rr), "MIDDLE"),
+            ("RIGHTPADDING", (6, rr), (6, rr), 3 * mm),
+        ]
+    cmds += [
+        ("LINEBEFORE", (4, r_t1), (4, r_t2), 0.7, colors.black),
+        ("LINEBEFORE", (6, r_t1), (6, r_t2), 0.7, colors.black),
+        ("LINEBELOW", (0, r_t2), (ULT, r_t2), 0.7, colors.black),
+    ]
+
+    # Franja vacía entre totales y observaciones
+    r = fila([], 4)
+    cmds.append(("LINEBELOW", (0, r), (ULT, r), 0.7, colors.black))
+
+    # ---------------- 9. OBSERVACIONES (ocupa el resto de la hoja) ----------------
+    obs_text = "Mendoza, Argentina"
+    alto_total = 242 * mm
+    alto_obs = max(25 * mm, alto_total - sum(alturas))
+
+    rows.append([
+        [
+            Paragraph("Observaciones:", s_bold),
+            Spacer(1, 4 * mm),
+            Paragraph(
+                f'<font name="Times-Roman">CIF:</font>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{escape(obs_text)}',
+                s_txt,
+            ),
+        ],
+        "", "", "", "", "", "",
+    ])
+    alturas.append(alto_obs)
+    r = len(rows) - 1
+    cmds += [
+        ("SPAN", (0, r), (ULT, r)),
+        ("VALIGN", (0, r), (ULT, r), "TOP"),
+        ("TOPPADDING", (0, r), (ULT, r), 4 * mm),
+    ]
+
+    # ---------------- ESTILO GLOBAL Y CONSTRUCCIÓN ----------------
+    tabla = Table(rows, colWidths=col_w, rowHeights=alturas, hAlign="CENTER")
+    tabla.setStyle(TableStyle([
+        ("TOPPADDING", (0, 0), (-1, -1), 1),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.black),
+    ] + cmds))
+
+    doc.build([tabla])
     buffer.seek(0)
-
     return buffer.getvalue()
+
 
 
 # ============================================================

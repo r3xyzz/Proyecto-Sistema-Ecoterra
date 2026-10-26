@@ -1,6 +1,7 @@
-
+# backend/ventas/serializers.py
 from rest_framework import serializers
-from .models import OrdenCompra
+from .models import OrdenCompra, NotaCredito
+from decimal import Decimal
 
 
 class OrdenCompraSerializer(serializers.ModelSerializer):
@@ -97,3 +98,88 @@ class OrdenCompraFacturacionSerializer(OrdenCompraSerializer):
             "cotizacion_numero", "cotizacion_detalle", "numero_oc",
             "fecha_orden", "ruta_documento_oc",
         ]
+
+
+class NotaCreditoSerializer(serializers.ModelSerializer):
+    # Campos de solo lectura extraídos de la factura relacionada
+    factura_numero = serializers.CharField(
+        source="id_factura.numero_factura",
+        read_only=True,
+    )
+    cliente_nombre = serializers.CharField(
+        source="id_factura.id_cliente.razon_social",
+        read_only=True,
+    )
+    cliente_id = serializers.IntegerField(
+        source="id_factura.id_cliente.id",
+        read_only=True,
+    )
+    factura_total = serializers.DecimalField(
+        source="id_factura.total",
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+
+    # Campo de escritura: el usuario envía el subtotal bruto
+    subtotal_bruto = serializers.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        write_only=True,
+        required=True,
+        min_value=Decimal("0.01"),
+    )
+
+    class Meta:
+        model = NotaCredito
+        fields = [
+            "id",
+            "id_factura",
+            "factura_numero",
+            "cliente_id",
+            "cliente_nombre",
+            "factura_total",
+            "numero_nc",
+            "fecha_emision",
+            "subtotal",
+            "iva",
+            "total",
+            "subtotal_bruto",
+            "motivo",
+            "estado",
+            "ruta_pdf_nc",
+            "creado_en",
+        ]
+        read_only_fields = [
+            "id",
+            "subtotal",
+            "iva",
+            "total",
+            "ruta_pdf_nc",
+            "creado_en",
+        ]
+
+    def validate(self, attrs):
+        factura = attrs.get("id_factura")
+        subtotal_bruto = attrs.get("subtotal_bruto")
+
+        if factura:
+            # Validación de seguridad: no permitir NC sobre facturas anuladas
+            if getattr(factura, "estado", "") == "ANULADA":
+                raise serializers.ValidationError(
+                    {
+                        "id_factura": (
+                            "No se puede crear una nota de crédito "
+                            "sobre una factura anulada."
+                        )
+                    }
+                )
+
+        return attrs
+
+    def create(self, validated_data):
+        subtotal_bruto = validated_data.pop("subtotal_bruto")
+        nota = NotaCredito(**validated_data)
+        nota.calcular_totales(subtotal_bruto)
+        nota.save()
+        return nota

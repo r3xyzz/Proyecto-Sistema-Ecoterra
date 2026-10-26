@@ -65,3 +65,24 @@ class DistribucionVentasTests(SalesTablesMixin, TestCase):
 
     def test_ruta_historica_exige_autenticacion(self):
         self.assertEqual(APIClient().get("/api/orden-compras/").status_code, 401)
+
+    def test_nota_credito_usa_factura_canonica(self):
+        orden = OrdenCompra.objects.create(
+            id_cliente=self.cliente, numero_oc="OC-NC",
+            fecha_oc=date(2026, 10, 25), ruta_documento_oc="orden.pdf",
+        )
+        factura = Factura.objects.create(
+            id_orden_compra=orden, id_cliente=self.cliente, numero_factura="F-NC",
+            subtotal=Decimal("100"), iva=Decimal("19"), total=Decimal("119"),
+        )
+        respuesta = self.api.post("/api/notas-credito/", {
+            "id_factura": factura.pk, "numero_nc": "NC-TEST",
+            "fecha_emision": "2026-10-26", "subtotal_bruto": "100.00",
+            "motivo": "Prueba de integracion",
+        }, format="json")
+        self.assertEqual(respuesta.status_code, 201, respuesta.data)
+        self.assertEqual(respuesta.data["factura_total"], "119.00")
+        self.assertEqual(respuesta.data["total"], "119.00")
+        respuesta = self.api.get("/api/notas-credito/", {"factura_id": factura.pk})
+        self.assertEqual(respuesta.status_code, 200, respuesta.data)
+        self.assertEqual(len(respuesta.data), 1)

@@ -1,4 +1,4 @@
-
+# backend/ventas/views.py
 from django.db import IntegrityError, transaction
 
 from rest_framework import status, viewsets
@@ -7,9 +7,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from usuarios.permissions import PermisoModulo
-from .models import OrdenCompra
+from .models import OrdenCompra, NotaCredito
 from facturacion.models import Factura
-from .serializers import OrdenCompraSerializer
+from .serializers import OrdenCompraSerializer, NotaCreditoSerializer
 
 
 class OrdenCompraViewSet(viewsets.ModelViewSet):
@@ -129,3 +129,43 @@ class OrdenCompraViewSet(viewsets.ModelViewSet):
             )
 
         instance.delete()
+
+
+class NotaCreditoViewSet(viewsets.ModelViewSet):
+    queryset = NotaCredito.objects.select_related(
+        "id_factura",
+        "id_factura__id_cliente",
+    ).all().order_by("-fecha_emision", "-id")
+
+    serializer_class = NotaCreditoSerializer
+    permission_classes = [PermisoModulo]
+
+    permisos_por_metodo = {
+        "GET": ("notas_credito", "Consultar"),
+        "HEAD": ("notas_credito", "Consultar"),
+        "OPTIONS": ("notas_credito", "Consultar"),
+        "POST": ("notas_credito", "Crear"),
+        "PUT": ("notas_credito", "Editar"),
+        "PATCH": ("notas_credito", "Editar"),
+        "DELETE": ("notas_credito", "Eliminar"),
+    }
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        factura_id = self.request.query_params.get("factura_id")
+        estado = self.request.query_params.get("estado")
+        cliente_id = self.request.query_params.get("cliente_id")
+
+        if factura_id:
+            queryset = queryset.filter(id_factura_id=factura_id)
+
+        if estado:
+            queryset = queryset.filter(estado__iexact=estado)
+
+        if cliente_id:
+            queryset = queryset.filter(
+                id_factura__id_cliente_id=cliente_id
+            )
+
+        return queryset

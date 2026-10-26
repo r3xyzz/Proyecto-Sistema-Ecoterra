@@ -1,4 +1,4 @@
-
+// src/modules/Facturacion.tsx
 import React, { useEffect, useState } from "react"
 import { getDocumentPdfUrl } from "../documentPdf"
 import {
@@ -13,12 +13,14 @@ import {
 
 export type Invoice = {
   id: string
+  id_interno?: number
   oc: string
   cliente: string
   fecha: string
+  venc: string
   subtotal: number
   iva: number
-  total?: number
+  total: number
   estado: string
 }
 
@@ -484,6 +486,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
         fecha: String(
           data.fecha_factura ?? data.fecha_emision ?? "",
         ),
+        venc: String(data.fecha_factura ?? data.fecha_emision ?? ""),
         subtotal: Number(
           data.subtotal_factura ?? data.subtotal ?? 0,
         ),

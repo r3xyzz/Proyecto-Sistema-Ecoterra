@@ -1,3 +1,4 @@
+# backend/clientes/views.py
 from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.exceptions import NotFound
 

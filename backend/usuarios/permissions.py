@@ -1,3 +1,4 @@
+# backend/usuarios/permissions.py
 from django.db import connection
 
 from rest_framework.permissions import BasePermission
