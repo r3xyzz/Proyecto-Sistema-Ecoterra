@@ -6,7 +6,8 @@ class SalesTablesMixin:
     @classmethod
     def setUpClass(cls):
         from cotizaciones.models import Cotizacion, DetalleCotizacion
-        from facturacion.models import OrdenCompra, Factura, DetalleFactura
+        from facturacion.models import Factura, DetalleFactura
+        from ventas.models import OrdenCompra
 
         cls.created_tables = []
         with connection.schema_editor() as editor:

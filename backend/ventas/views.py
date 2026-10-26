@@ -7,8 +7,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from usuarios.permissions import PermisoModulo
-from .models import OrdenCompra, Factura
-from .serializers import OrdenCompraSerializer, FacturaSerializer
+from .models import OrdenCompra
+from facturacion.models import Factura
+from .serializers import OrdenCompraSerializer
 
 
 class OrdenCompraViewSet(viewsets.ModelViewSet):
@@ -122,23 +123,9 @@ class OrdenCompraViewSet(viewsets.ModelViewSet):
         )
 
     def perform_destroy(self, instance):
-        if Factura.objects.filter(id_oc_id=instance.id_oc).exists():
+        if Factura.objects.filter(id_orden_compra_id=instance.id_oc).exists():
             raise ValidationError(
                 "No se puede eliminar una orden que tiene una factura asociada."
             )
 
         instance.delete()
-
-
-class FacturaViewSet(viewsets.ModelViewSet):
-    queryset = Factura.objects.all().order_by("-id_factura")
-    serializer_class = FacturaSerializer
-    permission_classes = [PermisoModulo]
-
-    permisos_por_metodo = {
-        "GET": ("facturacion", "Consultar"),
-        "POST": ("facturacion", "Crear"),
-        "PUT": ("facturacion", "Editar"),
-        "PATCH": ("facturacion", "Editar"),
-        "DELETE": ("facturacion", "Eliminar"),
-    }

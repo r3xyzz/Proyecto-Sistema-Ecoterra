@@ -1,7 +1,6 @@
 
 from rest_framework import serializers
-from .models import OrdenCompra, Factura
-from cotizaciones.models import Cotizacion
+from .models import OrdenCompra
 
 
 class OrdenCompraSerializer(serializers.ModelSerializer):
@@ -86,29 +85,15 @@ class OrdenCompraSerializer(serializers.ModelSerializer):
         return cotizacion
 
 
-class FacturaSerializer(serializers.ModelSerializer):
-    cliente_nombre = serializers.CharField(
-        source="id_cliente.razon_social",
-        read_only=True,
-    )
-    oc_numero = serializers.CharField(
-        source="id_oc.numero_oc",
-        read_only=True,
-    )
+class OrdenCompraFacturacionSerializer(OrdenCompraSerializer):
+    """Alias de campos para la ruta histórica /orden-compras/."""
 
-    class Meta:
-        model = Factura
+    id = serializers.IntegerField(source="id_oc", read_only=True)
+    fecha_orden = serializers.DateField(source="fecha_oc")
+
+    class Meta(OrdenCompraSerializer.Meta):
         fields = [
-            "id_factura",
-            "id_oc",
-            "oc_numero",
-            "id_cliente",
-            "cliente_nombre",
-            "numero_factura",
-            "fecha_factura",
-            "subtotal_factura",
-            "iva_factura",
-            "total_factura",
-            "estado_factura",
-            "ruta_pdf_factura",
+            "id", "id_cliente", "cliente_nombre", "id_cotizacion",
+            "cotizacion_numero", "cotizacion_detalle", "numero_oc",
+            "fecha_orden", "ruta_documento_oc",
         ]

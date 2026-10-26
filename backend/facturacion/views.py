@@ -34,7 +34,8 @@ from reportlab.platypus import (
 from supabase import create_client
 
 from usuarios.permissions import PermisoModulo
-from .models import Factura, OrdenCompra
+from .models import Factura
+from ventas.views import OrdenCompraViewSet as VentasOrdenCompraViewSet
 from .serializers import FacturaSerializer, OrdenCompraSerializer
 
 
@@ -265,10 +266,8 @@ def generar_pdf_factura(factura):
 # ÓRDENES DE COMPRA
 # ============================================================
 
-class OrdenCompraViewSet(viewsets.ModelViewSet):
-    queryset = OrdenCompra.objects.select_related(
-        "id_cliente",
-    ).all()
+class OrdenCompraViewSet(VentasOrdenCompraViewSet):
+    """Ruta histórica que comparte permisos y reglas con ventas."""
 
     serializer_class = OrdenCompraSerializer
 
