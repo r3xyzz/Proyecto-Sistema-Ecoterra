@@ -4,7 +4,9 @@ from uuid import uuid4
 from django.db import transaction
 from rest_framework import serializers
 
-from .models import Factura, DetalleFactura, OrdenCompra
+from .models import Factura, DetalleFactura
+from ventas.models import OrdenCompra
+from ventas.serializers import OrdenCompraFacturacionSerializer as OrdenCompraSerializer
 from clientes.models import Cliente
 from inventario.models import Producto
 
@@ -47,34 +49,6 @@ class DetalleFacturaSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "subtotal_df"]
 
-
-
-class OrdenCompraSerializer(serializers.ModelSerializer):
-    cliente_nombre = serializers.CharField(
-        source="id_cliente.razon_social",
-        read_only=True,
-        default="",
-    )
-
-    numero_oc = serializers.SerializerMethodField()
-
-    class Meta:
-        model = OrdenCompra
-        fields = [
-            "id",
-            "id_cliente",
-            "cliente_nombre",
-            "numero_oc",
-            "fecha_orden",
-            "estado",
-        ]
-
-    def get_numero_oc(self, obj):
-        return (
-            getattr(obj, "numero_oc", None)
-            or getattr(obj, "id_oc", None)
-            or obj.pk
-        )
 
 
 class FacturaSerializer(serializers.ModelSerializer):

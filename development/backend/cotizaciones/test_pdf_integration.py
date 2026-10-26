@@ -11,7 +11,8 @@ from clientes.models import Cliente
 from inventario.models import Producto
 from usuarios.models import Usuario
 from usuarios.authentication import crear_token
-from facturacion.models import OrdenCompra, Factura, DetalleFactura
+from facturacion.models import Factura, DetalleFactura
+from ventas.models import OrdenCompra
 from .models import Cotizacion, DetalleCotizacion
 
 
@@ -25,7 +26,7 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
         self.product = Producto.objects.create(codigo="PDF-001", nombre="Polímero agrícola",
                                                tipo="Control", unidad="Litros")
         self.order = OrdenCompra.objects.create(id_cliente=self.customer, numero_oc="OC-TEST-01",
-                                                fecha_orden="2026-10-25", ruta_documento_oc="")
+                                                fecha_oc="2026-10-25", ruta_documento_oc="")
         self.files = {}
         self.storage_patch = patch("facturacion.views.obtener_cliente_supabase")
         self.quote_storage_patch = patch("cotizaciones.views.obtener_cliente_supabase")

@@ -13,7 +13,8 @@ from clientes.models import Cliente
 from inventario.models import Producto
 from usuarios.models import Usuario
 from usuarios.authentication import crear_token
-from .models import Factura, DetalleFactura, OrdenCompra
+from .models import Factura, DetalleFactura
+from ventas.models import OrdenCompra
 
 
 class FacturacionAcceptanceTests(SalesTablesMixin, TestCase):
@@ -30,7 +31,7 @@ class FacturacionAcceptanceTests(SalesTablesMixin, TestCase):
         self.second_product = Producto.objects.create(codigo="QA-FAC-2", nombre="Control de polvo",
                                                       tipo="Control", unidad="Litros")
         self.order = OrdenCompra.objects.create(id_cliente=self.customer, numero_oc="OC-QA-S4T01",
-            fecha_orden=date(2026, 10, 25), ruta_documento_oc="")
+            fecha_oc=date(2026, 10, 25), ruta_documento_oc="")
         self.payload = {"cliente_id": self.customer.pk, "id_oc": self.order.pk,
             "detalles": [{"id_producto": self.product.pk, "cantidad": "2.00", "precio_unitario": "1000.00"}]}
 
@@ -161,7 +162,7 @@ class FacturacionAcceptanceTests(SalesTablesMixin, TestCase):
     def test_18_number_is_unique_for_different_orders(self):
         first = self.invoice()
         second_order = OrdenCompra.objects.create(id_cliente=self.customer, numero_oc="OC-QA-2",
-            fecha_orden=date(2026, 10, 25), ruta_documento_oc="")
+            fecha_oc=date(2026, 10, 25), ruta_documento_oc="")
         self.payload["id_oc"] = second_order.pk
         second = self.invoice()
         self.assertNotEqual(first.numero_factura, second.numero_factura)
@@ -261,7 +262,7 @@ class FacturacionAcceptanceTests(SalesTablesMixin, TestCase):
     def test_31_patch_cannot_take_another_invoices_order(self):
         first = self.invoice()
         order = OrdenCompra.objects.create(id_cliente=self.customer, numero_oc="OC-QA-OTHER",
-            fecha_orden=date(2026, 10, 25), ruta_documento_oc="")
+            fecha_oc=date(2026, 10, 25), ruta_documento_oc="")
         self.payload["id_oc"] = order.pk
         second = self.invoice()
         response = self.api.patch(f"/api/facturas/{second.pk}/", {"id_oc": first.id_orden_compra_id}, format="json")
