@@ -17,6 +17,7 @@ from .models import Cotizacion, DetalleCotizacion
 
 
 class PdfIntegrationTests(SalesTablesMixin, TestCase):
+    # Prepara los usuarios, datos y servicios simulados necesarios para cada prueba.
     def setUp(self):
         self.api = APIClient()
         self.user = Usuario.objects.create(nombre="Admin pruebas", email="pdf@example.com", id_rol=1)
@@ -36,9 +37,12 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
         self.addCleanup(self.quote_storage_patch.stop)
         self.bucket = client.return_value.storage.from_.return_value
         quote_client.return_value.storage.from_.return_value = self.bucket
+        # Simula una subida guardando los bytes del documento bajo su ruta en memoria.
         self.bucket.upload.side_effect = lambda path, content, **kwargs: self.files.update({path: content})
+        # Simula un enlace firmado que incluye la ruta del archivo y el tiempo de vigencia recibido.
         self.bucket.create_signed_url.side_effect = lambda path, ttl: {"signedURL": f"https://storage.example/{path}?ttl={ttl}"}
 
+    # Crea una cotización de prueba con la cantidad indicada de líneas y devuelve su URL y modelo.
     def create_quote(self, lines=1):
         response = self.api.post("/api/cotizaciones/", {
             "id_cliente": self.customer.pk, "fecha_cotizacion": "2026-10-25",
@@ -53,6 +57,7 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
         self.assertEqual(response.status_code, 201, response.data)
         return f"/api/cotizaciones/{response.data['id_cotizacion']}", Cotizacion.objects.get(pk=response.data["id_cotizacion"])
 
+    # Crea una factura de prueba mediante la API y devuelve su URL y modelo.
     def create_invoice(self):
         response = self.api.post("/api/facturas/", {
             "cliente_id": self.customer.pk, "id_oc": self.order.pk,
@@ -64,6 +69,7 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
         self.assertEqual(invoice.ruta_pdf_factura, "")
         return f"/api/facturas/{invoice.pk}", invoice
 
+    # Genera el PDF de prueba y verifica su almacenamiento, contenido y enlace firmado sin caché.
     def generate(self, base, record, field):
         self.assertEqual(self.api.get(f"{base}/pdf/").status_code, 404)
         response = self.api.post(f"{base}/generar-pdf/")
@@ -82,6 +88,7 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
         self.assertEqual(response["Cache-Control"], "no-store")
         return path
 
+    # Comprueba que una cotización puede crearse, generar y consultar su PDF y regenerarlo después de editarse.
     def test_quote_create_generate_consult_edit_regenerate(self):
         base, quote = self.create_quote()
         previous = self.generate(base, quote, "ruta_pdf_cotizacion")
@@ -93,10 +100,12 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
         self.assertNotEqual(previous, current)
         self.assertIn(previous, self.files)
 
+    # Comprueba que una factura puede crearse y generar y consultar su PDF.
     def test_invoice_create_generate_consult(self):
         base, invoice = self.create_invoice()
         self.generate(base, invoice, "ruta_pdf_factura")
 
+    # Comprueba que cambiar el estado invalida el PDF y permite generar uno nuevo.
     def test_invoice_state_change_invalidates_pdf(self):
         base, invoice = self.create_invoice()
         self.generate(base, invoice, "ruta_pdf_factura")
@@ -109,6 +118,7 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
         self.assertEqual(invoice.estado, "PAGADA")
         self.assertIn(invoice.numero_factura, pdf.pages[0].extract_text())
 
+    # Comprueba que el PDF multipágina conserva el último producto, los totales y la numeración.
     def test_multipage_quote_keeps_last_product_and_totals(self):
         base, quote = self.create_quote(lines=90)
         self.assertEqual(self.api.post(f"{base}/generar-pdf/").status_code, 200)
@@ -121,6 +131,7 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
         for number, page in enumerate(pdf.pages, 1):
             self.assertIn(f"Página {number}", page.extract_text())
 
+    # Comprueba que las solicitudes sin sesión o con token inválido se rechazan.
     def test_anonymous_and_invalid_token_are_denied(self):
         base, _ = self.create_quote()
         anonymous = APIClient()
@@ -130,6 +141,7 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
             self.assertEqual(anonymous.get(route).status_code, 401)
             anonymous.credentials()
 
+    # Comprueba que un usuario sin permiso no puede consultar ni generar PDF.
     def test_user_without_permission_cannot_read_or_generate(self):
         base, _ = self.create_quote()
         user = Usuario.objects.create(nombre="Sin permisos", email="denied@example.com", id_rol=3)
@@ -140,6 +152,7 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
                 self.assertEqual(self.api.post(f"{prefix}/generar-pdf/").status_code, 403)
         self.bucket.upload.assert_not_called()
 
+    # Comprueba que un fallo de Storage conserva la asociación anterior del documento.
     def test_storage_failure_preserves_previous_association(self):
         for create, field in ((self.create_quote, "ruta_pdf_cotizacion"), (self.create_invoice, "ruta_pdf_factura")):
             base, record = create()
@@ -150,4 +163,5 @@ class PdfIntegrationTests(SalesTablesMixin, TestCase):
             self.assertGreaterEqual(response.status_code, 500)
             record.refresh_from_db()
             self.assertEqual(getattr(record, field), original)
+            # Restablece la subida simulada guardando los bytes por ruta después de probar el fallo de Storage.
             self.bucket.upload.side_effect = lambda path, content, **kwargs: self.files.update({path: content})

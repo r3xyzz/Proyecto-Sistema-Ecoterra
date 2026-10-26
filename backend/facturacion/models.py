@@ -93,9 +93,11 @@ class Factura(models.Model):
             models.Index(fields=["numero_factura"]),
         ]
 
+    # Devuelve el número de factura y su cliente como representación textual.
     def __str__(self):
         return f"Factura {self.numero_factura} - {self.id_cliente}"
 
+    # Suma los detalles, calcula IVA del 19 % y total, y opcionalmente actualiza la factura en la base de datos.
     def recalcular_totales(self, guardar=True):
         if not self.pk:
             raise ValueError(
@@ -178,6 +180,7 @@ class DetalleFactura(models.Model):
         db_table = "detalle_factura"
         managed = False
     
+    # Devuelve el identificador del detalle, el producto y su cantidad.
     def __str__(self):
         return f"Detalle {self.id} - {self.id_producto} x {self.cantidad}"
 

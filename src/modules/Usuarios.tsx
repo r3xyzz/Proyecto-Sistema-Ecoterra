@@ -54,6 +54,7 @@ const NOMBRES_MODULO: Record<string, string> = {
   usuarios_roles: "Usuarios y roles",
 }
 
+// Muestra usuarios y permite crear cuentas y administrar los permisos de los roles según la sesión.
 export default function Usuarios({
   usuarios,
   loadError,
@@ -91,45 +92,45 @@ export default function Usuarios({
 
   // -------------------- CARGA DE DATOS --------------------
   // Cargar catálogo de permisos al montar (solo Admin)
-  useEffect(() => {
+  useEffect(/* Carga el catálogo de permisos únicamente para una sesión administradora. */ () => {
     if (!isAdmin || !authUser) return
 
     fetch("/api/permisos/", {
       headers: authHeaders(authUser),
     })
-      .then((r) => {
+      .then(/* Comprueba que la respuesta HTTP sea exitosa y devuelve su contenido JSON. */ (r) => {
         if (!r.ok) {
           throw new Error("No se pudo cargar el catálogo de permisos")
         }
         return r.json()
       })
-      .then((data) => {
+      .then(/* Procesa la respuesta actualizando setCatalogo. */ (data) => {
         setCatalogo(Array.isArray(data) ? data : [])
       })
-      .catch(() => setCatalogo([]))
+      .catch(/* Devuelve setCatalogo([]) cuando falla la operación anterior. */ () => setCatalogo([]))
   }, [isAdmin, authUser])
 
   // Cargar permisos del rol seleccionado (solo Admin)
-  useEffect(() => {
+  useEffect(/* Carga los permisos del rol seleccionado para una sesión administradora. */ () => {
     if (!isAdmin || !authUser || !selectedRoleId) return
 
     fetch(`/api/roles/${selectedRoleId}/permisos/`, {
       headers: authHeaders(authUser),
     })
-      .then((r) => {
+      .then(/* Comprueba que la respuesta HTTP sea exitosa y devuelve su contenido JSON. */ (r) => {
         if (!r.ok) {
           throw new Error("No se pudieron cargar los permisos del rol")
         }
         return r.json()
       })
-      .then((data) => {
+      .then(/* Inicializa los permisos seleccionados y su copia original con los identificadores recibidos. */ (data) => {
         const ids = new Set<number>(
-          (data.permisos ?? []).map((p: any) => p.id)
+          (data.permisos ?? []).map(/* Transforma cada elemento de la lista devolviendo p.id. */ (p: any) => p.id)
         )
         setRolPermisoIds(new Set(ids))
         setPermisoIdsOriginales(new Set(ids))
       })
-      .catch(() => {
+      .catch(/* Vacía los permisos seleccionados y originales si falla la consulta del rol. */ () => {
         setRolPermisoIds(new Set())
         setPermisoIdsOriginales(new Set())
       })
@@ -137,7 +138,7 @@ export default function Usuarios({
 
 
   // -------------------- DETECTAR CAMBIOS --------------------
-  const hasChanges = useMemo(() => {
+  const hasChanges = useMemo(/* Comprueba si el conjunto de permisos seleccionado difiere del conjunto original. */ () => {
     if (rolPermisoIds.size !== permisoIdsOriginales.size) return true
     for (const id of rolPermisoIds) {
       if (!permisoIdsOriginales.has(id)) return true
@@ -146,12 +147,14 @@ export default function Usuarios({
   }, [rolPermisoIds, permisoIdsOriginales])
 
   // -------------------- HANDLERS --------------------
+  // Selecciona el rol cuyos permisos se van a consultar o modificar.
   const handleRoleChange = (roleId: number) => {
     setSelectedRoleId(roleId)
   }
 
+  // Añade o quita el identificador del permiso en el conjunto de permisos seleccionado.
   const togglePermission = (idPermiso: number) => {
-    setRolPermisoIds((current) => {
+    setRolPermisoIds(/* Alterna el permiso indicado dentro de una copia del conjunto de permisos. */ (current) => {
       const next = new Set(current)
       if (next.has(idPermiso)) next.delete(idPermiso)
       else next.add(idPermiso)
@@ -159,6 +162,7 @@ export default function Usuarios({
     })
   }
 
+  // Envía los permisos del rol a la API cuando el usuario es administrador y actualiza el estado de guardado.
   const guardarPermisos = async () => {
     if (!authUser || !isAdmin) return
     setSaving(true)
@@ -171,21 +175,22 @@ export default function Usuarios({
         body: JSON.stringify({ permisos: Array.from(rolPermisoIds) }),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => null)
+        const data = await res.json().catch(/* Devuelve null cuando falla la operación anterior. */ () => null)
         throw new Error(data?.detail || "No se pudieron guardar los permisos")
       }
       setPermisoIdsOriginales(new Set(rolPermisoIds))
       setSaveStatus("saved")
-      setTimeout(() => setSaveStatus("idle"), 2000)
+      setTimeout(/* Calcula el nuevo valor de Timeout devolviendo setSaveStatus("idle"). */ () => setSaveStatus("idle"), 2000)
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Error al guardar")
       setSaveStatus("error")
-      setTimeout(() => setSaveStatus("idle"), 3000)
+      setTimeout(/* Calcula el nuevo valor de Timeout devolviendo setSaveStatus("idle"). */ () => setSaveStatus("idle"), 3000)
     } finally {
       setSaving(false)
     }
   }
 
+  // Solicita la creación del usuario y reinicia el formulario al completar el guardado.
   const saveNewUser = async () => {
     setSaving(true)
     setSaveError("")
@@ -201,9 +206,9 @@ export default function Usuarios({
   }
 
   // -------------------- AGRUPAR CATÁLOGO POR MÓDULO --------------------
-  const grupos = useMemo(() => {
+  const grupos = useMemo(/* Agrupa el catálogo de permisos por módulo para mostrarlo en la interfaz. */ () => {
     const map = new Map<string, PermisoCatalogo[]>()
-    catalogo.forEach((p) => {
+    catalogo.forEach(/* Crea el grupo del módulo si falta y añade el permiso correspondiente. */ (p) => {
       if (!map.has(p.modulo)) map.set(p.modulo, [])
       map.get(p.modulo)!.push(p)
     })
@@ -218,7 +223,7 @@ export default function Usuarios({
         sub="Usuarios, roles y permisos del sistema"
       >
         {isAdmin && (
-          <button className="btn btn-primary" onClick={() => setShowNew(true)}>
+          <button className="btn btn-primary" onClick={/* Ejecuta setShowNew(true) al invocarse este callback. */ () => setShowNew(true)}>
             <Ico p={I.plus} size={14} /> Nuevo usuario
           </button>
         )}
@@ -245,7 +250,7 @@ export default function Usuarios({
             </tr>
           </thead>
           <tbody>
-            {usuarios.map((user) => (
+            {usuarios.map(/* Renderiza el contenido de cada elemento de usuarios. */ (user) => (
               <tr key={user.id}>
                 <td style={{ fontWeight: 600 }}>{user.nombre}</td>
                 <td>{user.email}</td>
@@ -269,7 +274,7 @@ export default function Usuarios({
                   <td style={{ display: "flex", gap: 8 }}>
                     <button
                       className="btn btn-ghost btn-sm"
-                      onClick={() => {
+                      onClick={/* Muestra un aviso de edición del usuario mientras el formulario de edición está pendiente. */ () => {
                         // TODO: abrir modal de edición de usuario
                         alert(`Editar usuario: ${user.nombre}`)
                       }}
@@ -278,7 +283,7 @@ export default function Usuarios({
                     </button>
                     <button
                       className="btn btn-ghost btn-sm"
-                      onClick={async () => {
+                      onClick={/* Pide confirmación y solicita eliminar el usuario seleccionado. */ async () => {
                         if (!window.confirm(`¿Eliminar a ${user.nombre}?`)) return
                         await onDelete(user)
                       }}
@@ -313,10 +318,10 @@ export default function Usuarios({
             </div>
 
             <div className="usuarios-roles-grid" style={{ marginTop: 12 }}>
-              {[1, 2, 3].map((roleId) => (
+              {[1, 2, 3].map(/* Renderiza el contenido de cada elemento de [1, 2, 3]. */ (roleId) => (
                 <button
                   key={roleId}
-                  onClick={() => handleRoleChange(roleId)}
+                  onClick={/* Ejecuta handleRoleChange(roleId) al invocarse este callback. */ () => handleRoleChange(roleId)}
                   className={`usuarios-role-card ${selectedRoleId === roleId ? "active" : "inactive"}`}
                 >
                   <div className="usuarios-role-title">{ROLE_DISPLAY[roleId]}</div>
@@ -342,7 +347,7 @@ export default function Usuarios({
             </div>
 
             <div style={{ display: "grid", gap: 18 }}>
-              {grupos.map(([modulo, permisos]) => (
+              {grupos.map(/* Renderiza el contenido de cada elemento de grupos. */ ([modulo, permisos]) => (
                 <div
                   key={modulo}
                   style={{
@@ -356,7 +361,7 @@ export default function Usuarios({
                     {NOMBRES_MODULO[modulo] ?? modulo}
                   </div>
                   <div style={{ display: "grid", gap: 8 }}>
-                    {permisos.map((permiso) => (
+                    {permisos.map(/* Renderiza el contenido de cada elemento de permisos. */ (permiso) => (
                       <label
                         key={permiso.id}
                         style={{
@@ -370,7 +375,7 @@ export default function Usuarios({
                         <input
                           type="checkbox"
                           checked={rolPermisoIds.has(permiso.id)}
-                          onChange={() => togglePermission(permiso.id)}
+                          onChange={/* Ejecuta togglePermission(permiso.id) al invocarse este callback. */ () => togglePermission(permiso.id)}
                         />
                         <span>{permiso.nombre}</span>
                       </label>
@@ -421,7 +426,7 @@ export default function Usuarios({
         <div className="modal-backdrop">
           <div
             className="modal usuarios-modal"
-            onClick={(event) => event.stopPropagation()}
+            onClick={/* Ejecuta event.stopPropagation() al invocarse este callback. */ (event) => event.stopPropagation()}
           >
             <h2 className="usuarios-modal-title">Nuevo usuario</h2>
             <div className="usuarios-form">
@@ -431,8 +436,8 @@ export default function Usuarios({
                   className="input"
                   placeholder="Nombre del usuario"
                   value={newUser.nombre}
-                  onChange={(event) =>
-                    setNewUser((current) => ({ ...current, nombre: event.target.value }))
+                  onChange={/* Ejecuta setNewUser((current) => ({ ...current, nombre: event.target.value })) al invocarse este callback. */ (event) =>
+                    setNewUser(/* Calcula el nuevo valor de NewUser devolviendo ({ ...current, nombre: event.target.value }). */ (current) => ({ ...current, nombre: event.target.value }))
                   }
                 />
               </div>
@@ -443,8 +448,8 @@ export default function Usuarios({
                   type="email"
                   placeholder="usuario@ecoterra.cl"
                   value={newUser.email}
-                  onChange={(event) =>
-                    setNewUser((current) => ({ ...current, email: event.target.value }))
+                  onChange={/* Ejecuta setNewUser((current) => ({ ...current, email: event.target.value })) al invocarse este callback. */ (event) =>
+                    setNewUser(/* Calcula el nuevo valor de NewUser devolviendo ({ ...current, email: event.target.value }). */ (current) => ({ ...current, email: event.target.value }))
                   }
                 />
               </div>
@@ -453,8 +458,8 @@ export default function Usuarios({
                 <select
                   className="select"
                   value={newUser.rol}
-                  onChange={(event) =>
-                    setNewUser((current) => ({ ...current, rol: event.target.value }))
+                  onChange={/* Ejecuta setNewUser((current) => ({ ...current, rol: event.target.value })) al invocarse este callback. */ (event) =>
+                    setNewUser(/* Calcula el nuevo valor de NewUser devolviendo ({ ...current, rol: event.target.value }). */ (current) => ({ ...current, rol: event.target.value }))
                   }
                 >
                   <option value="Superusuario / Admin">Superusuario / Admin</option>
@@ -468,7 +473,7 @@ export default function Usuarios({
               <button className="btn btn-primary" onClick={saveNewUser} disabled={saving}>
                 <Ico p={I.check} size={14} /> Guardar
               </button>
-              <button className="btn btn-ghost" onClick={() => setShowNew(false)}>
+              <button className="btn btn-ghost" onClick={/* Ejecuta setShowNew(false) al invocarse este callback. */ () => setShowNew(false)}>
                 Cancelar
               </button>
             </div>

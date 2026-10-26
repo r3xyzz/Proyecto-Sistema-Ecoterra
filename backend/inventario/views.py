@@ -26,6 +26,7 @@ from .serializers import (
     ProductoSerializer,
 )
 # ---------- CÁLCULOS DE STOCK - Productos ----------
+# Anota cada producto con la suma de sus lotes disponibles y la suma de todos sus lotes.
 def productos_con_stock():
     campo_decimal = DecimalField(
         max_digits=12,
@@ -134,6 +135,7 @@ class MovimientoListView(ListCreateAPIView):
     "POST": ("movimientos", "Crear"),
     }
 
+    # Valida el movimiento, bloquea el lote y registra la entrada, salida o ajuste junto con los stocks anterior y posterior.
     def create(self, request, *args, **kwargs):
         tipo = request.data.get("tipo_movimiento")
         cantidad_raw = request.data.get("cantidad_movimiento")

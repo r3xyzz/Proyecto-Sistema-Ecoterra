@@ -28,6 +28,7 @@ class OrdenCompra(models.Model):
         db_table = "orden_compra"
         managed = False
 
+    # Devuelve el número de orden de compra como representación textual.
     def __str__(self):
         return self.numero_oc
 
@@ -114,9 +115,11 @@ class NotaCredito(models.Model):
             models.Index(fields=["numero_nc"]),
         ]
 
+    # Devuelve el número de nota de crédito y el número de la factura asociada.
     def __str__(self):
         return f"NC {self.numero_nc} - Factura {self.id_factura.numero_factura}"
 
+    # Calcula y asigna subtotal, IVA del 19 % y total de la nota de crédito sin guardarla.
     def calcular_totales(self, subtotal_bruto):
         """
         Recibe el subtotal ingresado por el usuario (positivo),

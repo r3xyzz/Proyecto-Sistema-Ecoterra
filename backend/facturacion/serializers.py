@@ -168,6 +168,7 @@ class FacturaSerializer(serializers.ModelSerializer):
             "estado",
         ]
 
+    # Obtiene el número de la orden asociada a la factura usando su identificador como alternativa.
     def get_oc_numero(self, obj):
         orden = obj.id_orden_compra
         return (
@@ -176,6 +177,7 @@ class FacturaSerializer(serializers.ModelSerializer):
             or orden.pk
         )
 
+    # Normaliza los alias de cliente, orden y producto antes de validar los datos de la factura.
     def to_internal_value(self, data):
         data = data.copy()
 
@@ -202,6 +204,7 @@ class FacturaSerializer(serializers.ModelSerializer):
 
         return super().to_internal_value(data)
 
+    # Exige cliente, orden y productos, comprueba su coherencia y rechaza órdenes facturadas o productos repetidos.
     def validate(self, attrs):
         cliente = attrs.get("id_cliente", getattr(self.instance, "id_cliente", None))
         orden = attrs.get("id_orden_compra", getattr(self.instance, "id_orden_compra", None))
@@ -248,6 +251,7 @@ class FacturaSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    # Rechaza una orden asociada a otra factura excluyendo la factura que se está editando.
     def validar_orden_disponible(self, orden):
         facturas = Factura.objects.filter(id_orden_compra=orden)
         if self.instance is not None:
@@ -257,6 +261,7 @@ class FacturaSerializer(serializers.ModelSerializer):
                 "id_oc": "Esta orden de compra ya tiene una factura asociada."
             })
 
+    # Guarda los productos de la factura con descripción, cantidades, precios y subtotales redondeados.
     def guardar_detalles(self, factura, detalles):
         for detalle in detalles:
             DetalleFactura.objects.create(
@@ -268,6 +273,7 @@ class FacturaSerializer(serializers.ModelSerializer):
                 subtotal_df=(detalle["cantidad"] * detalle["precio_unitario"]).quantize(Decimal("0.01")),
             )
 
+    # Bloquea la orden y crea atómicamente la factura, su número definitivo, sus detalles y sus totales.
     @transaction.atomic
     def create(self, validated_data):
         detalles_data = validated_data.pop("detalles", [])
@@ -301,6 +307,7 @@ class FacturaSerializer(serializers.ModelSerializer):
         factura.refresh_from_db()
         return factura
 
+    # Bloquea orden y factura, actualiza sus datos y detalles, invalida el PDF y recalcula los totales atómicamente.
     @transaction.atomic
     def update(self, instance, validated_data):
         detalles = validated_data.pop("detalles", None)

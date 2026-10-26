@@ -6,6 +6,7 @@ from rest_framework.permissions import BasePermission
 from .models import Usuario
 
 
+# Comprueba el permiso activo del rol del usuario y concede acceso directo a los administradores activos.
 def tiene_permiso(usuario, modulo, nombre_permiso):
     """
     Comprueba el permiso usando el usuario autenticado
@@ -43,6 +44,7 @@ class PermisoModulo(BasePermission):
     Los métodos sin regla explícita quedan denegados.
     """
 
+    # Exige el permiso definido por la vista para el método HTTP y deniega los métodos sin regla.
     def has_permission(self, request, view):
         usuario = request.user
 

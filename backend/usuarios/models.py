@@ -19,5 +19,6 @@ class Usuario(models.Model):
         verbose_name = "usuario"
         verbose_name_plural = "usuarios"
 
+    # Devuelve el nombre y el correo como representación textual del usuario.
     def __str__(self):
         return f"{self.nombre} ({self.email})"

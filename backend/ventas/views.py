@@ -25,6 +25,7 @@ class OrdenCompraViewSet(viewsets.ModelViewSet):
         "DELETE": ("ordenes_compra", "Eliminar"),
     }
 
+    # Filtra las órdenes por cliente, cotización, presencia de cotización y rango de fechas.
     def get_queryset(self):
         queryset = super().get_queryset()
 
@@ -55,6 +56,7 @@ class OrdenCompraViewSet(viewsets.ModelViewSet):
 
         return queryset
 
+    # Valida y vincula una cotización a la orden y responde HTTP 409 ante un conflicto de integridad.
     @action(
         detail=True,
         methods=["post"],
@@ -100,6 +102,7 @@ class OrdenCompraViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    # Quita la cotización de la orden y devuelve sus datos actualizados.
     @action(
         detail=True,
         methods=["delete"],
@@ -122,6 +125,7 @@ class OrdenCompraViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    # Impide eliminar órdenes con factura asociada y elimina las demás.
     def perform_destroy(self, instance):
         if Factura.objects.filter(id_orden_compra_id=instance.id_oc).exists():
             raise ValidationError(
@@ -150,6 +154,7 @@ class NotaCreditoViewSet(viewsets.ModelViewSet):
         "DELETE": ("notas_credito", "Eliminar"),
     }
 
+    # Filtra las notas de crédito por factura, estado y cliente de la factura.
     def get_queryset(self):
         queryset = super().get_queryset()
 

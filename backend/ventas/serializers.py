@@ -30,6 +30,7 @@ class OrdenCompraSerializer(serializers.ModelSerializer):
             "ruta_documento_oc",
         ]
 
+    # Devuelve un resumen de la cotización asociada a la orden o nulo cuando no existe.
     def get_cotizacion_detalle(self, obj):
         cotizacion = obj.id_cotizacion
 
@@ -45,6 +46,7 @@ class OrdenCompraSerializer(serializers.ModelSerializer):
             "estado_cotizacion": cotizacion.estado_cotizacion,
         }
 
+    # Exige una cotización vigente del mismo cliente que no esté asociada a otra orden de compra.
     def validate_id_cotizacion(self, cotizacion):
         if cotizacion is None:
             return None
@@ -159,6 +161,7 @@ class NotaCreditoSerializer(serializers.ModelSerializer):
             "creado_en",
         ]
 
+    # Rechaza la creación de una nota de crédito cuando la factura asociada está anulada.
     def validate(self, attrs):
         factura = attrs.get("id_factura")
         subtotal_bruto = attrs.get("subtotal_bruto")
@@ -177,6 +180,7 @@ class NotaCreditoSerializer(serializers.ModelSerializer):
 
         return attrs
 
+    # Calcula los importes desde el subtotal bruto y guarda la nota de crédito.
     def create(self, validated_data):
         subtotal_bruto = validated_data.pop("subtotal_bruto")
         nota = NotaCredito(**validated_data)

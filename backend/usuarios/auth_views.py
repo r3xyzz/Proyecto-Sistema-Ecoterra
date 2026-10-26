@@ -11,6 +11,7 @@ from .serializers import ROLE_ID_TO_LABEL
 from .authentication import crear_token
 
 
+# Consulta los permisos activos del rol y los devuelve como claves modulo:accion con valor verdadero.
 def _cargar_permisos(id_rol):
     """Devuelve un dict { 'modulo:accion': True } con los permisos del rol."""
     with connection.cursor() as cursor:
@@ -26,6 +27,7 @@ def _cargar_permisos(id_rol):
         return {f"{modulo}:{nombre}": True for modulo, nombre in cursor.fetchall()}
 
 
+# Valida correo, contraseña y estado del usuario y devuelve su sesión con rol, permisos y token firmado.
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def login_view(request):

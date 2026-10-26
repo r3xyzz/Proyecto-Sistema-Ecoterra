@@ -34,6 +34,7 @@ type Props = {
   onCreate: (input: MovimientoInput) => Promise<Movimiento>
 }
 
+// Muestra el historial de movimientos y permite registrar entradas, salidas y ajustes de inventario.
 export default function Movimientos({
   productos,
   lotes,
@@ -58,9 +59,10 @@ export default function Movimientos({
     Ajuste: "#D97706",
   }
 
-  const lotesDelProducto = lotes.filter((l) => l.prod === prod)
-  const selectedLote = lotes.find((l) => String(l.id) === String(loteId))
+  const lotesDelProducto = lotes.filter(/* Comprueba qué elementos cumplen la condición evaluando l.prod === prod. */ (l) => l.prod === prod)
+  const selectedLote = lotes.find(/* Identifica el elemento buscado evaluando String(l.id) === String(loteId). */ (l) => String(l.id) === String(loteId))
 
+  // Valida producto, lote y cantidad y solicita el registro del movimiento con el usuario actual.
   const registerMovement = async () => {
     if (!prod || !loteId || qty === "") {
       setError("Producto, lote y cantidad son obligatorios.")
@@ -85,6 +87,7 @@ export default function Movimientos({
     }
   }
 
+  // Limpia el formulario de movimientos y restablece sus indicadores de resultado y error.
   const resetForm = () => {
     setDone(false)
     setProd("")
@@ -126,7 +129,7 @@ export default function Movimientos({
           ) : (
             <>
               <div className="mov-toggle">
-                {(["Entrada", "Salida", "Ajuste"] as const).map((value) => (
+                {(["Entrada", "Salida", "Ajuste"] as const).map(/* Renderiza el contenido de cada elemento de (["Entrada", "Salida", "Ajuste"] as const). */ (value) => (
                   <button
                     key={value}
                     className={`mov-toggle-btn ${type === value ? "active" : ""}`}
@@ -134,7 +137,7 @@ export default function Movimientos({
                       background: type === value ? colors[value] : "transparent",
                       color: type === value ? "white" : "#94A3B8",
                     }}
-                    onClick={() => {
+                    onClick={/* Cambia el tipo de movimiento y limpia la cantidad y el error del formulario. */ () => {
                       setType(value)
                       setQty("")   // Limpiar cantidad al cambiar tipo
                       setError("")
@@ -155,13 +158,13 @@ export default function Movimientos({
                   <select
                     className="select"
                     value={prod}
-                    onChange={(e) => {
+                    onChange={/* Cambia el producto y borra la selección de lote. */ (e) => {
                       setProd(e.target.value)
                       setLoteId("")
                     }}
                   >
                     <option value="">Seleccionar…</option>
-                    {productos.map((p) => (
+                    {productos.map(/* Renderiza el contenido de cada elemento de productos. */ (p) => (
                       <option key={p.id} value={p.codigo}>
                         {p.codigo} — {p.nombre}
                       </option>
@@ -175,10 +178,10 @@ export default function Movimientos({
                     className="select"
                     value={loteId}
                     disabled={!prod}
-                    onChange={(e) => setLoteId(e.target.value)}
+                    onChange={/* Ejecuta setLoteId(e.target.value) al invocarse este callback. */ (e) => setLoteId(e.target.value)}
                   >
                     <option value="">Seleccionar lote…</option>
-                    {lotesDelProducto.map((l) => (
+                    {lotesDelProducto.map(/* Renderiza el contenido de cada elemento de lotesDelProducto. */ (l) => (
                       <option key={l.id} value={l.id}>
                         {l.id} · {l.ubic} · {fmt(l.qty)} L
                       </option>
@@ -198,7 +201,7 @@ export default function Movimientos({
                     type="number"
                     min={type === "Ajuste" ? 0 : 1}
                     value={qty}
-                    onChange={(e) => setQty(e.target.value)}
+                    onChange={/* Ejecuta setQty(e.target.value) al invocarse este callback. */ (e) => setQty(e.target.value)}
                   />
                   {selectedLote && (
                     <p
@@ -271,7 +274,7 @@ export default function Movimientos({
                     className="input"
                     placeholder="Ej. OC-2024-040"
                     value={reference}
-                    onChange={(e) => setReference(e.target.value)}
+                    onChange={/* Ejecuta setReference(e.target.value) al invocarse este callback. */ (e) => setReference(e.target.value)}
                   />
                 </div>
 
@@ -286,7 +289,7 @@ export default function Movimientos({
                     }
                     rows={3}
                     value={observation}
-                    onChange={(e) => setObservation(e.target.value)}
+                    onChange={/* Ejecuta setObservation(e.target.value) al invocarse este callback. */ (e) => setObservation(e.target.value)}
                   />
                 </div>
 
@@ -322,7 +325,7 @@ export default function Movimientos({
               </tr>
             </thead>
             <tbody>
-              {movimientos.map((movement) => {
+              {movimientos.map(/* Renderiza una fila del historial diferenciando los ajustes de los demás movimientos. */ (movement) => {
                 const isAjuste = movement.tipo === "Ajuste"
                 return (
                   <tr key={movement.id}>

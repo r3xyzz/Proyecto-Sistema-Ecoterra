@@ -11,6 +11,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from facturacion.views import formato_moneda
 
 
+# Construye en memoria el PDF de la cotización con cliente, productos, totales y numeración de páginas.
 def generar_pdf_cotizacion(cotizacion):
     buffer = BytesIO()
     styles = getSampleStyleSheet()
@@ -18,6 +19,7 @@ def generar_pdf_cotizacion(cotizacion):
     normal.fontSize = 9
     normal.leading = 13
 
+    # Escapa el contenido recibido y lo convierte en un párrafo de ReportLab.
     def paragraph(value):
         return Paragraph(escape(str(value or "")), normal)
 
@@ -59,6 +61,7 @@ def generar_pdf_cotizacion(cotizacion):
     if cotizacion.observacion_cotizacion:
         elements.extend([Spacer(1, 5*mm), paragraph(cotizacion.observacion_cotizacion)])
 
+    # Escribe el número de página en el pie de cada hoja del PDF.
     def footer(canvas, document):
         canvas.setFont("Helvetica", 8)
         canvas.drawString(18*mm, 10*mm, "Ecoterra - Cotización comercial")

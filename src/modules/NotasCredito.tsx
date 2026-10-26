@@ -17,6 +17,7 @@ type CreditNote = {
   ruta_pdf_nc: string
 }
 
+// Carga las notas de crédito y permite emitirlas sobre una factura y abrir su vista de impresión.
 export default function NotasCredito({
   facturas,
   authUser,
@@ -38,16 +39,17 @@ export default function NotasCredito({
   const [subtotalInput, setSubtotalInput] = useState<number | "">("")
   const [guardando, setGuardando] = useState(false)
   const [errorGuardado, setErrorGuardado] = useState("")
-  const facturaSeleccionada = facturas.find(f => f.id === selectedFacturaId)
+  const facturaSeleccionada = facturas.find(/* Identifica el elemento buscado evaluando f.id === selectedFacturaId. */ f => f.id === selectedFacturaId)
     
 
   // Cargar notas desde la API al montar el componente o si cambia el usuario
-  useEffect(() => {
+  useEffect(/* Carga las notas de crédito al cambiar la sesión y finaliza la carga si no hay usuario. */ () => {
     if (!authUser) {
       setCargando(false)
       return
     }
 
+    // Consulta las notas de crédito de la API y actualiza el listado y los indicadores de carga y error.
     const cargarNotas = async () => {
       try {
         const res = await fetch("/api/notas-credito/", {
@@ -73,6 +75,7 @@ export default function NotasCredito({
   const totalCalculado = subtotalNum + ivaCalculado
 
   // Función para guardar la nueva NC
+  // Valida sesión y formulario, emite la nota de crédito en la API y actualiza la lista local.
   const handleEmitirNC = async () => {
     if (!authUser) {
       setErrorGuardado("No hay sesión activa.")
@@ -92,7 +95,7 @@ export default function NotasCredito({
         headers: authHeaders(authUser),
         body: JSON.stringify({
           // Buscamos la factura seleccionada y usamos su id_interno
-          id_factura: facturas.find(f => f.id === selectedFacturaId)?.id_interno,
+          id_factura: facturas.find(/* Identifica el elemento buscado evaluando f.id === selectedFacturaId. */ f => f.id === selectedFacturaId)?.id_interno,
           numero_nc: `NC-${Date.now()}`, // Generación temporal
           fecha_emision: new Date().toISOString().split("T")[0],
           motivo: motivo,
@@ -102,14 +105,14 @@ export default function NotasCredito({
       })
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => null)
+        const errData = await res.json().catch(/* Devuelve null cuando falla la operación anterior. */ () => null)
         throw new Error(
           errData ? JSON.stringify(errData) : "Error al crear la nota de crédito."
         )
       }
 
       const nuevaNC = await res.json()
-      setNotes((prev) => [nuevaNC, ...prev])
+      setNotes(/* Calcula el nuevo valor de Notes devolviendo [nuevaNC, ...prev]. */ (prev) => [nuevaNC, ...prev])
       
       // Limpiar formulario y cerrar modal
       setShowNew(false)
@@ -125,7 +128,7 @@ export default function NotasCredito({
     }
   }
 
-  // Función para generar el PDF (ajustada a los nuevos campos)
+  // Abre una ventana con el comprobante HTML de la nota de crédito para imprimirlo.
   const downloadCreditNotePdf = (note: CreditNote) => {
     const printWindow = window.open(
       "",
@@ -196,7 +199,7 @@ export default function NotasCredito({
         title="Notas de Crédito"
         sub="Documentos asociados a facturas emitidas"
       >
-        <button className="btn btn-primary" onClick={() => setShowNew(true)}>
+        <button className="btn btn-primary" onClick={/* Ejecuta setShowNew(true) al invocarse este callback. */ () => setShowNew(true)}>
           <Ico p={I.plus} size={14} /> Nueva NC
         </button>
       </PageTitle>
@@ -236,7 +239,7 @@ export default function NotasCredito({
                 </td>
               </tr>
             ) : (
-              notes.map((note) => (
+              notes.map(/* Renderiza el contenido de cada elemento de notes. */ (note) => (
                 <tr key={note.id}>
                   <td className="nc-id">{note.numero_nc}</td>
                   <td className="nc-factura">{note.factura_numero}</td>
@@ -256,7 +259,7 @@ export default function NotasCredito({
                     <button
                       className="btn btn-ghost btn-sm"
                       title="Ver PDF"
-                      onClick={() => downloadCreditNotePdf(note)}
+                      onClick={/* Ejecuta downloadCreditNotePdf(note) al invocarse este callback. */ () => downloadCreditNotePdf(note)}
                     >
                       <Ico p={I.pdf} size={13} />
                     </button>
@@ -268,16 +271,16 @@ export default function NotasCredito({
         </table>
       </div>
       {showNew && (
-        <div className="modal-backdrop" onClick={() => setShowNew(false)}>
+        <div className="modal-backdrop" onClick={/* Ejecuta setShowNew(false) al invocarse este callback. */ () => setShowNew(false)}>
           <div
             className="modal nc-modal"
-            onClick={(event) => event.stopPropagation()}
+            onClick={/* Ejecuta event.stopPropagation() al invocarse este callback. */ (event) => event.stopPropagation()}
           >
             <div className="nc-modal-header">
               <h2 className="nc-modal-title">
                 Nueva Nota de Crédito
               </h2>
-              <button onClick={() => setShowNew(false)} className="nc-modal-close">
+              <button onClick={/* Ejecuta setShowNew(false) al invocarse este callback. */ () => setShowNew(false)} className="nc-modal-close">
                 <Ico p={I.x} size={18} />
               </button>
             </div>
@@ -287,15 +290,15 @@ export default function NotasCredito({
                 <select 
                   className="select"
                   value={selectedFacturaId}
-                  onChange={(e) => {
+                  onChange={/* Selecciona la factura y completa el subtotal inicial de la nota de crédito. */ (e) => {
                     setSelectedFacturaId(e.target.value)
                     // Autocompletar el subtotal con el total de la factura
-                    const fac = facturas.find(f => f.id === e.target.value)
+                    const fac = facturas.find(/* Identifica el elemento buscado evaluando f.id === e.target.value. */ f => f.id === e.target.value)
                     if (fac) setSubtotalInput(fac.total)
                   }}
                 >
                   <option value="">Seleccionar factura…</option>
-                  {facturas.map((invoice) => (
+                  {facturas.map(/* Renderiza el contenido de cada elemento de facturas. */ (invoice) => (
                     <option key={invoice.id} value={invoice.id}>
                       {invoice.id} · {invoice.cliente} · {fmtCLP(invoice.total)}
                     </option>
@@ -317,7 +320,7 @@ export default function NotasCredito({
                   type="number" 
                   placeholder="0"
                   value={subtotalInput}
-                  onChange={(e) => setSubtotalInput(e.target.value === "" ? "" : Number(e.target.value))}
+                  onChange={/* Ejecuta setSubtotalInput(e.target.value === "" ? "" : Number(e.target.value)) al invocarse este callback. */ (e) => setSubtotalInput(e.target.value === "" ? "" : Number(e.target.value))}
                 />
               </div>
               <div className="field">
@@ -333,7 +336,7 @@ export default function NotasCredito({
                 <select 
                   className="select"
                   value={motivo}
-                  onChange={(e) => setMotivo(e.target.value)}
+                  onChange={/* Ejecuta setMotivo(e.target.value) al invocarse este callback. */ (e) => setMotivo(e.target.value)}
                 >
                   <option value="">Seleccionar motivo…</option>
                   <option value="Devolución parcial de mercancía">Devolución parcial de mercancía</option>
@@ -346,7 +349,7 @@ export default function NotasCredito({
                 <select 
                   className="select"
                   value={estado}
-                  onChange={(e) => setEstado(e.target.value)}
+                  onChange={/* Ejecuta setEstado(e.target.value) al invocarse este callback. */ (e) => setEstado(e.target.value)}
                 >
                   <option value="EMITIDA">Emitida</option>
                   <option value="ANULADA">Anulada</option>
@@ -369,7 +372,7 @@ export default function NotasCredito({
               </button>
               <button
                 className="btn btn-ghost"
-                onClick={() => setShowNew(false)}
+                onClick={/* Ejecuta setShowNew(false) al invocarse este callback. */ () => setShowNew(false)}
                 disabled={guardando}
               >
                 Cancelar

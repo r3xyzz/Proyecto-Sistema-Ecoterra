@@ -35,6 +35,7 @@ export type Invoice = {
   estado: string
 }
 
+// Muestra órdenes, permite desasociar cotizaciones y ofrece importación y facturación locales de demostración.
 export default function OrdenesCompra({
   ordenes,
   facturas,
@@ -67,19 +68,21 @@ export default function OrdenesCompra({
   })
 
   // Mantener sincronizadas las órdenes recibidas desde App.tsx.
-  useEffect(() => {
+  useEffect(/* Sincroniza las órdenes locales con las órdenes recibidas por propiedades. */ () => {
     setOrders(ordenes)
   }, [ordenes])
 
   const allInvoices = [...facturas, ...generatedInvoices]
 
+  // Busca la factura asociada a la orden por número de orden o número de factura.
   const getInvoice = (order: PurchaseOrder) =>
     allInvoices.find(
-      (invoice) =>
+      /* Identifica el elemento buscado evaluando invoice.oc === order.id || invoice.id === order.factura. */ (invoice) =>
         invoice.oc === order.id || invoice.id === order.factura,
     )
 
   // Desasociar una cotización mediante el backend.
+  // Pide confirmación y elimina mediante la API la asociación entre la orden y su cotización.
   const desasociarCotizacion = async (order: PurchaseOrder) => {
     if (order.cotizacionId == null) {
       alert("Esta orden no tiene una cotización asociada.")
@@ -139,6 +142,7 @@ export default function OrdenesCompra({
     }
   }
 
+  // Carga el PDF seleccionado para vista previa y rellena datos de orden simulados para demostración.
   const handlePdfUpload = (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
@@ -161,6 +165,7 @@ export default function OrdenesCompra({
     event.target.value = ""
   }
 
+  // Cierra la importación, limpia el archivo seleccionado y libera la URL temporal de vista previa.
   const closeUploadModal = () => {
     setShowUploadModal(false)
     setUploadedPdf(null)
@@ -174,13 +179,14 @@ export default function OrdenesCompra({
 
   // Importación local de demostración.
   // No registra la orden en la base de datos.
+  // Añade o reemplaza la orden importada únicamente en la lista local de demostración.
   const saveUploadedOrder = () => {
     if (!uploadedPdf || !detectedOrder.id || !detectedOrder.cliente) {
       return
     }
 
     const existingOrder = orders.find(
-      (order) => order.id === detectedOrder.id,
+      /* Identifica el elemento buscado evaluando order.id === detectedOrder.id. */ (order) => order.id === detectedOrder.id,
     )
 
     const newOrder: PurchaseOrder = {
@@ -196,16 +202,17 @@ export default function OrdenesCompra({
       factura: detectedOrder.factura || null,
     }
 
-    setOrders((current) => [
+    setOrders(/* Calcula el nuevo valor de Orders devolviendo [ newOrder, ...current.filter((order) => order.id !== detectedOrder.id), ]. */ (current) => [
       newOrder,
-      ...current.filter((order) => order.id !== detectedOrder.id),
+      ...current.filter(/* Comprueba qué elementos cumplen la condición evaluando order.id !== detectedOrder.id. */ (order) => order.id !== detectedOrder.id),
     ])
 
     closeUploadModal()
   }
 
+  // Crea una factura local de demostración con IVA y vencimiento a 30 días para la orden seleccionada.
   const generateInvoice = () => {
-    const order = orders.find((item) => item.id === selectedOrderId)
+    const order = orders.find(/* Identifica el elemento buscado evaluando item.id === selectedOrderId. */ (item) => item.id === selectedOrderId)
 
     if (!order || getInvoice(order)) return
 
@@ -213,7 +220,7 @@ export default function OrdenesCompra({
 
     const invoiceNumber =
       Math.max(
-        ...allInvoices.map((invoice) =>
+        ...allInvoices.map(/* Transforma cada elemento de la lista devolviendo Number(invoice.id.replace("FAC-2024-", "")). */ (invoice) =>
           Number(invoice.id.replace("FAC-2024-", "")),
         ),
         0,
@@ -223,10 +230,11 @@ export default function OrdenesCompra({
     const dueDate = new Date(issueDate)
     dueDate.setDate(dueDate.getDate() + 30)
 
+    // Convierte una fecha a su parte de calendario UTC con formato AAAA-MM-DD.
     const formatDate = (date: Date) =>
       date.toISOString().slice(0, 10)
 
-    setGeneratedInvoices((current) => [
+    setGeneratedInvoices(/* Calcula el nuevo valor de GeneratedInvoices devolviendo [ ...current, { id: `FAC-2024-${String(invoiceNumber).padStart(3, "0")}`, oc: order.id, cliente: order.cliente, fecha: formatDate(issueDate), venc: formatDate(dueDate), subtotal, iva: order.total - subtotal, total: order.total, estado: "Pendiente", }, ]. */ (current) => [
       ...current,
       {
         id: `FAC-2024-${String(invoiceNumber).padStart(3, "0")}`,
@@ -254,7 +262,7 @@ export default function OrdenesCompra({
         <button
           className="btn btn-ghost"
           type="button"
-          onClick={() => pdfInputRef.current?.click()}
+          onClick={/* Ejecuta pdfInputRef.current?.click() al invocarse este callback. */ () => pdfInputRef.current?.click()}
         >
           <Ico p={I.upload} size={14} /> Subir OC en PDF
         </button>
@@ -270,7 +278,7 @@ export default function OrdenesCompra({
         <button
           className="btn btn-primary"
           type="button"
-          onClick={() => setShowInvoiceModal(true)}
+          onClick={/* Ejecuta setShowInvoiceModal(true) al invocarse este callback. */ () => setShowInvoiceModal(true)}
         >
           <Ico p={I.invoice} size={14} /> Generar factura
         </button>
@@ -291,7 +299,7 @@ export default function OrdenesCompra({
           </thead>
 
           <tbody>
-            {orders.map((order) => {
+            {orders.map(/* Renderiza una orden con la información de su factura asociada. */ (order) => {
               const invoice = getInvoice(order)
 
               return (
@@ -315,7 +323,7 @@ export default function OrdenesCompra({
                     <button
                       className="btn btn-ghost btn-sm"
                       type="button"
-                      onClick={() => setPreviewOrder(order)}
+                      onClick={/* Ejecuta setPreviewOrder(order) al invocarse este callback. */ () => setPreviewOrder(order)}
                     >
                       <Ico p={I.pdf} size={13} /> Vista previa
                     </button>
@@ -326,7 +334,7 @@ export default function OrdenesCompra({
                       <button
                         className="btn btn-ghost btn-sm"
                         type="button"
-                        onClick={() => desasociarCotizacion(order)}
+                        onClick={/* Ejecuta desasociarCotizacion(order) al invocarse este callback. */ () => desasociarCotizacion(order)}
                       >
                         Desasociar cotización
                       </button>
@@ -351,11 +359,11 @@ export default function OrdenesCompra({
       {showInvoiceModal && (
         <div
           className="modal-backdrop"
-          onClick={() => setShowInvoiceModal(false)}
+          onClick={/* Ejecuta setShowInvoiceModal(false) al invocarse este callback. */ () => setShowInvoiceModal(false)}
         >
           <div
             className="modal oc-modal"
-            onClick={(event) => event.stopPropagation()}
+            onClick={/* Ejecuta event.stopPropagation() al invocarse este callback. */ (event) => event.stopPropagation()}
           >
             <div className="oc-modal-header">
               <div>
@@ -367,7 +375,7 @@ export default function OrdenesCompra({
 
               <button
                 type="button"
-                onClick={() => setShowInvoiceModal(false)}
+                onClick={/* Ejecuta setShowInvoiceModal(false) al invocarse este callback. */ () => setShowInvoiceModal(false)}
                 aria-label="Cerrar generación de factura"
                 className="oc-modal-close"
               >
@@ -381,13 +389,13 @@ export default function OrdenesCompra({
               <select
                 className="select"
                 value={selectedOrderId}
-                onChange={(event) =>
+                onChange={/* Ejecuta setSelectedOrderId(event.target.value) al invocarse este callback. */ (event) =>
                   setSelectedOrderId(event.target.value)
                 }
               >
                 <option value="">Seleccionar OC…</option>
 
-                {orders.map((order) => {
+                {orders.map(/* Renderiza la opción de orden e identifica si ya tiene una factura asociada. */ (order) => {
                   const invoice = getInvoice(order)
 
                   return (
@@ -429,7 +437,7 @@ export default function OrdenesCompra({
               <button
                 className="btn btn-ghost"
                 type="button"
-                onClick={() => setShowInvoiceModal(false)}
+                onClick={/* Ejecuta setShowInvoiceModal(false) al invocarse este callback. */ () => setShowInvoiceModal(false)}
               >
                 Cancelar
               </button>
@@ -442,11 +450,11 @@ export default function OrdenesCompra({
       {previewOrder && (
         <div
           className="modal-backdrop"
-          onClick={() => setPreviewOrder(null)}
+          onClick={/* Ejecuta setPreviewOrder(null) al invocarse este callback. */ () => setPreviewOrder(null)}
         >
           <div
             className="modal oc-modal-wide"
-            onClick={(event) => event.stopPropagation()}
+            onClick={/* Ejecuta event.stopPropagation() al invocarse este callback. */ (event) => event.stopPropagation()}
           >
             <div className="oc-modal-header">
               <div>
@@ -460,7 +468,7 @@ export default function OrdenesCompra({
 
               <button
                 type="button"
-                onClick={() => setPreviewOrder(null)}
+                onClick={/* Ejecuta setPreviewOrder(null) al invocarse este callback. */ () => setPreviewOrder(null)}
                 aria-label="Cerrar vista previa"
                 className="oc-modal-close"
               >
@@ -555,7 +563,7 @@ export default function OrdenesCompra({
               <button
                 className="btn btn-ghost"
                 type="button"
-                onClick={() => setPreviewOrder(null)}
+                onClick={/* Ejecuta setPreviewOrder(null) al invocarse este callback. */ () => setPreviewOrder(null)}
               >
                 Cerrar
               </button>
@@ -572,7 +580,7 @@ export default function OrdenesCompra({
         >
           <div
             className="modal oc-modal-wide"
-            onClick={(event) => event.stopPropagation()}
+            onClick={/* Ejecuta event.stopPropagation() al invocarse este callback. */ (event) => event.stopPropagation()}
           >
             <div className="oc-modal-header">
               <div>
@@ -625,7 +633,7 @@ export default function OrdenesCompra({
                     <input
                       className="input"
                       value={detectedOrder.id}
-                      onChange={(event) =>
+                      onChange={/* Ejecuta setDetectedOrder({ ...detectedOrder, id: event.target.value, }) al invocarse este callback. */ (event) =>
                         setDetectedOrder({
                           ...detectedOrder,
                           id: event.target.value,
@@ -639,7 +647,7 @@ export default function OrdenesCompra({
                     <input
                       className="input"
                       value={detectedOrder.cot}
-                      onChange={(event) =>
+                      onChange={/* Ejecuta setDetectedOrder({ ...detectedOrder, cot: event.target.value, }) al invocarse este callback. */ (event) =>
                         setDetectedOrder({
                           ...detectedOrder,
                           cot: event.target.value,
@@ -653,7 +661,7 @@ export default function OrdenesCompra({
                     <input
                       className="input"
                       value={detectedOrder.cliente}
-                      onChange={(event) =>
+                      onChange={/* Ejecuta setDetectedOrder({ ...detectedOrder, cliente: event.target.value, }) al invocarse este callback. */ (event) =>
                         setDetectedOrder({
                           ...detectedOrder,
                           cliente: event.target.value,
@@ -668,7 +676,7 @@ export default function OrdenesCompra({
                       className="input"
                       type="date"
                       value={detectedOrder.fecha}
-                      onChange={(event) =>
+                      onChange={/* Ejecuta setDetectedOrder({ ...detectedOrder, fecha: event.target.value, }) al invocarse este callback. */ (event) =>
                         setDetectedOrder({
                           ...detectedOrder,
                           fecha: event.target.value,
@@ -684,7 +692,7 @@ export default function OrdenesCompra({
                       type="number"
                       min={0}
                       value={detectedOrder.total}
-                      onChange={(event) =>
+                      onChange={/* Ejecuta setDetectedOrder({ ...detectedOrder, total: event.target.value, }) al invocarse este callback. */ (event) =>
                         setDetectedOrder({
                           ...detectedOrder,
                           total: event.target.value,
@@ -698,7 +706,7 @@ export default function OrdenesCompra({
                     <select
                       className="select"
                       value={detectedOrder.factura}
-                      onChange={(event) =>
+                      onChange={/* Ejecuta setDetectedOrder({ ...detectedOrder, factura: event.target.value, }) al invocarse este callback. */ (event) =>
                         setDetectedOrder({
                           ...detectedOrder,
                           factura: event.target.value,
@@ -707,7 +715,7 @@ export default function OrdenesCompra({
                     >
                       <option value="">Sin factura asociada</option>
 
-                      {allInvoices.map((invoice) => (
+                      {allInvoices.map(/* Renderiza el contenido de cada elemento de allInvoices. */ (invoice) => (
                         <option key={invoice.id} value={invoice.id}>
                           {invoice.id} · {invoice.cliente} ·{" "}
                           {fmtCLP(invoice.total)}

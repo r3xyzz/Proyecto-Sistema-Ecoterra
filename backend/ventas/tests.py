@@ -14,6 +14,7 @@ from .models import OrdenCompra
 
 
 class DistribucionVentasTests(SalesTablesMixin, TestCase):
+    # Prepara el cliente autenticado y los datos necesarios para cada prueba.
     def setUp(self):
         self.api = APIClient()
         admin = Usuario.objects.create(
@@ -25,12 +26,14 @@ class DistribucionVentasTests(SalesTablesMixin, TestCase):
             telefono="123", email="cliente-ventas@example.com",
         )
 
+    # Comprueba que orden_compra y factura tienen un único modelo registrado y una relación canónica.
     def test_tablas_tienen_un_solo_modelo_registrado(self):
         for tabla, esperado in (("orden_compra", OrdenCompra), ("factura", Factura)):
             modelos = [model for model in apps.get_models() if model._meta.db_table == tabla]
             self.assertEqual(modelos, [esperado])
         self.assertIs(Factura._meta.get_field("id_orden_compra").related_model, OrdenCompra)
 
+    # Comprueba que las dos rutas de órdenes crean y consultan el mismo modelo con sus alias respectivos.
     def test_ambas_rutas_crean_y_consultan_el_mismo_modelo(self):
         for ruta, fecha, identificador in (
             ("ordenes-compra", "fecha_oc", "id_oc"),
@@ -49,6 +52,7 @@ class DistribucionVentasTests(SalesTablesMixin, TestCase):
                     self.assertEqual(respuesta.status_code, 200, respuesta.data)
                     self.assertEqual(respuesta.data["numero_oc"], orden.numero_oc)
 
+    # Comprueba que las dos rutas impiden eliminar órdenes con factura asociada.
     def test_ambas_rutas_protegen_ordenes_facturadas(self):
         orden = OrdenCompra.objects.create(
             id_cliente=self.cliente, numero_oc="OC-FACTURADA",
@@ -63,9 +67,11 @@ class DistribucionVentasTests(SalesTablesMixin, TestCase):
             self.assertEqual(respuesta.status_code, 400, respuesta.data)
         self.assertTrue(OrdenCompra.objects.filter(pk=orden.pk).exists())
 
+    # Comprueba que la ruta histórica de órdenes exige autenticación.
     def test_ruta_historica_exige_autenticacion(self):
         self.assertEqual(APIClient().get("/api/orden-compras/").status_code, 401)
 
+    # Comprueba que una nota de crédito se crea y consulta vinculada al modelo canónico de factura.
     def test_nota_credito_usa_factura_canonica(self):
         orden = OrdenCompra.objects.create(
             id_cliente=self.cliente, numero_oc="OC-NC",

@@ -9,11 +9,13 @@ from .views import CotizacionViewSet
 
 
 class DocumentPdfTests(SimpleTestCase):
+    # Prepara los usuarios, datos y servicios simulados necesarios para cada prueba.
     def setUp(self):
         self.record = SimpleNamespace(pk=42, ruta_pdf_cotizacion="", save=Mock())
         self.factory = APIRequestFactory()
         self.user = Usuario(id=1, id_rol=1, activo=True)
 
+    # Invoca una acción de cotizaciones con una solicitud simulada y autenticación opcional.
     def request(self, action, method="get", authenticated=True):
         request = getattr(self.factory, method)("/api/cotizaciones/42/pdf/")
         if authenticated:
@@ -21,12 +23,15 @@ class DocumentPdfTests(SimpleTestCase):
         with patch.object(CotizacionViewSet, "get_object", return_value=self.record):
             return CotizacionViewSet.as_view({method: action})(request, pk=42)
 
+    # Comprueba que las acciones de PDF exigen autenticación.
     def test_requires_authentication(self):
         self.assertIn(self.request("obtener_pdf", authenticated=False).status_code, (401, 403))
 
+    # Comprueba que consultar un PDF inexistente devuelve HTTP 404.
     def test_missing_document(self):
         self.assertEqual(self.request("obtener_pdf").status_code, 404)
 
+    # Comprueba que el enlace firmado dura cinco minutos y la respuesta no se almacena en caché.
     @patch("cotizaciones.views.obtener_cliente_supabase")
     def test_signed_url_is_temporary_and_not_cached(self, client):
         self.record.ruta_pdf_cotizacion = "cotizaciones/42/test.pdf"
@@ -37,6 +42,7 @@ class DocumentPdfTests(SimpleTestCase):
         self.assertEqual(response["Cache-Control"], "no-store")
         bucket.create_signed_url.assert_called_once_with(self.record.ruta_pdf_cotizacion, 300)
 
+    # Comprueba que el PDF se sube y su ruta queda vinculada a la cotización.
     @patch("cotizaciones.views.generar_pdf_cotizacion", return_value=b"%PDF-test")
     @patch("cotizaciones.views.obtener_cliente_supabase")
     def test_upload_and_association(self, client, generate):
@@ -45,6 +51,7 @@ class DocumentPdfTests(SimpleTestCase):
         self.assertTrue(self.record.ruta_pdf_cotizacion.startswith("cotizaciones/42/"))
         self.record.save.assert_called_once_with(update_fields=["ruta_pdf_cotizacion"])
 
+    # Comprueba que un fallo al subir el PDF no vincula una ruta inexistente.
     @patch("cotizaciones.views.generar_pdf_cotizacion", return_value=b"%PDF-test")
     @patch("cotizaciones.views.obtener_cliente_supabase")
     def test_upload_failure_does_not_associate(self, client, generate):
@@ -55,11 +62,13 @@ class DocumentPdfTests(SimpleTestCase):
         self.record.save.assert_not_called()
         self.assertEqual(self.record.ruta_pdf_cotizacion, "")
 
+    # Comprueba que editar una cotización invalida su PDF anterior.
     def test_edit_invalidates_previous_pdf(self):
         serializer = Mock()
         CotizacionViewSet().perform_update(serializer)
         serializer.save.assert_called_once_with(ruta_pdf_cotizacion="")
 
+    # Comprueba que el generador acepta acentos y caracteres de marcado y produce un PDF completo.
     def test_renderer_handles_accents_and_markup(self):
         details = Mock()
         details.all.return_value.order_by.return_value = [SimpleNamespace(

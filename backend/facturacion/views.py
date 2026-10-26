@@ -46,6 +46,7 @@ from .serializers import FacturaSerializer, OrdenCompraSerializer
 # ============================================================
 
 
+# Crea el cliente de Supabase con la URL y la clave secreta configuradas o informa que faltan.
 def obtener_cliente_supabase():
     url = os.getenv("SUPABASE_URL") or getattr(
         settings, "SUPABASE_URL", ""
@@ -68,6 +69,7 @@ def obtener_cliente_supabase():
 
 
 
+# Obtiene el bucket configurado para los PDF o utiliza facturas-pdf como valor predeterminado.
 def obtener_nombre_bucket():
     return (
         os.getenv("SUPABASE_STORAGE_BUCKET")
@@ -80,6 +82,7 @@ def obtener_nombre_bucket():
 # UTILIDADES PDF
 # ============================================================
 
+# Formatea un importe con símbolo de peso, miles con punto y dos decimales con coma.
 def formato_moneda(valor):
     """
     Formato chileno: $10.000,00.
@@ -91,11 +94,13 @@ def formato_moneda(valor):
     return f"${texto}"
 
 
+# Formatea un importe con miles separados por coma y dos decimales separados por punto.
 def _num(valor):
     """Formato de la plantilla: 6,049.44"""
     return f"{Decimal(str(valor or 0)):,.2f}"
 
 
+# Calcula la escala del logo para que quepa en el espacio indicado sin deformarlo.
 def _logo_proporcional(ruta, ancho_max, alto_max):
     """Carga el logo sin deformarlo, ajustado a un recuadro máximo."""
     ancho, alto = ImageReader(ruta).getSize()
@@ -103,6 +108,7 @@ def _logo_proporcional(ruta, ancho_max, alto_max):
     return Image(ruta, width=ancho * escala, height=alto * escala, hAlign="LEFT")
 
 
+# Construye en memoria el PDF de la factura con el diseño comercial, logo, cliente, productos y totales.
 def generar_pdf_factura(factura):
     """
     Genera el PDF de la factura replicando la plantilla Ecoterra (Invoice):
@@ -122,6 +128,7 @@ def generar_pdf_factura(factura):
     # ---------------- ESTILOS ----------------
     base = getSampleStyleSheet()["Normal"]
 
+    # Crea un estilo de párrafo combinando los valores base con las opciones recibidas.
     def est(nombre, **kw):
         params = dict(parent=base, fontName="Helvetica", fontSize=7, leading=8.5)
         params.update(kw)
@@ -164,6 +171,7 @@ def generar_pdf_factura(factura):
 
     rows, alturas, cmds = [], [], []
 
+    # Añade una fila y su altura a la tabla del PDF y devuelve su índice.
     def fila(celdas, alto):
         rows.append(celdas + [""] * (7 - len(celdas)))
         alturas.append(alto * mm)
@@ -401,6 +409,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
         "DELETE": ("facturacion", "Eliminar"),
     }
 
+    # Actualiza la factura y convierte los conflictos de integridad en una respuesta HTTP 409.
     def update(self, request, *args, **kwargs):
         try:
             return super().update(request, *args, **kwargs)
@@ -408,6 +417,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
             return Response({"error": "No se pudo actualizar la factura. Revisa la asociación con la orden de compra."},
                             status=status.HTTP_409_CONFLICT)
 
+    # Valida y crea la factura en una transacción devolviendo HTTP 409 si hay un conflicto de integridad.
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -440,6 +450,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
     # POST /api/facturas/{id}/generar-pdf/
     # --------------------------------------------------------
 
+    # Genera y sube un PDF nuevo de la factura a Supabase y guarda su ruta en la factura.
     @action(
         detail=True,
         methods=["post"],
@@ -497,6 +508,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
     # GET /api/facturas/{id}/pdf/
     # --------------------------------------------------------
 
+    # Obtiene un enlace firmado temporal al PDF de la factura e impide almacenar la respuesta en caché.
     @action(
         detail=True,
         methods=["get"],
@@ -571,6 +583,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
     # PATCH /api/facturas/{id}/acciones/
     # --------------------------------------------------------
 
+    # Valida y cambia el estado de la factura e invalida el PDF guardado anteriormente.
     @action(
         detail=True,
         methods=["patch"],

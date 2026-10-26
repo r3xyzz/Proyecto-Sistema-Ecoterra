@@ -3,6 +3,7 @@ from django.db import connection
 
 class SalesTablesMixin:
     """Tablas unmanaged disponibles exclusivamente durante cada clase de tests."""
+    # Crea las tablas unmanaged que necesita la clase de pruebas en la base de datos de prueba.
     @classmethod
     def setUpClass(cls):
         from cotizaciones.models import Cotizacion, DetalleCotizacion
@@ -17,6 +18,7 @@ class SalesTablesMixin:
                     cls.created_tables.append(model)
         super().setUpClass()
 
+    # Elimina en orden inverso las tablas creadas exclusivamente para esta clase de pruebas.
     @classmethod
     def tearDownClass(cls):
         super().tearDownClass()

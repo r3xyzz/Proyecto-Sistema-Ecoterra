@@ -30,6 +30,7 @@ class InventarioSerializer(serializers.ModelSerializer):
             "estado",
         ]
 
+    # Genera un código de lote aleatorio si falta y guarda el registro de inventario.
     def create(self, validated_data):
         if not validated_data.get("codigo_lote"):
             suffix = "".join(random.choices(string.digits, k=4))
@@ -73,8 +74,10 @@ class ProductoSerializer(serializers.ModelSerializer):
             "estado",
         ]
 
+    # Devuelve como número el stock disponible calculado o cero si no hay existencias.
     def get_stock_disponible(self, obj):
         return float(obj.stock_disponible_calculado or 0)
 
+    # Devuelve como número el stock total calculado o cero si no hay existencias.
     def get_stock_total(self, obj):
         return float(obj.stock_total_calculado or 0)

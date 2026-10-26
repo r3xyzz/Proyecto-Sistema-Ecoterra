@@ -35,6 +35,7 @@ class UsuarioDetailView(RetrieveUpdateDestroyAPIView):
     }
 
 # ---------- Permisos (endpoints existentes) ----------
+# Comprueba el permiso administrativo y devuelve el catálogo de permisos activos ordenado por identificador.
 @api_view(["GET"])
 def permisos_list(request):
     """Devuelve el catálogo completo de permisos agrupados por módulo."""
@@ -69,6 +70,7 @@ def permisos_list(request):
     ])
 
 
+# Consulta los permisos del rol con GET o intenta reemplazarlos atómicamente con PUT tras comprobar autorización.
 @api_view(["GET", "PUT"])
 def rol_permisos(request, id_rol):
     """GET: permisos del rol. PUT: reemplazar la lista de permisos del rol."""
