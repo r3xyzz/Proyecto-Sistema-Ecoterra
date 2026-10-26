@@ -7,11 +7,11 @@ import Proveedores, { Proveedor, ProveedorInput } from "./modules/Proveedores"
 import Productos, { ProductInput } from "./modules/Productos"
 import Lotes, { Lote, LoteInput } from "./modules/Lotes"
 import Movimientos, { Movimiento, MovimientoInput } from "./modules/Movimientos"
-import Cotizaciones, { Invoice } from "./modules/Cotizaciones"
+import Cotizaciones from "./modules/Cotizaciones" // 👈 Quitamos { Invoice } de aquí
 import OrdenesCompra, {
   type PurchaseOrder,
 } from "./modules/OrdenesCompra"
-import Facturacion from "./modules/Facturacion"
+import Facturacion, { Invoice } from "./modules/Facturacion" // 👈 Solo una vez, y trae el Invoice correcto
 import NotasCredito from "./modules/NotasCredito"
 import IaPanel from "./modules/IaPanel"
 import Usuarios, { User, UserInput } from "./modules/Usuarios"
@@ -121,6 +121,7 @@ const mapMovimientoFromApi = (
 
 const mapFacturaFromApi = (item: any): Invoice => ({
   id: item.numero_factura,
+  id_interno: Number(item.id_factura ?? item.id),
   oc: item.oc_numero || "",
   cliente: item.cliente_nombre || "",
   fecha: item.fecha_factura,
@@ -929,7 +930,7 @@ export default function App() {
         ...current.filter((item) => item.id !== invoice.id),
       ])
     }} />,
-    nc: <NotasCredito facturas={facturas} />,
+    nc: <NotasCredito facturas={facturas} authUser={authUser} />,
     ia: <IaPanel productos={productos} />,
     usuarios: (
       <Usuarios
