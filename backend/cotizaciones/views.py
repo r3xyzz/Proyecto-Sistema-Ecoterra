@@ -11,7 +11,15 @@ from .serializers import CotizacionSerializer, DetalleCotizacionSerializer
 
 
 class CotizacionViewSet(viewsets.ModelViewSet):
-    queryset = Cotizacion.objects.all().order_by("-id_cotizacion")
+    queryset = (
+        Cotizacion.objects
+        .select_related("id_cliente")
+        .prefetch_related(
+            "id_cliente__direcciones",
+            "detallecotizacion_set__id_producto",
+        )
+        .order_by("-id_cotizacion")
+    )
     serializer_class = CotizacionSerializer
     permission_classes = [PermisoModulo]
 
