@@ -75,7 +75,11 @@ class CotizacionViewSet(viewsets.ModelViewSet):
 
 
 class DetalleCotizacionViewSet(viewsets.ModelViewSet):
-    queryset = DetalleCotizacion.objects.all()
+    queryset = (
+    DetalleCotizacion.objects
+        .select_related("id_cotizacion", "id_producto")
+        .prefetch_related("id_cotizacion__id_cliente")
+    )
     serializer_class = DetalleCotizacionSerializer
     permission_classes = [PermisoModulo]
 
