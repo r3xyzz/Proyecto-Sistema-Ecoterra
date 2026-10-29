@@ -33,6 +33,16 @@ class UsuarioDetailView(RetrieveUpdateDestroyAPIView):
         "PATCH": ("usuarios_roles", "Editar usuarios"),
         "DELETE": ("usuarios_roles", "Eliminar usuarios"),
     }
+    
+    def update(self, request, *args, **kwargs):
+        # Imprimimos para depurar qué llega desde el frontend
+        print("Datos recibidos para actualizar:", request.data)
+        
+        # Si viene la contraseña, nos aseguramos de que el serializer la procese
+        if "contrasena" in request.data:
+            print("Contraseña recibida:", request.data["contrasena"])
+        
+        return super().update(request, *args, **kwargs) 
 
 # ---------- Permisos (endpoints existentes) ----------
 # Comprueba el permiso administrativo y devuelve el catálogo de permisos activos ordenado por identificador.

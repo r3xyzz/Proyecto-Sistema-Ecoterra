@@ -18,6 +18,7 @@ export type UserInput = {
   rol: string
   estado: string
   permisos?: Record<string, boolean>
+  contrasena?: string
 }
 
 type PermisoCatalogo = {
@@ -78,6 +79,16 @@ export default function Usuarios({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState("")
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle")
+
+  const [showEdit, setShowEdit] = useState(false)
+  const [editUser, setEditUser] = useState<User | null>(null)
+  const [editForm, setEditForm] = useState({
+    nombre: "",
+    email: "",
+    rol: "",
+    estado: "",
+    password: "",
+  })
 
   const [newUser, setNewUser] = useState<UserInput>({
     nombre: "",
@@ -205,6 +216,46 @@ export default function Usuarios({
     }
   }
 
+    const openEditUser = (user: User) => {
+    setEditUser(user)
+    setEditForm({
+      nombre: user.nombre,
+      email: user.email,
+      rol: user.rol,
+      estado: user.estado,
+      password: "",
+    })
+    setSaveError("")
+    setShowEdit(true)
+  }
+
+  // Guarda los cambios del usuario
+  const saveEditUser = async () => {
+    if (!editUser) return
+    setSaving(true)
+    setSaveError("")
+    try {
+      const payload: any = {
+        nombre: editForm.nombre,
+        email: editForm.email,
+        rol: editForm.rol,
+        estado: editForm.estado,
+      }
+      // Solo enviamos la contraseña si el usuario escribió una nueva
+      if (editForm.password.trim() !== "") {
+        payload.contrasena = editForm.password
+      }
+
+      await onUpdate(editUser, payload)
+      setShowEdit(false)
+      setEditUser(null)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "No se pudo actualizar el usuario")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // -------------------- AGRUPAR CATÁLOGO POR MÓDULO --------------------
   const grupos = useMemo(/* Agrupa el catálogo de permisos por módulo para mostrarlo en la interfaz. */ () => {
     const map = new Map<string, PermisoCatalogo[]>()
@@ -274,10 +325,7 @@ export default function Usuarios({
                   <td style={{ display: "flex", gap: 8 }}>
                     <button
                       className="btn btn-ghost btn-sm"
-                      onClick={/* Muestra un aviso de edición del usuario mientras el formulario de edición está pendiente. */ () => {
-                        // TODO: abrir modal de edición de usuario
-                        alert(`Editar usuario: ${user.nombre}`)
-                      }}
+                      onClick={() => openEditUser(user)}
                     >
                       <Ico p={I.edit} size={13} /> Editar
                     </button>
@@ -474,6 +522,81 @@ export default function Usuarios({
                 <Ico p={I.check} size={14} /> Guardar
               </button>
               <button className="btn btn-ghost" onClick={/* Ejecuta setShowNew(false) al invocarse este callback. */ () => setShowNew(false)}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+            {/* ============================================== */}
+      {/* MODAL: Editar usuario (solo Admin)             */}
+      {/* ============================================== */}
+      {isAdmin && showEdit && editUser && (
+        <div className="modal-backdrop" onClick={() => setShowEdit(false)}>
+          <div
+            className="modal usuarios-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 className="usuarios-modal-title">Editar usuario</h2>
+            <div className="usuarios-form">
+              <div className="field">
+                <label className="label">Nombre completo</label>
+                <input
+                  className="input"
+                  value={editForm.nombre}
+                  onChange={(e) => setEditForm({ ...editForm, nombre: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label className="label">Correo electrónico</label>
+                <input
+                  className="input"
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label className="label">Rol</label>
+                <select
+                  className="select"
+                  value={editForm.rol}
+                  onChange={(e) => setEditForm({ ...editForm, rol: e.target.value })}
+                >
+                  <option value="Superusuario / Admin">Superusuario / Admin</option>
+                  <option value="Usuario con privilegios">Usuario con privilegios</option>
+                  <option value="Usuario base">Usuario base</option>
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Estado</label>
+                <select
+                  className="select"
+                  value={editForm.estado}
+                  onChange={(e) => setEditForm({ ...editForm, estado: e.target.value })}
+                >
+                  <option value="Activo">Activo</option>
+                  <option value="Inactivo">Inactivo</option>
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Nueva contraseña (opcional)</label>
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="Dejar en blanco para no cambiar"
+                  value={editForm.password}
+                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                />
+              </div>
+            </div>
+            {saveError && <p style={{ color: "#B91C1C", marginTop: 12 }}>{saveError}</p>}
+            <div className="usuarios-form-actions">
+              <button className="btn btn-primary" onClick={saveEditUser} disabled={saving}>
+                <Ico p={I.check} size={14} /> {saving ? "Guardando..." : "Guardar cambios"}
+              </button>
+              <button className="btn btn-ghost" onClick={() => setShowEdit(false)} disabled={saving}>
                 Cancelar
               </button>
             </div>

@@ -468,19 +468,28 @@ export default function App() {
 
   // Actualiza el usuario mediante la API y reemplaza sus datos en la lista local.
   const updateUser = async (user: User, input: UserInput) => {
+    // 1. Armamos el body base con los campos que siempre se envían
+    const bodyData: any = {
+      nombre: input.nombre,
+      email: input.email,
+      rol: input.rol,
+      estado: input.estado,
+      permisos: input.permisos ?? {},
+    }
+
+    // 2. Si el usuario escribió una nueva contraseña, la agregamos al body
+    if (input.contrasena && input.contrasena.trim() !== "") {
+      bodyData.contrasena = input.contrasena
+    }
+
     const response = await fetch(`/api/usuarios/${user.id}/`, {
       method: "PATCH",
       headers: authHeaders(authUser),
-      body: JSON.stringify({
-        nombre: input.nombre,
-        email: input.email,
-        rol: input.rol,
-        estado: input.estado,
-        permisos: input.permisos ?? {},
-      }),
+      body: JSON.stringify(bodyData), //  Enviamos el body modificado
     })
+    
     if (!response.ok) {
-      const errorData = await response.json().catch(/* Devuelve null cuando falla la operación anterior. */ () => null)
+      const errorData = await response.json().catch(() => null)
       throw new Error(
         errorData
           ? Object.values(errorData).flat().join(" ")
@@ -488,8 +497,8 @@ export default function App() {
       )
     }
     const updated = mapUserFromApi(await response.json())
-    setUsuarios(/* Calcula el nuevo valor de Usuarios devolviendo current.map((item) => (item.id === updated.id ? updated : item)). */ (current) =>
-      current.map(/* Transforma cada elemento de la lista devolviendo (item.id === updated.id ? updated : item). */ (item) => (item.id === updated.id ? updated : item)),
+    setUsuarios((current) =>
+      current.map((item) => (item.id === updated.id ? updated : item)),
     )
     return updated
   }
