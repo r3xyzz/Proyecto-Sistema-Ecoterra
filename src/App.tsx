@@ -23,6 +23,7 @@ import {
   Screen,
 } from "./shared"
 import Login from "./modules/Login"
+import { clearSession, readSession, saveSession } from "./session"
 
 // ---------- Mappers API -> UI ----------
 // Adapta un cliente de la API y sus direcciones al formato utilizado por la interfaz.
@@ -223,8 +224,8 @@ const initialProductos = [
 // ---------- App ----------
 // Gestiona la sesión, carga los datos de la API y conecta la navegación con las operaciones de cada módulo.
 export default function App() {
-  const [authUser, setAuthUser] = useState<AuthUser | null>(null)
-  const [screen, setScreen] = useState<Screen>("login")
+  const [authUser, setAuthUser] = useState<AuthUser | null>(readSession)
+  const [screen, setScreen] = useState<Screen>(() => authUser ? "dashboard" : "login")
   const [productos, setProductos] = useState(initialProductos)
   const [clientes, setClientes] = useState<
     React.ComponentProps<typeof Clientes>["clientes"]
@@ -262,12 +263,14 @@ export default function App() {
   // ---------- Auth ----------
   // Guarda el usuario autenticado y abre el dashboard.
   const handleLogin = (user: AuthUser) => {
+    saveSession(user)
     setAuthUser(user)
     setScreen("dashboard")
   }
 
-  // Borra el usuario de la sesión en memoria y vuelve a la pantalla de acceso.
+  // Borra la sesión guardada y en memoria y vuelve a la pantalla de acceso.
   const handleLogout = () => {
+    clearSession()
     setAuthUser(null)
     setScreen("login")
   }
