@@ -3,7 +3,6 @@ import React, { useState, useEffect } from "react"
 import { getDocumentPdfUrl } from "../documentPdf"
 import { AuthUser, authHeaders, Badge, fmtCLP, I, Ico, PageTitle, Product } from "../shared"
 
-
 export type Quote = {
   idCotizacion: number
   id: string
@@ -28,7 +27,6 @@ export type PurchaseOrder = {
   estado: string
   factura: string | null
 }
-
 
 export type Invoice = {
   id: string
@@ -88,7 +86,6 @@ type QuoteDetail = {
 }
 
 
-// Gestiona el listado, edición, vista previa, PDF y asociación de cotizaciones con órdenes.
 export default function Cotizaciones({
   authUser,
   ordenes,
@@ -106,7 +103,7 @@ export default function Cotizaciones({
 }) {
 
   const [show, setShow] = useState(false)
-  // Abre una pestaña y la dirige al PDF de la cotización obtenido desde el backend.
+  
   const downloadQuotePdf = async (quote: Quote) => {
     const tab = window.open("about:blank", "_blank")
     if (!tab) { alert("Permite las ventanas emergentes para abrir el PDF."); return }
@@ -138,12 +135,10 @@ export default function Cotizaciones({
     { productId: "", quantity: "", unitPrice: "" },
   ])
 
-  // Estado para saber si estamos editando (guarda el ID interno)
   const [editQuoteId, setEditQuoteId] = useState<number | null>(null)
-
   const [clientes, setClientes] = useState<Client[]>(clientesProp || [])
 
-  useEffect(/* Carga las cotizaciones y consulta clientes si no se recibieron desde la aplicación. */ () => {
+  useEffect(() => {
     reloadCotizaciones()
     if (!clientesProp || clientesProp.length === 0) {
       loadClientes()
@@ -151,14 +146,13 @@ export default function Cotizaciones({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Carga los clientes autorizados desde la API cuando no se reciben desde la aplicación.
   const loadClientes = async () => {
     try {
-      const response = await fetch("/api/clientes/", { headers: authHeaders(authUser) }) // 👈 TOKEN
+      const response = await fetch("/api/clientes/", { headers: authHeaders(authUser) })
       if (!response.ok) return
       const data = await response.json()
       const items = data.value || data
-      const mapped: Client[] = items.map(/* Transforma cada elemento de la lista devolviendo ({ id: item.id, razon: item.razon_social, ciudad: item.ciudad, }). */ (item: any) => ({
+      const mapped: Client[] = items.map((item: any) => ({
         id: item.id,
         razon: item.razon_social,
         ciudad: item.ciudad,
@@ -169,8 +163,6 @@ export default function Cotizaciones({
     }
   }
 
-  
-// Carga las cotizaciones de la API y las adapta al formato del listado.
 const reloadCotizaciones = async () => {
   try {
     const response = await fetch("/api/cotizaciones/", {
@@ -189,7 +181,7 @@ const reloadCotizaciones = async () => {
     const data = await response.json()
     const items = data.value || data
 
-    const mapped: Quote[] = items.map(/* Transforma cada elemento de la lista devolviendo ({ idCotizacion: Number(item.id_cotizacion), id: item.numero_cotizacion, cliente: item.cliente_nombre || "", fecha: item.fecha_cotizacion, vigencia: item.vigencia_cotizacion, subtotal: Number(item.subtotal_cotizacion), iva: Number(item.iva_cotizacion), total: Number(item.total_cotizacion), observacion: item.observacion_cotizacion || "", estado: item.estado_cotizacion, }). */ (item: any) => ({
+    const mapped: Quote[] = items.map((item: any) => ({
       idCotizacion: Number(item.id_cotizacion),
       id: item.numero_cotizacion,
       cliente: item.cliente_nombre || "",
@@ -208,20 +200,18 @@ const reloadCotizaciones = async () => {
   }
 }
 
-
-  // Selecciona la cotización y consulta sus datos completos para mostrar la vista previa.
   const openPreview = async (quote: Quote) => {
     setPreview(quote)
     setDetail(null)
     setIsLoadingDetail(true)
     try {
-      const listResp = await fetch("/api/cotizaciones/", { headers: authHeaders(authUser) }) // 👈 TOKEN
+      const listResp = await fetch("/api/cotizaciones/", { headers: authHeaders(authUser) })
       const listData = await listResp.json()
       const items = listData.value || listData
-      const match = items.find(/* Identifica el elemento buscado evaluando c.numero_cotizacion === quote.id. */ (c: any) => c.numero_cotizacion === quote.id)
+      const match = items.find((c: any) => c.numero_cotizacion === quote.id)
       
       if (match) {
-        const detailResp = await fetch(`/api/cotizaciones/${match.id_cotizacion}/`, { headers: authHeaders(authUser) }) // 👈 TOKEN
+        const detailResp = await fetch(`/api/cotizaciones/${match.id_cotizacion}/`, { headers: authHeaders(authUser) })
         if (detailResp.ok) {
           const detailData = await detailResp.json()
           setDetail(detailData)
@@ -234,23 +224,20 @@ const reloadCotizaciones = async () => {
     }
   }
 
-  // Función para abrir el modal en modo edición
-  // Consulta la cotización completa y rellena el formulario para editarla.
   const openEdit = async (quote: Quote) => {
     try {
-      const listResp = await fetch("/api/cotizaciones/", { headers: authHeaders(authUser) }) // 👈 TOKEN
+      const listResp = await fetch("/api/cotizaciones/", { headers: authHeaders(authUser) })
       const listData = await listResp.json()
       const items = listData.value || listData
-      const match = items.find(/* Identifica el elemento buscado evaluando c.numero_cotizacion === quote.id. */ (c: any) => c.numero_cotizacion === quote.id)
+      const match = items.find((c: any) => c.numero_cotizacion === quote.id)
       
       if (!match) return
 
-      const detailResp = await fetch(`/api/cotizaciones/${match.id_cotizacion}/`, { headers: authHeaders(authUser) }) // 👈 TOKEN
+      const detailResp = await fetch(`/api/cotizaciones/${match.id_cotizacion}/`, { headers: authHeaders(authUser) })
       if (!detailResp.ok) return
       
       const data = await detailResp.json()
       
-      // Precargar el formulario
       setEditQuoteId(data.id_cotizacion)
       setQuoteClient(data.cliente_nombre)
       setQuoteAddress(data.cliente_direcciones?.[0]?.ciudad || "")
@@ -260,9 +247,8 @@ const reloadCotizaciones = async () => {
       setQuoteStatus(data.estado_cotizacion)
       setQuoteObservation(data.observacion_cotizacion || "")
       
-      // Precargar líneas de productos
       setQuoteLines(
-        data.detalles.map(/* Transforma cada elemento de la lista devolviendo ({ productId: String(d.id_producto), quantity: String(d.cantidad_dc), unitPrice: String(d.precio_unitario_dc), }). */ (d: any) => ({
+        data.detalles.map((d: any) => ({
           productId: String(d.id_producto),
           quantity: String(d.cantidad_dc),
           unitPrice: String(d.precio_unitario_dc),
@@ -275,39 +261,33 @@ const reloadCotizaciones = async () => {
     }
   }
 
-  const activeQuotes = quotes.filter(/* Comprueba qué elementos cumplen la condición evaluando quote.estado === "Vigente". */ (quote) => quote.estado === "Vigente")
-  const convertedQuotes = quotes.filter(/* Comprueba qué elementos cumplen la condición evaluando quote.estado === "Convertida". */ (quote) => quote.estado === "Convertida")
-  const expiredQuotes = quotes.filter(/* Comprueba qué elementos cumplen la condición evaluando quote.estado === "Vencida". */ (quote) => quote.estado === "Vencida")
-  const totalQuoted = quotes.reduce(/* Acumula el resultado de la lista mediante sum + quote.total. */ (sum, quote) => sum + quote.total, 0)
+  const activeQuotes = quotes.filter((quote) => quote.estado === "Vigente")
+  const convertedQuotes = quotes.filter((quote) => quote.estado === "Convertida")
+  const expiredQuotes = quotes.filter((quote) => quote.estado === "Vencida")
+  const totalQuoted = quotes.reduce((sum, quote) => sum + quote.total, 0)
 
-  
-  // Busca la orden asociada por identificador de cotización o por la asociación local guardada.
   const getPurchaseOrder = (quote: Quote) =>
     ordenes.find(
-      /* Identifica el elemento buscado evaluando order.cotizacionId === quote.idCotizacion. */ (order) => order.cotizacionId === quote.idCotizacion,
+      (order) => order.cotizacionId === quote.idCotizacion,
     ) ??
     ordenes.find(
-      /* Identifica el elemento buscado evaluando linkedOrders[quote.id] === order.id. */ (order) => linkedOrders[quote.id] === order.id,
+      (order) => linkedOrders[quote.id] === order.id,
     ) ??
     null
 
 
-  // Busca la factura de la orden vinculada a la cotización o devuelve nulo.
   const getInvoice = (quote: Quote) => {
     const order = getPurchaseOrder(quote)
     return order
-      ? (facturas.find(/* Identifica el elemento buscado evaluando invoice.oc === order.id. */ (invoice) => invoice.oc === order.id) ?? null)
+      ? (facturas.find((invoice) => invoice.oc === order.id) ?? null)
       : null
   }
 
-  
-
-// Valida la selección y asocia la cotización a la orden mediante la API.
 const linkOrder = async () => {
   if (!quoteToLink) return
 
   const order = ordenes.find(
-    /* Identifica el elemento buscado evaluando purchaseOrder.id === selectedOrder. */ (purchaseOrder) => purchaseOrder.id === selectedOrder,
+    (purchaseOrder) => purchaseOrder.id === selectedOrder,
   )
 
   if (!order) {
@@ -326,9 +306,8 @@ const linkOrder = async () => {
     return
   }
 
-  // Evitar asociar una cotización que ya pertenece a otra orden.
   const existingOrder = ordenes.find(
-    /* Identifica el elemento buscado evaluando purchaseOrder.cotizacionId === quoteToLink.idCotizacion && purchaseOrder.idOc !== order.idOc. */ (purchaseOrder) =>
+    (purchaseOrder) =>
       purchaseOrder.cotizacionId === quoteToLink.idCotizacion &&
       purchaseOrder.idOc !== order.idOc,
   )
@@ -372,7 +351,6 @@ const linkOrder = async () => {
       return
     }
 
-    // Actualizar las órdenes compartidas con los datos del backend.
     try {
       await onOrdenesChange()
     } catch (refreshError) {
@@ -382,9 +360,8 @@ const linkOrder = async () => {
       )
     }
 
-    // Actualizar el estado visual de la cotización.
-    setQuotes(/* Calcula el nuevo valor de Quotes devolviendo current.map((quote) => quote.idCotizacion === quoteToLink.idCotizacion ? { ...quote, estado: "Convertida" } : quote, ). */ (current) =>
-      current.map(/* Transforma cada elemento de la lista devolviendo quote.idCotizacion === quoteToLink.idCotizacion ? { ...quote, estado: "Convertida" } : quote. */ (quote) =>
+    setQuotes((current) =>
+      current.map((quote) =>
         quote.idCotizacion === quoteToLink.idCotizacion
           ? { ...quote, estado: "Convertida" }
           : quote,
@@ -399,26 +376,14 @@ const linkOrder = async () => {
   }
 }
 
-
-
-  // Abre el cliente de correo con asunto y texto de la cotización para que el usuario los envíe.
-  const sendByEmail = (quote: Quote) => {
-    const subject = encodeURIComponent(`Cotización ${quote.id} · Ecoterra`)
-    const body = encodeURIComponent(
-      `Estimado cliente, adjuntamos la cotización ${quote.id} por ${fmtCLP(quote.total)}.`,
-    )
-    window.location.href = `mailto:?subject=${subject}&body=${body}`
-  }
-
-  const selectedClient = clientes.find(/* Identifica el elemento buscado evaluando client.razon === quoteClient. */ (client) => client.razon === quoteClient)
+  const selectedClient = clientes.find((client) => client.razon === quoteClient)
   const lineSubtotal = quoteLines.reduce(
-    /* Acumula el resultado de la lista mediante sum + Number(line.quantity || 0) * Number(line.unitPrice || 0). */ (sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0),
+    (sum, line) => sum + Number(line.quantity || 0) * Number(line.unitPrice || 0),
     0,
   )
   const lineIva = Math.round(lineSubtotal * 0.19)
   const lineTotal = lineSubtotal + lineIva
 
-  // Restablece los campos y las líneas del formulario de cotización a sus valores iniciales.
   const resetQuoteForm = () => {
     setEditQuoteId(null)
     setQuoteClient("")
@@ -432,17 +397,15 @@ const linkOrder = async () => {
     setQuoteLines([{ productId: "", quantity: "", unitPrice: "" }])
   }
 
-  // Cierra el formulario de cotización y restablece sus campos.
   const closeQuoteForm = () => {
     setShow(false)
     resetQuoteForm()
   }
 
-  // Valida el cliente y los productos y crea o actualiza la cotización con sus detalles mediante la API.
   const saveQuote = async (status = quoteStatus) => {
-    if (!quoteClient || !quoteLines.some(/* Comprueba qué elementos cumplen la condición evaluando line.productId && line.quantity. */ (line) => line.productId && line.quantity)) return
+    if (!quoteClient || !quoteLines.some((line) => line.productId && line.quantity)) return
 
-    const selectedClientObj = clientes.find(/* Identifica el elemento buscado evaluando c.razon === quoteClient. */ (c) => c.razon === quoteClient)
+    const selectedClientObj = clientes.find((c) => c.razon === quoteClient)
     if (!selectedClientObj) {
       alert("Cliente no encontrado")
       return
@@ -465,9 +428,9 @@ const linkOrder = async () => {
       estado_cotizacion: status,
       ruta_pdf_cotizacion: "",
       detalles: quoteLines
-        .filter(/* Comprueba qué elementos cumplen la condición evaluando line.productId && line.quantity. */ (line) => line.productId && line.quantity)
-        .map(/* Convierte una línea de formulario en un detalle de cotización con producto y subtotal. */ (line) => {
-          const product = productos.find(/* Identifica el elemento buscado evaluando String(p.id) === line.productId. */ (p) => String(p.id) === line.productId)
+        .filter((line) => line.productId && line.quantity)
+        .map((line) => {
+          const product = productos.find((p) => String(p.id) === line.productId)
           const subtotal = Number(line.quantity) * Number(line.unitPrice)
           return {
             id_producto: Number(line.productId),
@@ -485,12 +448,12 @@ const linkOrder = async () => {
 
       const response = await fetch(url, {
         method,
-        headers: authHeaders(authUser), // 👈 TOKEN (incluye Content-Type)
+        headers: authHeaders(authUser),
         body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
-        const errorData = await response.json().catch(/* Devuelve ({}) cuando falla la operación anterior. */ () => ({}))
+        const errorData = await response.json().catch(() => ({}))
         console.error("Error del backend:", errorData)
         alert(`Error al ${editQuoteId ? "actualizar" : "guardar"} la cotización. Revisa la consola.`)
         return
@@ -508,10 +471,9 @@ const linkOrder = async () => {
     }
   }
 
-  // Aplica los cambios indicados únicamente a la línea seleccionada de la cotización.
   const updateLine = (index: number, changes: Partial<QuoteLine>) => {
-    setQuoteLines(/* Calcula el nuevo valor de QuoteLines devolviendo current.map((line, lineIndex) => lineIndex === index ? { ...line, ...changes } : line, ). */ (current) =>
-      current.map(/* Transforma cada elemento de la lista devolviendo lineIndex === index ? { ...line, ...changes } : line. */ (line, lineIndex) =>
+    setQuoteLines((current) =>
+      current.map((line, lineIndex) =>
         lineIndex === index ? { ...line, ...changes } : line,
       ),
     )
@@ -520,7 +482,7 @@ const linkOrder = async () => {
   return (
     <div>
       <PageTitle title="Cotizaciones" sub="Ciclo de vida comercial">
-        <button className="btn btn-primary" onClick={/* Ejecuta setShow(true) al invocarse este callback. */ () => setShow(true)}>
+        <button className="btn btn-primary" onClick={() => setShow(true)}>
           <Ico p={I.plus} size={14} /> Nueva cotización
         </button>
       </PageTitle>
@@ -529,7 +491,7 @@ const linkOrder = async () => {
           <div className="kpi-label">Vigentes</div>
           <div className="kpi-value tabular">{activeQuotes.length}</div>
           <div className="cotizaciones-kpi-note">
-            {fmtCLP(activeQuotes.reduce(/* Acumula el resultado de la lista mediante sum + quote.total. */ (sum, quote) => sum + quote.total, 0))} CLP
+            {fmtCLP(activeQuotes.reduce((sum, quote) => sum + quote.total, 0))} CLP
           </div>
         </div>
         <div className="kpi">
@@ -571,9 +533,9 @@ const linkOrder = async () => {
             </tr>
           </thead>
           <tbody>
-            {quotes.map(/* Renderiza el contenido de cada elemento de quotes. */ (quote) => (
+            {quotes.map((quote) => (
               <tr key={quote.id}>
-                {(/* Muestra los datos de la cotización junto con su orden y su factura asociadas. */ () => {
+                {(() => {
                   const order = getPurchaseOrder(quote)
                   const invoice = getInvoice(quote)
 
@@ -607,7 +569,7 @@ const linkOrder = async () => {
                             className="btn btn-ghost btn-sm"
                             title="Editar productos"
                             aria-label={`Editar ${quote.id}`}
-                            onClick={/* Ejecuta openEdit(quote) al invocarse este callback. */ () => openEdit(quote)}
+                            onClick={() => openEdit(quote)}
                           >
                             <Ico p={I.edit} size={13} />
                           </button>
@@ -615,7 +577,7 @@ const linkOrder = async () => {
                             className="btn btn-ghost btn-sm"
                             title="Vista previa"
                             aria-label={`Vista previa ${quote.id}`}
-                            onClick={/* Ejecuta openPreview(quote) al invocarse este callback. */ () => openPreview(quote)}
+                            onClick={() => openPreview(quote)}
                           >
                             <Ico p={I.pdf} size={13} />
                           </button>
@@ -623,23 +585,16 @@ const linkOrder = async () => {
                             className="btn btn-ghost btn-sm"
                             title="Descargar PDF"
                             aria-label={`Descargar PDF ${quote.id}`}
-                            onClick={/* Ejecuta downloadQuotePdf(quote) al invocarse este callback. */ () => downloadQuotePdf(quote)}
+                            onClick={() => downloadQuotePdf(quote)}
                           >
                             <Ico p={I.download} size={13} />
                           </button>
-                          <button
-                            className="btn btn-ghost btn-sm"
-                            title="Enviar por correo"
-                            aria-label={`Enviar ${quote.id} por correo`}
-                            onClick={/* Ejecuta sendByEmail(quote) al invocarse este callback. */ () => sendByEmail(quote)}
-                          >
-                            <Ico p={I.mail} size={13} />
-                          </button>
+                          {/* BOTÓN DE CORREO ELIMINADO */}
                           <button
                             className="btn btn-ghost btn-sm"
                             title="Asociar a orden de compra"
                             aria-label={`Asociar ${quote.id} a una orden de compra`}
-                            onClick={/* Ejecuta setQuoteToLink(quote) al invocarse este callback. */ () => setQuoteToLink(quote)}
+                            onClick={() => setQuoteToLink(quote)}
                           >
                             <Ico p={I.link} size={13} />
                           </button>
@@ -657,7 +612,7 @@ const linkOrder = async () => {
         <div className="modal-backdrop" onClick={closeQuoteForm}>
           <div
             className="modal cotizaciones-modal cotizaciones-modal-wide"
-            onClick={/* Ejecuta event.stopPropagation() al invocarse este callback. */ (event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="cotizaciones-modal-head">
               <div>
@@ -682,14 +637,14 @@ const linkOrder = async () => {
                 <select
                   className="select"
                   value={quoteClient}
-                  onChange={/* Cambia el cliente de la cotización y limpia la dirección seleccionada. */ (event) => {
+                  onChange={(event) => {
                     setQuoteClient(event.target.value)
                     setQuoteAddress("")
                   }}
                   disabled={!!editQuoteId}
                 >
                   <option value="">Seleccionar cliente…</option>
-                  {clientes.map(/* Renderiza el contenido de cada elemento de clientes. */ (client) => (
+                  {clientes.map((client) => (
                     <option key={client.id}>{client.razon}</option>
                   ))}
                 </select>
@@ -699,7 +654,7 @@ const linkOrder = async () => {
                 <select
                   className="select"
                   value={quoteAddress}
-                  onChange={/* Ejecuta setQuoteAddress(event.target.value) al invocarse este callback. */ (event) => setQuoteAddress(event.target.value)}
+                  onChange={(event) => setQuoteAddress(event.target.value)}
                   disabled={!selectedClient}
                 >
                   <option value="">Seleccionar dirección…</option>
@@ -716,7 +671,7 @@ const linkOrder = async () => {
                   className="input"
                   type="date"
                   value={quoteDate}
-                  onChange={/* Ejecuta setQuoteDate(event.target.value) al invocarse este callback. */ (event) => setQuoteDate(event.target.value)}
+                  onChange={(event) => setQuoteDate(event.target.value)}
                 />
               </div>
               <div className="field">
@@ -724,7 +679,7 @@ const linkOrder = async () => {
                 <select
                   className="select"
                   value={quoteValidity}
-                  onChange={/* Ejecuta setQuoteValidity(event.target.value) al invocarse este callback. */ (event) => setQuoteValidity(event.target.value)}
+                  onChange={(event) => setQuoteValidity(event.target.value)}
                 >
                   <option value="30">30 días</option>
                   <option value="15">15 días</option>
@@ -737,7 +692,7 @@ const linkOrder = async () => {
                 <select
                   className="select"
                   value={paymentTerm}
-                  onChange={/* Ejecuta setPaymentTerm(event.target.value) al invocarse este callback. */ (event) => setPaymentTerm(event.target.value)}
+                  onChange={(event) => setPaymentTerm(event.target.value)}
                 >
                   <option>30 días</option>
                   <option>60 días</option>
@@ -749,7 +704,7 @@ const linkOrder = async () => {
                 <select
                   className="select"
                   value={currency}
-                  onChange={/* Ejecuta setCurrency(event.target.value) al invocarse este callback. */ (event) => setCurrency(event.target.value)}
+                  onChange={(event) => setCurrency(event.target.value)}
                 >
                   <option>CLP</option>
                   <option>USD</option>
@@ -760,7 +715,7 @@ const linkOrder = async () => {
                 <select
                   className="select"
                   value={quoteStatus}
-                  onChange={/* Ejecuta setQuoteStatus(event.target.value) al invocarse este callback. */ (event) => setQuoteStatus(event.target.value)}
+                  onChange={(event) => setQuoteStatus(event.target.value)}
                 >
                   <option>Borrador</option>
                   <option>Vigente</option>
@@ -774,8 +729,8 @@ const linkOrder = async () => {
                 <strong>Productos / Servicios</strong>
                 <button
                   className="btn btn-ghost btn-sm"
-                  onClick={/* Ejecuta setQuoteLines((current) => [ ...current, { productId: "", quantity: "", unitPrice: "" }, ]) al invocarse este callback. */ () =>
-                    setQuoteLines(/* Calcula el nuevo valor de QuoteLines devolviendo [ ...current, { productId: "", quantity: "", unitPrice: "" }, ]. */ (current) => [
+                  onClick={() =>
+                    setQuoteLines((current) => [
                       ...current,
                       { productId: "", quantity: "", unitPrice: "" },
                     ])
@@ -791,20 +746,20 @@ const linkOrder = async () => {
                 <span>Subtotal</span>
                 <span />
               </div>
-              {quoteLines.map(/* Renderiza una línea de cotización con su producto, cantidades e importes. */ (line, index) => {
-                const product = productos.find(/* Identifica el elemento buscado evaluando String(item.id) === line.productId. */ (item) => String(item.id) === line.productId)
+              {quoteLines.map((line, index) => {
+                const product = productos.find((item) => String(item.id) === line.productId)
                 const subtotal = Number(line.quantity || 0) * Number(line.unitPrice || 0)
                 return (
                   <div key={index} className="cotizaciones-lines-grid">
                     <select
                       className="select"
                       value={line.productId}
-                      onChange={/* Ejecuta updateLine(index, { productId: event.target.value }) al invocarse este callback. */ (event) =>
+                      onChange={(event) =>
                         updateLine(index, { productId: event.target.value })
                       }
                     >
                       <option value="">Seleccionar producto…</option>
-                      {productos.map(/* Renderiza el contenido de cada elemento de productos. */ (item) => (
+                      {productos.map((item) => (
                         <option key={item.id} value={item.id}>
                           {item.codigo} · {item.nombre}
                         </option>
@@ -816,7 +771,7 @@ const linkOrder = async () => {
                       min={1}
                       placeholder="0"
                       value={line.quantity}
-                      onChange={/* Ejecuta updateLine(index, { quantity: event.target.value }) al invocarse este callback. */ (event) =>
+                      onChange={(event) =>
                         updateLine(index, { quantity: event.target.value })
                       }
                     />
@@ -826,7 +781,7 @@ const linkOrder = async () => {
                       min={0}
                       placeholder="0"
                       value={line.unitPrice}
-                      onChange={/* Ejecuta updateLine(index, { unitPrice: event.target.value }) al invocarse este callback. */ (event) =>
+                      onChange={(event) =>
                         updateLine(index, { unitPrice: event.target.value })
                       }
                     />
@@ -838,9 +793,9 @@ const linkOrder = async () => {
                       title="Eliminar línea"
                       aria-label="Eliminar línea"
                       disabled={quoteLines.length === 1}
-                      onClick={/* Ejecuta setQuoteLines((current) => current.filter((_, lineIndex) => lineIndex !== index), ) al invocarse este callback. */ () =>
-                        setQuoteLines(/* Calcula el nuevo valor de QuoteLines devolviendo current.filter((_, lineIndex) => lineIndex !== index). */ (current) =>
-                          current.filter(/* Comprueba qué elementos cumplen la condición evaluando lineIndex !== index. */ (_, lineIndex) => lineIndex !== index),
+                      onClick={() =>
+                        setQuoteLines((current) =>
+                          current.filter((_, lineIndex) => lineIndex !== index),
                         )
                       }
                     >
@@ -857,7 +812,7 @@ const linkOrder = async () => {
                 rows={3}
                 placeholder="Notas adicionales de la cotización"
                 value={quoteObservation}
-                onChange={/* Ejecuta setQuoteObservation(event.target.value) al invocarse este callback. */ (event) => setQuoteObservation(event.target.value)}
+                onChange={(event) => setQuoteObservation(event.target.value)}
               />
             </div>
             <div className="cotizaciones-summary">
@@ -880,13 +835,13 @@ const linkOrder = async () => {
                 disabled={
                   !quoteClient ||
                   !quoteAddress ||
-                  !quoteLines.some(/* Comprueba qué elementos cumplen la condición evaluando line.productId && line.quantity. */ (line) => line.productId && line.quantity)
+                  !quoteLines.some((line) => line.productId && line.quantity)
                 }
-                onClick={/* Ejecuta saveQuote("Borrador") al invocarse este callback. */ () => saveQuote("Borrador")}
+                onClick={() => saveQuote("Borrador")}
               >
                 <Ico p={I.check} size={14} /> {editQuoteId ? "Guardar cambios" : "Guardar borrador"}
               </button>
-              <button className="btn btn-ghost" onClick={/* Abre el PDF de la cotización en vista previa en una pestaña nueva o muestra el error. */ async () => {
+              <button className="btn btn-ghost" onClick={async () => {
                 const tab = window.open("about:blank", "_blank")
                 if (!tab) { alert("Permite las ventanas emergentes para abrir el PDF."); return }
                 tab.opener = null
@@ -902,23 +857,15 @@ const linkOrder = async () => {
               }}>
                 <Ico p={I.download} size={14} /> Exportar PDF
               </button>
-              <button
-                className="btn btn-ghost"
-                onClick={/* Abre el cliente de correo con el asunto de una nueva cotización. */ () => {
-                  const subject = encodeURIComponent("Nueva cotización Ecoterra")
-                  window.location.href = `mailto:?subject=${subject}`
-                }}
-              >
-                <Ico p={I.mail} size={14} /> Enviar por correo
-              </button>
+              {/* BOTÓN DE CORREO ELIMINADO */}
               <button
                 className="btn btn-navy"
                 disabled={
                   !quoteClient ||
                   !quoteAddress ||
-                  !quoteLines.some(/* Comprueba qué elementos cumplen la condición evaluando line.productId && line.quantity. */ (line) => line.productId && line.quantity)
+                  !quoteLines.some((line) => line.productId && line.quantity)
                 }
-                onClick={/* Ejecuta saveQuote("Vigente") al invocarse este callback. */ () => saveQuote("Vigente")}
+                onClick={() => saveQuote("Vigente")}
               >
                 <Ico p={I.check} size={14} /> {editQuoteId ? "Actualizar cotización" : "Emitir cotización"}
               </button>
@@ -928,11 +875,11 @@ const linkOrder = async () => {
       )}
 
       {preview && (
-        <div className="modal-backdrop" onClick={/* Ejecuta setPreview(null) al invocarse este callback. */ () => setPreview(null)}>
+        <div className="modal-backdrop" onClick={() => setPreview(null)}>
           <div
             className="modal cotizaciones-modal cotizaciones-preview-modal"
             style={{ maxWidth: "900px", width: "100%", padding: 0, overflow: "hidden" }}
-            onClick={/* Ejecuta event.stopPropagation() al invocarse este callback. */ (event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="cotizaciones-preview-head" style={{ padding: "1rem 1.5rem", borderBottom: "1px solid #E2E8F0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
@@ -941,10 +888,10 @@ const linkOrder = async () => {
                 </h2>
               </div>
               <div style={{ display: "flex", gap: "10px" }}>
-                <button className="btn btn-ghost btn-sm" onClick={/* Ejecuta downloadQuotePdf(preview) al invocarse este callback. */ () => downloadQuotePdf(preview)}>
+                <button className="btn btn-ghost btn-sm" onClick={() => downloadQuotePdf(preview)}>
                   <Ico p={I.download} size={14} /> Imprimir / PDF
                 </button>
-                <button onClick={/* Ejecuta setPreview(null) al invocarse este callback. */ () => setPreview(null)} className="cotizaciones-modal-close" style={{ position: "static" }}>
+                <button onClick={() => setPreview(null)} className="cotizaciones-modal-close" style={{ position: "static" }}>
                   <Ico p={I.x} size={18} />
                 </button>
               </div>
@@ -987,7 +934,7 @@ const linkOrder = async () => {
                       
                       {detail.cliente_direcciones && detail.cliente_direcciones.length > 0 && (
                         <div style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}>
-                          {detail.cliente_direcciones.map(/* Renderiza el contenido de cada elemento de detail.cliente_direcciones. */ (dir, idx) => (
+                          {detail.cliente_direcciones.map((dir, idx) => (
                              <div key={idx}>
                                {dir.calle}, {dir.ciudad}, {dir.region}, {dir.pais}
                              </div>
@@ -1020,7 +967,7 @@ const linkOrder = async () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {detail.detalles.map(/* Renderiza el contenido de cada elemento de detail.detalles. */ (line, idx) => (
+                      {detail.detalles.map((line, idx) => (
                         <tr key={idx} style={{ borderBottom: "1px solid #000" }}>
                           <td style={{ padding: "0.5rem", textAlign: "center", borderRight: "1px solid #000" }}>{idx + 1}</td>
                           <td style={{ padding: "0.5rem", textAlign: "center", borderRight: "1px solid #000" }}>{line.codigo_producto}</td>
@@ -1030,7 +977,7 @@ const linkOrder = async () => {
                           <td style={{ padding: "0.5rem", textAlign: "right" }}>{fmtCLP(Number(line.subtotal_dc))}</td>
                         </tr>
                       ))}
-                      {Array.from({ length: Math.max(0, 5 - detail.detalles.length) }).map(/* Renderiza el contenido de cada elemento de Array.from({ length: Math.max(0, 5 - detail.detalles.length) }). */ (_, i) => (
+                      {Array.from({ length: Math.max(0, 5 - detail.detalles.length) }).map((_, i) => (
                         <tr key={`empty-${i}`} style={{ borderBottom: "1px solid #000" }}>
                           <td style={{ padding: "1rem", borderRight: "1px solid #000" }}>&nbsp;</td>
                           <td style={{ borderRight: "1px solid #000" }}></td>
@@ -1084,10 +1031,10 @@ const linkOrder = async () => {
       )}
 
       {quoteToLink && (
-        <div className="modal-backdrop" onClick={/* Ejecuta setQuoteToLink(null) al invocarse este callback. */ () => setQuoteToLink(null)}>
+        <div className="modal-backdrop" onClick={() => setQuoteToLink(null)}>
           <div
             className="modal cotizaciones-modal cotizaciones-link-modal"
-            onClick={/* Ejecuta event.stopPropagation() al invocarse este callback. */ (event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             <h2 className="cotizaciones-link-title">Asociar Orden de Compra</h2>
             <p className="cotizaciones-link-subtitle">
@@ -1098,10 +1045,10 @@ const linkOrder = async () => {
               <select
                 className="select"
                 value={selectedOrder}
-                onChange={/* Ejecuta setSelectedOrder(event.target.value) al invocarse este callback. */ (event) => setSelectedOrder(event.target.value)}
+                onChange={(event) => setSelectedOrder(event.target.value)}
               >
                 <option value="">Seleccionar OC…</option>
-                {ordenes.map(/* Renderiza el contenido de cada elemento de ordenes. */ (order) => (
+                {ordenes.map((order) => (
                   <option key={order.id} value={order.id}>
                     {order.id} · {order.cliente} · {fmtCLP(order.total)}
                   </option>
@@ -1116,7 +1063,7 @@ const linkOrder = async () => {
               >
                 <Ico p={I.link} size={14} /> Asociar OC
               </button>
-              <button className="btn btn-ghost" onClick={/* Ejecuta setQuoteToLink(null) al invocarse este callback. */ () => setQuoteToLink(null)}>
+              <button className="btn btn-ghost" onClick={() => setQuoteToLink(null)}>
                 Cancelar
               </button>
             </div>

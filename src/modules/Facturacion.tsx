@@ -62,7 +62,6 @@ type FacturacionProps = {
   onCreated: (invoice: Invoice) => void
 }
 
-// Traduce el código del estado de factura a su etiqueta o conserva el texto recibido.
 const estadoLegible = (estado: string) => {
   const estados: Record<string, string> = {
     PENDIENTE: "Pendiente",
@@ -75,21 +74,19 @@ const estadoLegible = (estado: string) => {
   return estados[estado?.toUpperCase()] || estado || "Pendiente"
 }
 
-// Crea una línea de factura vacía con cantidad inicial igual a uno.
 const createDetalle = (): DetalleForm => ({
   producto_id: "",
   cantidad: "1",
   precio_unitario: "",
 })
 
-// Convierte el cuerpo de error de la API en un mensaje legible incluyendo el estado HTTP si falta contenido.
 const errorDeRespuesta = (data: any, status: number) => {
   if (!data) return `Error del servidor (HTTP ${status}).`
   if (typeof data === "string") return data
 
   return (
     Object.entries(data)
-      .map(/* Convierte un campo de error de la API y sus mensajes en texto legible. */ ([campo, valor]) => {
+      .map(([campo, valor]) => {
         const mensaje = Array.isArray(valor)
           ? valor.map(String).join(", ")
           : typeof valor === "string"
@@ -102,14 +99,12 @@ const errorDeRespuesta = (data: any, status: number) => {
   )
 }
 
-// Extrae una lista directa o el campo results de una respuesta paginada y devuelve nulo si no hay lista.
 const extraerLista = (data: any): any[] | null => {
   if (Array.isArray(data)) return data
   if (data && Array.isArray(data.results)) return data.results
   return null
 }
 
-// Obtiene el identificador del cliente de una orden admitiendo relaciones por número u objeto.
 const obtenerClienteId = (
   orden: OrdenAPI | undefined,
 ): string => {
@@ -127,7 +122,6 @@ const obtenerClienteId = (
     : String(cliente)
 }
 
-// Obtiene el nombre del cliente de la orden usando los campos de nombre disponibles.
 const obtenerNombreCliente = (
   orden: OrdenAPI | undefined,
 ): string => {
@@ -147,7 +141,6 @@ const obtenerNombreCliente = (
   return ""
 }
 
-// Muestra las facturas y gestiona su creación con productos, su vista previa, correo y PDF.
 export default function Facturacion({
   facturas,
   authUser,
@@ -169,11 +162,11 @@ export default function Facturacion({
   const [errorGuardado, setErrorGuardado] = useState("")
   const [errorCarga, setErrorCarga] = useState("")
 
-  useEffect(/* Sincroniza la lista interna de facturas con las facturas recibidas por propiedades. */ () => {
+  useEffect(() => {
     setInvoices(facturas)
   }, [facturas])
 
-  useEffect(/* Carga productos y órdenes para la sesión actual y registra la cancelación al desmontarse. */ () => {
+  useEffect(() => {
     if (!authUser) {
       setProductos([])
       setOrdenesCompra([])
@@ -183,7 +176,6 @@ export default function Facturacion({
 
     let cancelado = false
 
-    // Carga productos y órdenes para el formulario de factura evitando actualizar una vista desmontada.
     const cargarDatos = async () => {
       setCargandoDatos(true)
       setErrorCarga("")
@@ -199,11 +191,11 @@ export default function Facturacion({
 
         const datosProductos = await respuestaProductos
           .json()
-          .catch(/* Devuelve null cuando falla la operación anterior. */ () => null)
+          .catch(() => null)
 
         const datosOrdenes = await respuestaOrdenes
           .json()
-          .catch(/* Devuelve null cuando falla la operación anterior. */ () => null)
+          .catch(() => null)
 
         if (!respuestaProductos.ok) {
           throw new Error(
@@ -251,13 +243,13 @@ export default function Facturacion({
 
     cargarDatos()
 
-    return /* Marca la carga como cancelada para evitar actualizar el estado tras desmontar la vista. */ () => {
+    return () => {
       cancelado = true
     }
   }, [authUser])
 
   const ordenActual = ordenesCompra.find(
-  /* Identifica el elemento buscado evaluando String(orden.id_oc) === String(ordenSeleccionada). */ (orden) =>
+  (orden) =>
     String(orden.id_oc) === String(ordenSeleccionada),
 )
 
@@ -265,7 +257,7 @@ export default function Facturacion({
   const nombreCliente = obtenerNombreCliente(ordenActual)
 
   const subtotalCalculado = detalles.reduce(
-    /* Acumula el subtotal multiplicando la cantidad por el precio de cada detalle. */ (total, detalle) => {
+    (total, detalle) => {
       const cantidad = Number(detalle.cantidad) || 0
       const precio = Number(detalle.precio_unitario) || 0
       return total + cantidad * precio
@@ -277,29 +269,28 @@ export default function Facturacion({
   const totalCalculado = subtotalCalculado + ivaCalculado
 
   const totalFacturado = invoices.reduce(
-    /* Acumula el resultado de la lista mediante sum + Number(invoice.total ?? invoice.subtotal + invoice.iva). */ (sum, invoice) =>
+    (sum, invoice) =>
       sum + Number(invoice.total ?? invoice.subtotal + invoice.iva),
     0,
   )
 
   const pagadas = invoices.filter(
-    /* Comprueba qué elementos cumplen la condición evaluando ["Pagada", "PAGADA"].includes(invoice.estado). */ (invoice) =>
+    (invoice) =>
       ["Pagada", "PAGADA"].includes(invoice.estado),
   ).length
 
   const pendientes = invoices.filter(
-    /* Comprueba qué elementos cumplen la condición evaluando ["Pendiente", "PENDIENTE"].includes(invoice.estado). */ (invoice) =>
+    (invoice) =>
       ["Pendiente", "PENDIENTE"].includes(invoice.estado),
   ).length
 
   const vencidas = invoices.filter(
-    /* Comprueba qué elementos cumplen la condición evaluando ["Vencida", "VENCIDA"].includes(invoice.estado). */ (invoice) =>
+    (invoice) =>
       ["Vencida", "VENCIDA"].includes(invoice.estado),
   ).length
 
   const invoiceCount = invoices.length
 
-  // Reinicia la orden, los detalles y los errores y abre el formulario de nueva factura.
   const openNewInvoice = () => {
     setOrdenSeleccionada("")
     setDetalles([createDetalle()])
@@ -308,31 +299,12 @@ export default function Facturacion({
     setShowNew(true)
   }
 
-  // Cierra el formulario de factura y limpia el error si no hay un guardado en curso.
   const closeNewInvoice = () => {
     if (guardando) return
     setShowNew(false)
     setErrorGuardado("")
   }
 
-  // Abre el cliente de correo con el asunto y el texto preparados para la factura.
-  const sendInvoiceByMail = (invoice: Invoice) => {
-    const subject = encodeURIComponent(
-      `Factura ${invoice.id} · Ecoterra`,
-    )
-
-    const body = encodeURIComponent(
-      `Estimado cliente, adjuntamos la factura ${invoice.id} por ${fmtCLP(
-        invoice.total ?? invoice.subtotal + invoice.iva,
-      )}.`,
-    )
-
-    window.location.href =
-      `mailto:?subject=${subject}&body=${body}`
-  }
-
-  
-// Resuelve el identificador interno de la factura y abre su PDF mediante el backend autenticado.
 const downloadInvoicePdf = async (invoice: Invoice) => {
   const printWindow = window.open("about:blank", "_blank")
 
@@ -354,14 +326,13 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
   try {
     const headers = authHeaders(authUser)
 
-    // Buscar el ID interno de la factura en Django.
     const respuestaFacturas = await fetch("/api/facturas/", {
       headers,
     })
 
     const datosFacturas = await respuestaFacturas
       .json()
-      .catch(/* Devuelve null cuando falla la operación anterior. */ () => null)
+      .catch(() => null)
 
     if (!respuestaFacturas.ok) {
       throw new Error(
@@ -376,7 +347,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
     }
 
     const facturaAPI = listaFacturas.find(
-      /* Identifica el elemento buscado evaluando item.numero_factura === invoice.id. */ (item: any) =>
+      (item: any) =>
         item.numero_factura === invoice.id
     )
 
@@ -405,8 +376,6 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
   }
 }
 
-
-  // Valida sesión, orden y productos, crea la factura en la API y actualiza el listado local.
   const guardarFactura = async () => {
     setErrorGuardado("")
 
@@ -430,7 +399,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
     }
 
     const detalleInvalido = detalles.some(
-      /* Comprueba qué elementos cumplen la condición evaluando !detalle.producto_id || !detalle.cantidad || !detalle.precio_unitario || !Number.isFinite(Number(detalle.cantidad)) || !Number.isFinite(Number(detalle.precio_unitario)) || Number(detalle.cantidad) <= 0 || Number(detalle.precio_unitario) <= 0. */ (detalle) =>
+      (detalle) =>
         !detalle.producto_id ||
         !detalle.cantidad ||
         !detalle.precio_unitario ||
@@ -448,7 +417,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
     }
 
     const idsProductos = detalles.map(
-      /* Transforma cada elemento de la lista devolviendo detalle.producto_id. */ (detalle) => detalle.producto_id,
+      (detalle) => detalle.producto_id,
     )
 
     if (new Set(idsProductos).size !== idsProductos.length) {
@@ -471,7 +440,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
           cliente_id: clienteId,
           id_orden_compra: ordenActual.id_oc,
           ruta_pdf_factura: "",
-          detalles: detalles.map(/* Transforma cada elemento de la lista devolviendo ({ producto_id: Number(detalle.producto_id), cantidad: Number(detalle.cantidad), precio_unitario: Number(detalle.precio_unitario), }). */ (detalle) => ({
+          detalles: detalles.map((detalle) => ({
             producto_id: Number(detalle.producto_id),
             cantidad: Number(detalle.cantidad),
             precio_unitario: Number(detalle.precio_unitario),
@@ -479,7 +448,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
         }),
       })
 
-      const data = await respuesta.json().catch(/* Devuelve null cuando falla la operación anterior. */ () => null)
+      const data = await respuesta.json().catch(() => null)
 
       if (!respuesta.ok) {
         throw new Error(
@@ -510,10 +479,10 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
         ),
       }
 
-      setInvoices(/* Calcula el nuevo valor de Invoices devolviendo [ facturaCreada, ...actuales.filter( (item) => item.id !== facturaCreada.id, ), ]. */ (actuales) => [
+      setInvoices((actuales) => [
         facturaCreada,
         ...actuales.filter(
-          /* Comprueba qué elementos cumplen la condición evaluando item.id !== facturaCreada.id. */ (item) => item.id !== facturaCreada.id,
+          (item) => item.id !== facturaCreada.id,
         ),
       ])
       onCreated(facturaCreada)
@@ -593,7 +562,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
               </tr>
             </thead>
             <tbody>
-              {invoices.map(/* Renderiza el contenido de cada elemento de invoices. */ (invoice) => (
+              {invoices.map((invoice) => (
                 <tr key={invoice.id}>
                   <td className="facturacion-id-cell">
                     {invoice.id}
@@ -628,21 +597,15 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                       <button
                         className="btn btn-ghost btn-sm"
                         title="Ver factura"
-                        onClick={/* Ejecuta setPreview(invoice) al invocarse este callback. */ () => setPreview(invoice)}
+                        onClick={() => setPreview(invoice)}
                       >
                         <Ico p={I.pdf} size={13} />
                       </button>
-                      <button
-                        className="btn btn-ghost btn-sm"
-                        title="Enviar por correo"
-                        onClick={/* Ejecuta sendInvoiceByMail(invoice) al invocarse este callback. */ () => sendInvoiceByMail(invoice)}
-                      >
-                        <Ico p={I.mail} size={13} />
-                      </button>
+                      {/* BOTÓN DE CORREO ELIMINADO */}
                       <button
                         className="btn btn-ghost btn-sm"
                         title="Imprimir o guardar como PDF"
-                        onClick={/* Ejecuta downloadInvoicePdf(invoice) al invocarse este callback. */ () => downloadInvoicePdf(invoice)}
+                        onClick={() => downloadInvoicePdf(invoice)}
                       >
                         <Ico p={I.download} size={13} />
                       </button>
@@ -658,11 +621,11 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
       {preview && (
         <div
           className="modal-backdrop"
-          onClick={/* Ejecuta setPreview(null) al invocarse este callback. */ () => setPreview(null)}
+          onClick={() => setPreview(null)}
         >
           <div
             className="modal facturacion-modal"
-            onClick={/* Ejecuta event.stopPropagation() al invocarse este callback. */ (event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="facturacion-modal-header">
               <div>
@@ -674,7 +637,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                 </p>
               </div>
               <button
-                onClick={/* Ejecuta setPreview(null) al invocarse este callback. */ () => setPreview(null)}
+                onClick={() => setPreview(null)}
                 className="facturacion-icon-button"
               >
                 <Ico p={I.x} size={18} />
@@ -712,15 +675,10 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                 </span>
               </div>
               <div className="facturacion-preview-actions">
-                <button
-                  className="btn btn-primary"
-                  onClick={/* Ejecuta sendInvoiceByMail(preview) al invocarse este callback. */ () => sendInvoiceByMail(preview)}
-                >
-                  <Ico p={I.mail} size={14} /> Enviar por correo
-                </button>
+                {/* BOTÓN DE CORREO ELIMINADO */}
                 <button
                   className="btn btn-ghost"
-                  onClick={/* Ejecuta downloadInvoicePdf(preview) al invocarse este callback. */ () => downloadInvoicePdf(preview)}
+                  onClick={() => downloadInvoicePdf(preview)}
                 >
                   <Ico p={I.download} size={14} /> Imprimir / PDF
                 </button>
@@ -737,7 +695,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
         >
           <div
             className="modal facturacion-modal facturacion-modal-wide"
-            onClick={/* Ejecuta event.stopPropagation() al invocarse este callback. */ (event) => event.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="facturacion-modal-header">
               <div>
@@ -787,7 +745,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                     <select
                       className="select"
                       value={ordenSeleccionada}
-                      onChange={/* Cambia la orden elegida y borra el error de guardado. */ (event) => {
+                      onChange={(event) => {
                         setOrdenSeleccionada(event.target.value)
                         setErrorGuardado("")
                       }}
@@ -795,7 +753,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                       <option value="">
                         Selecciona una orden
                       </option>
-                      {ordenesCompra.map(/* Renderiza el contenido de cada elemento de ordenesCompra. */ (orden) => (
+                      {ordenesCompra.map((orden) => (
                         <option
                           key={String(orden.id_oc)}
                           value={String(orden.id_oc)}
@@ -835,7 +793,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                 >
                   <label className="label">Productos</label>
 
-                  {detalles.map(/* Renderiza el contenido de cada elemento de detalles. */ (detalle, index) => (
+                  {detalles.map((detalle, index) => (
                     <div
                       key={index}
                       className="facturacion-form-grid"
@@ -848,9 +806,9 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                         <select
                           className="select"
                           value={detalle.producto_id}
-                          onChange={/* Ejecuta setDetalles((actuales) => actuales.map((item, i) => i === index ? { ...item, producto_id: event.target.value, } : item, ), ) al invocarse este callback. */ (event) =>
-                            setDetalles(/* Calcula el nuevo valor de Detalles devolviendo actuales.map((item, i) => i === index ? { ...item, producto_id: event.target.value, } : item, ). */ (actuales) =>
-                              actuales.map(/* Transforma cada elemento de la lista devolviendo i === index ? { ...item, producto_id: event.target.value, } : item. */ (item, i) =>
+                          onChange={(event) =>
+                            setDetalles((actuales) =>
+                              actuales.map((item, i) =>
                                 i === index
                                   ? {
                                       ...item,
@@ -865,7 +823,7 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                           <option value="">
                             Selecciona un producto
                           </option>
-                          {productos.map(/* Renderiza el contenido de cada elemento de productos. */ (producto) => (
+                          {productos.map((producto) => (
                             <option
                               key={producto.id}
                               value={producto.id}
@@ -889,9 +847,9 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                           min="0.01"
                           step="0.01"
                           value={detalle.cantidad}
-                          onChange={/* Ejecuta setDetalles((actuales) => actuales.map((item, i) => i === index ? { ...item, cantidad: event.target.value, } : item, ), ) al invocarse este callback. */ (event) =>
-                            setDetalles(/* Calcula el nuevo valor de Detalles devolviendo actuales.map((item, i) => i === index ? { ...item, cantidad: event.target.value, } : item, ). */ (actuales) =>
-                              actuales.map(/* Transforma cada elemento de la lista devolviendo i === index ? { ...item, cantidad: event.target.value, } : item. */ (item, i) =>
+                          onChange={(event) =>
+                            setDetalles((actuales) =>
+                              actuales.map((item, i) =>
                                 i === index
                                   ? {
                                       ...item,
@@ -916,9 +874,9 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                           step="0.01"
                           placeholder="Ej. 15000"
                           value={detalle.precio_unitario}
-                          onChange={/* Ejecuta setDetalles((actuales) => actuales.map((item, i) => i === index ? { ...item, precio_unitario: event.target.value, } : item, ), ) al invocarse este callback. */ (event) =>
-                            setDetalles(/* Calcula el nuevo valor de Detalles devolviendo actuales.map((item, i) => i === index ? { ...item, precio_unitario: event.target.value, } : item, ). */ (actuales) =>
-                              actuales.map(/* Transforma cada elemento de la lista devolviendo i === index ? { ...item, precio_unitario: event.target.value, } : item. */ (item, i) =>
+                          onChange={(event) =>
+                            setDetalles((actuales) =>
+                              actuales.map((item, i) =>
                                 i === index
                                   ? {
                                       ...item,
@@ -936,10 +894,10 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                         <button
                           type="button"
                           className="btn btn-ghost"
-                          onClick={/* Ejecuta setDetalles((actuales) => actuales.filter( (_, i) => i !== index, ), ) al invocarse este callback. */ () =>
-                            setDetalles(/* Calcula el nuevo valor de Detalles devolviendo actuales.filter( (_, i) => i !== index, ). */ (actuales) =>
+                          onClick={() =>
+                            setDetalles((actuales) =>
                               actuales.filter(
-                                /* Comprueba qué elementos cumplen la condición evaluando i !== index. */ (_, i) => i !== index,
+                                (_, i) => i !== index,
                               ),
                             )
                           }
@@ -953,8 +911,8 @@ const downloadInvoicePdf = async (invoice: Invoice) => {
                   <button
                     type="button"
                     className="btn btn-ghost"
-                    onClick={/* Ejecuta setDetalles((actuales) => [ ...actuales, createDetalle(), ]) al invocarse este callback. */ () =>
-                      setDetalles(/* Calcula el nuevo valor de Detalles devolviendo [ ...actuales, createDetalle(), ]. */ (actuales) => [
+                    onClick={() =>
+                      setDetalles((actuales) => [
                         ...actuales,
                         createDetalle(),
                       ])

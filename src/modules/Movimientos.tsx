@@ -34,7 +34,6 @@ type Props = {
   onCreate: (input: MovimientoInput) => Promise<Movimiento>
 }
 
-// Muestra el historial de movimientos y permite registrar entradas, salidas y ajustes de inventario.
 export default function Movimientos({
   productos,
   lotes,
@@ -59,10 +58,9 @@ export default function Movimientos({
     Ajuste: "#D97706",
   }
 
-  const lotesDelProducto = lotes.filter(/* Comprueba qué elementos cumplen la condición evaluando l.prod === prod. */ (l) => l.prod === prod)
-  const selectedLote = lotes.find(/* Identifica el elemento buscado evaluando String(l.id) === String(loteId). */ (l) => String(l.id) === String(loteId))
+  const lotesDelProducto = lotes.filter((l) => l.prod === prod)
+  const selectedLote = lotes.find((l) => String(l.id) === String(loteId))
 
-  // Valida producto, lote y cantidad y solicita el registro del movimiento con el usuario actual.
   const registerMovement = async () => {
     if (!prod || !loteId || qty === "") {
       setError("Producto, lote y cantidad son obligatorios.")
@@ -87,7 +85,6 @@ export default function Movimientos({
     }
   }
 
-  // Limpia el formulario de movimientos y restablece sus indicadores de resultado y error.
   const resetForm = () => {
     setDone(false)
     setProd("")
@@ -129,7 +126,7 @@ export default function Movimientos({
           ) : (
             <>
               <div className="mov-toggle">
-                {(["Entrada", "Salida", "Ajuste"] as const).map(/* Renderiza el contenido de cada elemento de (["Entrada", "Salida", "Ajuste"] as const). */ (value) => (
+                {(["Entrada", "Salida", "Ajuste"] as const).map((value) => (
                   <button
                     key={value}
                     className={`mov-toggle-btn ${type === value ? "active" : ""}`}
@@ -137,9 +134,9 @@ export default function Movimientos({
                       background: type === value ? colors[value] : "transparent",
                       color: type === value ? "white" : "#94A3B8",
                     }}
-                    onClick={/* Cambia el tipo de movimiento y limpia la cantidad y el error del formulario. */ () => {
+                    onClick={() => {
                       setType(value)
-                      setQty("")   // Limpiar cantidad al cambiar tipo
+                      setQty("")
                       setError("")
                     }}
                   >
@@ -158,13 +155,13 @@ export default function Movimientos({
                   <select
                     className="select"
                     value={prod}
-                    onChange={/* Cambia el producto y borra la selección de lote. */ (e) => {
+                    onChange={(e) => {
                       setProd(e.target.value)
                       setLoteId("")
                     }}
                   >
                     <option value="">Seleccionar…</option>
-                    {productos.map(/* Renderiza el contenido de cada elemento de productos. */ (p) => (
+                    {productos.map((p) => (
                       <option key={p.id} value={p.codigo}>
                         {p.codigo} — {p.nombre}
                       </option>
@@ -178,10 +175,10 @@ export default function Movimientos({
                     className="select"
                     value={loteId}
                     disabled={!prod}
-                    onChange={/* Ejecuta setLoteId(e.target.value) al invocarse este callback. */ (e) => setLoteId(e.target.value)}
+                    onChange={(e) => setLoteId(e.target.value)}
                   >
                     <option value="">Seleccionar lote…</option>
-                    {lotesDelProducto.map(/* Renderiza el contenido de cada elemento de lotesDelProducto. */ (l) => (
+                    {lotesDelProducto.map((l) => (
                       <option key={l.id} value={l.id}>
                         {l.id} · {l.ubic} · {fmt(l.qty)} L
                       </option>
@@ -189,7 +186,6 @@ export default function Movimientos({
                   </select>
                 </div>
 
-                {/* Input de cantidad con label dinámico */}
                 <div className="field">
                   <label className="label">
                     {type === "Ajuste"
@@ -201,7 +197,7 @@ export default function Movimientos({
                     type="number"
                     min={type === "Ajuste" ? 0 : 1}
                     value={qty}
-                    onChange={/* Ejecuta setQty(e.target.value) al invocarse este callback. */ (e) => setQty(e.target.value)}
+                    onChange={(e) => setQty(e.target.value)}
                   />
                   {selectedLote && (
                     <p
@@ -211,18 +207,16 @@ export default function Movimientos({
                         marginTop: 4,
                       }}
                     >
-                      {/* CAMBIO 1: Texto dinámico */}
                       {type === "Ajuste" ? "Stock actual en el lote:" : "Stock final en el lote:"}{" "}
                       
-                      {/* CAMBIO 2: Valor principal dinámico (el resultado esperado) */}
                       <strong style={{ color: "#0F172A" }}>
                         {qty !== "" && type !== "Ajuste" 
                           ? fmt(
                               type === "Entrada" 
-                                ? selectedLote.qty + Number(qty) // Suma stock actual + cantidad
-                                : selectedLote.qty - Number(qty) // Resta stock actual - cantidad
+                                ? selectedLote.qty + Number(qty)
+                                : selectedLote.qty - Number(qty)
                             )
-                          : fmt(selectedLote.qty) // Si es Ajuste o está vacío, muestra el stock actual tal cual
+                          : fmt(selectedLote.qty)
                         } L
                       </strong>
 
@@ -231,33 +225,28 @@ export default function Movimientos({
                           style={{
                             marginLeft: 8,
                             color:
-                              // Lógica de colores según tipo y efecto
                               type === "Ajuste"
                                 ? Number(qty) - selectedLote.qty === 0
-                                  ? "#64748B" // Gris si no cambia
+                                  ? "#64748B"
                                   : Number(qty) > selectedLote.qty
-                                    ? "#00995A" // Verde si aumenta
-                                    : "#DC2626" // Rojo si disminuye
+                                    ? "#00995A"
+                                    : "#DC2626"
                                 : type === "Entrada"
-                                  ? "#00995A" // Verde para entradas
-                                  : "#DC2626", // Rojo para salidas
+                                  ? "#00995A"
+                                  : "#DC2626",
                             fontWeight: 600,
                           }}
                         >
-                          {/* Lógica del valor entre paréntesis (la diferencia/cambio) */}
                           {type === "Ajuste" ? (
-                            // CASO AJUSTE: Muestra la diferencia con el stock actual
                             <>
                               ({Number(qty) > selectedLote.qty ? "+" : ""}
                               {fmt(Number(qty) - selectedLote.qty)} L)
                             </>
                           ) : type === "Entrada" ? (
-                            // CASO ENTRADA: Muestra cuánto se suma
                             <>
                               (+{fmt(Number(qty))} L)
                             </>
                           ) : (
-                            // CASO SALIDA: Muestra cuánto se resta
                             <>
                               (-{fmt(Number(qty))} L)
                             </>
@@ -274,7 +263,7 @@ export default function Movimientos({
                     className="input"
                     placeholder="Ej. OC-2024-040"
                     value={reference}
-                    onChange={/* Ejecuta setReference(e.target.value) al invocarse este callback. */ (e) => setReference(e.target.value)}
+                    onChange={(e) => setReference(e.target.value)}
                   />
                 </div>
 
@@ -289,7 +278,7 @@ export default function Movimientos({
                     }
                     rows={3}
                     value={observation}
-                    onChange={/* Ejecuta setObservation(e.target.value) al invocarse este callback. */ (e) => setObservation(e.target.value)}
+                    onChange={(e) => setObservation(e.target.value)}
                   />
                 </div>
 
@@ -309,7 +298,7 @@ export default function Movimientos({
         {/* Historial */}
         <div className="panel">
           <div className="panel-header">Historial de Movimientos</div>
-          <table className="dt w-full">
+          <table className="dt mov-table" style={{ tableLayout: "auto" }}>
             <thead>
               <tr>
                 <th>ID</th>
@@ -325,7 +314,7 @@ export default function Movimientos({
               </tr>
             </thead>
             <tbody>
-              {movimientos.map(/* Renderiza una fila del historial diferenciando los ajustes de los demás movimientos. */ (movement) => {
+              {movimientos.map((movement) => {
                 const isAjuste = movement.tipo === "Ajuste"
                 return (
                   <tr key={movement.id}>
@@ -356,8 +345,7 @@ export default function Movimientos({
                       {fmt(movement.qty)} L
                     </td>
                     <td style={{ fontSize: "0.75rem" }}>
-                      {
-                      movement.stockAnterior != null &&
+                      {movement.stockAnterior != null &&
                       movement.stockPosterior != null ? (
                         <span>
                           <span style={{ color: "#64748B" }}>
@@ -385,7 +373,7 @@ export default function Movimientos({
                     </td>
                     <td>{movement.lote}</td>
                     <td>{movement.ref}</td>
-                    <td style={{ maxWidth: 200, fontSize: "0.75rem" }}>
+                    <td style={{ fontSize: "0.75rem", maxWidth: "250px", whiteSpace: "normal", wordBreak: "break-word" }}>
                       {movement.observacion || "—"}
                     </td>
                     <td>{movement.user}</td>
